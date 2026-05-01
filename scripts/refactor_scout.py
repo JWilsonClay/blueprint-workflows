@@ -1,0 +1,325 @@
+#!/usr/bin/env python3
+"""
+refactor_scout.py — Phase 0: Cryogenic Snapshot Scout
+======================================================
+Sovereign Refactor Protocol — Script Suite
+
+Responsibilities:
+  1. Walk the project directory tree and enumerate every source file.
+  2. Generate IMPORT_GRAPH.txt (deterministic grep-based dependency scan).
+  3. Pre-populate REFACTOR_MANIFEST.yaml with every discovered file listed,
+     each with action: TBD. The LLM fills in the decisions; this script
+     ensures no file is accidentally omitted.
+
+Usage:
+  python3 refactor_scout.py --project-root /path/to/project [--language python|javascript]
+
+Requirements: Python 3.8+, PyYAML (pip install pyyaml), git in PATH.
+"""
+
+import argparse
+import datetime
+import os
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+try:
+    import yaml
+except ImportError:
+    print("❌  FATAL: PyYAML is required. Install with: pip install pyyaml")
+    sys.exit(1)
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+MANIFEST_FILENAME = "REFACTOR_MANIFEST.yaml"
+IMPORT_GRAPH_FILENAME = "IMPORT_GRAPH.txt"
+SHIM_HEADER_MARKERS = ["⚠️ SHIM FILE", "⚠️ REVERSE SHIM"]
+
+SKIP_DIRS = {
+    "__pycache__", ".git", ".mypy_cache", ".pytest_cache", ".tox",
+    ".venv", "venv", "env", "node_modules", "dist", "build",
+    ".next", ".nuxt", "coverage", ".coverage", "htmlcov",
+}
+
+PYTHON_EXTENSIONS = {".py"}
+JS_EXTENSIONS = {".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs"}
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def out(emoji: str, msg: str) -> None:
+    print(f"{emoji}  {msg}", flush=True)
+
+
+def fail(msg: str) -> None:
+    out("❌", f"FATAL: {msg}")
+    sys.exit(1)
+
+
+def run(cmd: list, cwd: Path) -> subprocess.CompletedProcess:
+    return subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True)
+
+
+def is_shim(path: Path) -> bool:
+    try:
+        content = path.read_text(encoding="utf-8", errors="replace")
+        return any(m in content for m in SHIM_HEADER_MARKERS)
+    except (OSError, PermissionError):
+        return False
+
+
+def should_skip_dir(name: str) -> bool:
+    return name in SKIP_DIRS or name.endswith(".egg-info") or name.endswith(".dist-info")
+
+
+# ---------------------------------------------------------------------------
+# Step 1: Pre-flight
+# ---------------------------------------------------------------------------
+
+def check_git_status(root: Path) -> None:
+    out("🔍", "Checking git working tree status…")
+    r = run(["git", "status", "--porcelain"], root)
+    if r.returncode != 0:
+        out("⚠️ ", "Cannot run `git status` — not a git repo? Continuing (read-only).")
+        return
+    if r.stdout.strip():
+        out("⚠️ ", "Uncommitted changes detected. Phase 0 recommends a clean tree.")
+        out("⚠️ ", "Proceeding with read-only scout enumeration.")
+    else:
+        out("✅", "Git working tree is clean.")
+
+
+def check_no_existing_manifest(root: Path) -> None:
+    manifest = root / MANIFEST_FILENAME
+    if manifest.exists():
+        out("⚠️ ", f"{MANIFEST_FILENAME} already exists — it will be OVERWRITTEN.")
+        out("⚠️ ", "Press Ctrl+C within 3 seconds to abort…")
+        try:
+            time.sleep(3)
+        except KeyboardInterrupt:
+            out("🛑", "Aborted. Existing manifest preserved.")
+            sys.exit(0)
+
+
+# ---------------------------------------------------------------------------
+# Step 2: Enumerate source files
+# ---------------------------------------------------------------------------
+
+def enumerate_files(root: Path, language: str) -> list:
+    exts = PYTHON_EXTENSIONS if language == "python" else JS_EXTENSIONS
+    found = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if not should_skip_dir(d)]
+        for fn in filenames:
+            fp = Path(dirpath) / fn
+            if fp.suffix in exts and not is_shim(fp):
+                found.append(fp.relative_to(root))
+    return sorted(found)
+
+
+# ---------------------------------------------------------------------------
+# Step 3: Import graph
+# ---------------------------------------------------------------------------
+
+def generate_import_graph(root: Path, language: str) -> None:
+    out("📊", f"Generating {IMPORT_GRAPH_FILENAME}…")
+    graph_path = root / IMPORT_GRAPH_FILENAME
+
+    if language == "python":
+        patterns = [r"^from ", r"^import "]
+        includes = ["--include=*.py"]
+        exclude = "__pycache__"
+    else:
+        patterns = [r"^import ", r"require\("]
+        includes = ["--include=*.ts", "--include=*.js", "--include=*.tsx", "--include=*.jsx"]
+        exclude = "node_modules"
+
+    lines = set()
+    for pat in patterns:
+        r = run(["grep", "-rn", pat] + includes + ["."], root)
+        for line in r.stdout.splitlines():
+            if exclude not in line:
+                lines.add(line)
+
+    sorted_lines = sorted(lines)
+
+    with open(graph_path, "w", encoding="utf-8") as f:
+        f.write("# IMPORT GRAPH — Generated by refactor_scout.py\n")
+        f.write(f"# Project   : {root.name}\n")
+        f.write(f"# Generated : {datetime.datetime.now().isoformat()}\n")
+        f.write(f"# Language  : {language}\n")
+        f.write(f"# Total     : {len(sorted_lines)} import lines\n")
+        f.write("# Format    : <file>:<line>:<import statement>\n")
+        f.write("# ─────────────────────────────────────────────────────────\n\n")
+        for line in sorted_lines:
+            f.write(line + "\n")
+
+    out("✅", f"Import graph written → {graph_path.name} ({len(sorted_lines)} import lines)")
+
+
+# ---------------------------------------------------------------------------
+# Step 4: Build and write manifest
+# ---------------------------------------------------------------------------
+
+MANIFEST_HEADER = """\
+# ═══════════════════════════════════════════════════════════════════
+# REFACTOR_MANIFEST.yaml — Sovereign Refactor Protocol
+# ═══════════════════════════════════════════════════════════════════
+# Generated by refactor_scout.py (Phase 0 script)
+# Status: AWAITING LLM ARCHITECTURE REVIEW + USER APPROVAL
+#
+# ─── LLM INSTRUCTIONS ─────────────────────────────────────────────
+# Every file in this project is listed below with action: TBD.
+# Fill in the `action` field for each entry:
+#
+#   MOVE    — File moves to a new target path (update `target:`)
+#   KEEP    — File stays where it is (leave `target:` unchanged)
+#   SPLIT   — File is split into multiple new files
+#             (create one entry per new target file, same `current:`)
+#   ARCHIVE — File is removed after Phase 4
+#
+# Also fill in:
+#   target            : New relative path (for MOVE/SPLIT entries)
+#   notes             : Brief rationale
+#   verification_gate : Exact shell command that exits 0 if project works
+#
+# Do NOT edit `surgery_complete` — managed by refactor_audit.py (Phase 3).
+#
+# ─── SCHEMA REFERENCE ─────────────────────────────────────────────
+# project_name      : string   — Human-readable project name
+# language          : string   — "python" or "javascript"
+# verification_gate : string   — Shell command; must exit 0 if healthy
+# files             : list
+#   current         : string   — Current relative path from project root
+#   target          : string   — Target relative path (fill in for MOVE/SPLIT)
+#   action          : enum     — TBD | MOVE | KEEP | SPLIT | ARCHIVE
+#   notes           : string   — Optional rationale
+#   surgery_complete: bool     — Phase 3 tracker (do not edit manually)
+# ═══════════════════════════════════════════════════════════════════\n\n"""
+
+
+def build_and_write_manifest(root: Path, language: str, files: list) -> None:
+    manifest_path = root / MANIFEST_FILENAME
+    data = {
+        "project_name": root.name,
+        "language": language,
+        "verification_gate": "# TODO: replace with exact shell command (e.g. python3 -m pytest tests/ -x)",
+        "files": [
+            {
+                "current": str(f),
+                "target": str(f),
+                "action": "TBD",
+                "notes": "",
+                "surgery_complete": False,
+            }
+            for f in files
+        ],
+    }
+
+    with open(manifest_path, "w", encoding="utf-8") as fh:
+        fh.write(MANIFEST_HEADER)
+        yaml.dump(data, fh, default_flow_style=False, allow_unicode=True,
+                  sort_keys=False, width=120)
+
+    out("✅", f"Manifest written → {manifest_path.name}")
+    out("📋", f"  Files enumerated : {len(files)}")
+    out("📋", "  All entries      : action: TBD")
+    out("📋", "  Next step        : LLM fills in action/target/notes, user approves.")
+
+
+# ---------------------------------------------------------------------------
+# Summary
+# ---------------------------------------------------------------------------
+
+def print_summary(root: Path, files: list, language: str) -> None:
+    print()
+    print("═" * 65)
+    print("  🏗️   REFACTOR SCOUT — Phase 0 Complete")
+    print("═" * 65)
+    print(f"  Project root : {root}")
+    print(f"  Language     : {language}")
+    print(f"  Files found  : {len(files)}")
+    print()
+    print("  Artifacts created:")
+    print(f"    📊 {IMPORT_GRAPH_FILENAME}")
+    print(f"    📋 {MANIFEST_FILENAME}")
+    print()
+    print("  ─── NEXT STEPS ────────────────────────────────────────")
+    print("  1. Review IMPORT_GRAPH.txt to understand dependencies.")
+    print("  2. Fill in REFACTOR_MANIFEST.yaml:")
+    print("     • Set action: MOVE | KEEP | SPLIT | ARCHIVE for each file")
+    print("     • Set target: for MOVE/SPLIT entries")
+    print("     • Set verification_gate: to the project's test command")
+    print("  3. User approves the manifest.")
+    print("  4. Run: python3 refactor_bridge.py --project-root <root>")
+    print("═" * 65)
+    print()
+
+
+# ---------------------------------------------------------------------------
+# Language detection
+# ---------------------------------------------------------------------------
+
+def detect_language(root: Path) -> str:
+    py = sum(1 for _ in root.rglob("*.py"))
+    js = sum(1 for ext in ["*.js", "*.ts", "*.jsx", "*.tsx"] for _ in root.rglob(ext))
+    detected = "python" if py >= js else "javascript"
+    out("🔍", f"Auto-detected language: {detected} (py={py}, js/ts={js})")
+    return detected
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(
+        prog="refactor_scout.py",
+        description="Phase 0 Scout: enumerate files, generate import graph, pre-populate manifest.",
+    )
+    p.add_argument("--project-root", required=True,
+                   help="Path to the root of the project being refactored.")
+    p.add_argument("--language", choices=["python", "javascript"], default=None,
+                   help="Source language. Auto-detected if omitted.")
+    return p.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+    root = Path(args.project_root).resolve()
+
+    if not root.exists():
+        fail(f"Project root does not exist: {root}")
+    if not root.is_dir():
+        fail(f"Project root is not a directory: {root}")
+
+    out("🏗️ ", "Sovereign Refactor Protocol — Phase 0: Cryogenic Snapshot Scout")
+    out("📁", f"Project root: {root}")
+
+    language = args.language or detect_language(root)
+    out("🔤", f"Language: {language}")
+
+    check_git_status(root)
+    check_no_existing_manifest(root)
+
+    out("📂", "Enumerating source files…")
+    files = enumerate_files(root, language)
+    if not files:
+        fail(f"No {language} source files found. Check --language or --project-root.")
+    out("✅", f"Found {len(files)} source file(s).")
+
+    generate_import_graph(root, language)
+    build_and_write_manifest(root, language, files)
+    print_summary(root, files, language)
+
+    out("🏁", "Phase 0 scout complete. Exit code: 0")
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
