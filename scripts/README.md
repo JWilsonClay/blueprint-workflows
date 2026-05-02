@@ -10,14 +10,21 @@
 > **LLMs provide intelligence. Scripts provide determinism.**
 
 Every mechanical, filesystem-level operation in a refactor is a hallucination
-risk when left to an LLM. These 5 Python scripts eliminate that risk by handling
-all enumeration, shim creation, file movement, import scanning, and shim removal
-deterministically — while the LLM focuses exclusively on the work that requires
-intelligence: architectural decisions and import rewriting.
+risk when left to an LLM. These scripts eliminate that risk by handling
+all enumeration, shim creation, file movement, import scanning, shim removal,
+and **intent-vs-reality diff review** deterministically — while the LLM focuses
+exclusively on the work that requires intelligence: architectural decisions and
+import rewriting.
 
 **The `REFACTOR_MANIFEST.yaml` is the contract between the LLM and the scripts.**
 The LLM writes it once (Phase 0). You approve it. Every script reads it and executes
 deterministically from that point forward.
+
+**[INJECTION — 2026-05-01]**: A 6th script (`refactor_diff.py`) has been added
+as a cross-phase Diff Review Node that runs at every phase boundary to compare
+filesystem reality against manifest intent, flagging deviations before they
+compound. See the [Diff Review Node](#-refactor_diffpy--cross-phase-diff-review-node)
+section below.
 
 ---
 
@@ -302,3 +309,122 @@ Scripts detect language from `REFACTOR_MANIFEST.yaml → language` field.
 |:---|:---|:---|
 | `python` | `from <module> import *  # noqa: F401, F403` | `from X`, `import X` |
 | `javascript` | `export * from '<path>';` | `from 'X'`, `require('X')` |
+
+---
+
+## **[INJECTION — 2026-05-01]**: The 6th Script + Updated Tables
+
+---
+
+### 🔍 `refactor_diff.py` — Cross-Phase Diff Review Node
+
+**Hallucination prevented**: Silent drift between what the manifest declared and
+what the filesystem contains, compounding silently across phases until it becomes
+a merge-breaking regression.
+
+**What it does**:
+- Reads `REFACTOR_MANIFEST.yaml` (the spec / user intent).
+- Compares the actual filesystem state against that spec.
+- Classifies every deviation as 🔴 CRITICAL, 🟡 WARNING, or 🔵 INFO.
+- Exits 0 (clean, proceed) or 1 (critical deviations found, loop back and fix).
+
+**Loop-back mechanism**:
+```
+[Phase script runs] → [refactor_diff.py --phase pN]
+                           │
+                           ├── EXIT 0 ──► git commit ──► next phase
+                           └── EXIT 1 ──► fix → re-run diff → commit
+```
+
+**Invocation**:
+```bash
+# After Phase 1 (bridge) — validate shim layer:
+python3 refactor_diff.py --project-root /path/to/project --phase p1
+
+# After each Phase 2 module migration:
+python3 refactor_diff.py --project-root /path/to/project --phase p2
+
+# During Phase 3 (structural health snapshot, on demand):
+python3 refactor_diff.py --project-root /path/to/project --phase p3
+
+# After Phase 4 shim cleanup:
+python3 refactor_diff.py --project-root /path/to/project --phase p4
+
+# Pre-merge (strictest gate — run immediately before git merge):
+python3 refactor_diff.py --project-root /path/to/project --phase p4 --pre-merge
+
+# View manifest intent without filesystem checks:
+python3 refactor_diff.py --project-root /path/to/project --spec-summary
+```
+
+**Phase-specific checks summary**:
+
+| Phase | What It Validates |
+|:---|:---|
+| `--phase p1` | Shims at targets, correct headers, correct source refs, originals untouched |
+| `--phase p2` | Real files at targets, reverse shims at old paths, correct pointers |
+| `--phase p3` | P2 structural checks + surgery_complete consistency + progress report |
+| `--phase p4` | Zero shims remain, targets exist, old paths removed, KEEP files intact |
+| `--phase p4 --pre-merge` | All P4 checks + artifacts removed + no unexpected files |
+
+---
+
+## Updated Division of Labor
+
+> **[INJECTION — 2026-05-01]**: Table updated to include the Diff Review Node.
+
+| Phase | Script | Script's Job | LLM's Job |
+|:---|:---|:---|:---|
+| **P0** | `refactor_scout.py` | Enumerate all files, generate import graph | Design the architecture, fill in manifest decisions |
+| **P1** | `refactor_bridge.py` | Create all shim files from manifest | Approve the manifest, trigger the script |
+| **P1→P2** | `refactor_diff.py --phase p1` | Validate shim layer vs manifest intent | Review findings, approve proceeding |
+| **P2** | `refactor_migrate.py` | `git mv` + reverse shims | Select module order, trigger `--module` per session |
+| **P2→P3** | `refactor_diff.py --phase p2` | Validate each migration vs manifest intent | Review findings, loop back if critical |
+| **P3** | `refactor_audit.py` | Scan for stale imports, verify after surgery | Rewrite the import statements (requires intelligence) |
+| **P3 (demand)** | `refactor_diff.py --phase p3` | Structural health snapshot, surgery consistency | Review progress, fix inconsistencies |
+| **P4** | `refactor_clean.py` | Verify shim safety, `git rm`, final gate | Approve each removal |
+| **P4→merge** | `refactor_diff.py --phase p4 --pre-merge` | Final state validation before merge | Fix any remaining deviations, then merge |
+
+---
+
+## Updated Quick-Reference Command Sequence
+
+> **[INJECTION — 2026-05-01]**: Diff review calls added at each phase boundary.
+
+```bash
+# Phase 0 — Scout
+python3 scripts/refactor_scout.py --project-root ./my-project
+# → LLM fills in REFACTOR_MANIFEST.yaml → User approves
+
+# View manifest intent
+python3 scripts/refactor_diff.py --project-root ./my-project --spec-summary
+
+# Phase 1 — Bridge
+python3 scripts/refactor_bridge.py --project-root ./my-project
+python3 scripts/refactor_diff.py --project-root ./my-project --phase p1  # ← GATE
+git add . && git commit -m "refactor(p1): inject shim layer"
+
+# Phase 2 — Migrate (one module at a time)
+python3 scripts/refactor_migrate.py --project-root ./my-project --module utils
+python3 scripts/refactor_diff.py --project-root ./my-project --phase p2   # ← GATE
+git add . && git commit -m "refactor(p2): git mv utils"
+# Repeat for each module
+
+# Phase 3 — Audit & Surgery (iterate until verify passes)
+python3 scripts/refactor_diff.py --project-root ./my-project --phase p3   # ← health check
+python3 scripts/refactor_audit.py --project-root ./my-project --scan
+# → LLM updates one file's imports → git commit
+python3 scripts/refactor_audit.py --project-root ./my-project --verify
+
+# Phase 4 — Clean
+python3 scripts/refactor_clean.py --project-root ./my-project
+python3 scripts/refactor_diff.py --project-root ./my-project --phase p4   # ← GATE
+git add . && git commit -m "refactor(p4): remove all shims"
+git rm IMPORT_GRAPH.txt REFACTOR_MANIFEST.yaml
+git commit -m "refactor(p4): remove refactor artifacts"
+
+# Pre-merge final gate
+python3 scripts/refactor_diff.py --project-root ./my-project --phase p4 --pre-merge  # ← FINAL GATE
+git checkout main && git merge --no-ff refactor/my-project
+git tag refactor/my-project-complete && git push origin main --tags
+```
