@@ -58,6 +58,21 @@ def find_all_shims(root: Path) -> list:
 # Step 2: Check if a shim is still being imported
 # ---------------------------------------------------------------------------
 
+import os
+from core.filesystem import walk_project, is_shim_file, get_source_extensions, read_file_safe
+
+def _is_path_in_root(root: Path, path: Path) -> bool:
+    """
+    SECURITY: Return True if 'path' is a descendant of 'root'.
+    Prevents workspace escape via malicious paths.
+    """
+    try:
+        root_res = root.resolve()
+        path_res = path.resolve()
+        return os.commonpath([root_res]) == os.commonpath([root_res, path_res])
+    except (ValueError, OSError):
+        return False
+
 def find_importers(root: Path, shim_path: Path, language: str) -> list:
     """
     Scan the project for any non-shim file that imports from the shim's path.
@@ -79,11 +94,12 @@ def find_importers(root: Path, shim_path: Path, language: str) -> list:
             if is_shim_file(fp):
                 continue  # Other shims importing this shim is OK
 
-            try:
-                lines = fp.read_text(encoding="utf-8", errors="replace").splitlines()
-            except (OSError, PermissionError):
+            # SECURITY: Use core.filesystem.read_file_safe to enforce size limits (DoS protection)
+            content = read_file_safe(fp)
+            if not content:
                 continue
 
+            lines = content.splitlines()
             for lineno, line in enumerate(lines, start=1):
                 for pat in patterns:
                     if pat in line:
@@ -106,10 +122,19 @@ def remove_shim(root: Path, shim_path: Path, language: str, gate_cmd: str,
     """
     Verify safety and remove one shim via git rm.
     Returns True if successfully removed (or would be in dry-run).
-    Returns False if the shim is still being imported.
     """
+    # SECURITY: Absolute boundary check
+    if not _is_path_in_root(root, shim_path):
+        out("❌", f"SECURITY ALERT: Shim path is outside project root: {shim_path}")
+        return False
+
     rel = shim_path.relative_to(root)
     out("🔍", f"Checking safety of: {rel}")
+
+    # SECURITY: RE-VERIFY that it is actually a shim before any deletion
+    if not is_shim_file(shim_path):
+        out("❌", f"CRITICAL: File no longer appears to be a shim — skipping deletion: {rel}")
+        return False
 
     importers = find_importers(root, shim_path, language)
 

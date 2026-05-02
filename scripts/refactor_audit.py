@@ -85,11 +85,12 @@ def find_stale_imports(root: Path, manifest: dict) -> dict:
                 continue
 
             rel_fp = fp.relative_to(root)
-            try:
-                lines = fp.read_text(encoding="utf-8", errors="replace").splitlines()
-            except (OSError, PermissionError):
+            # SECURITY: Use core.filesystem.read_file_safe to enforce size limits (DoS protection)
+            content = read_file_safe(fp)
+            if not content:
                 continue
 
+            lines = content.splitlines()
             for lineno, line in enumerate(lines, start=1):
                 for old_path, new_path in moved.items():
                     patterns = path_to_import_patterns(old_path, language)
@@ -182,8 +183,8 @@ def run_verify(root: Path, manifest: dict, gate_cmd: str) -> int:
         if gate_cmd and not gate_cmd.startswith("#"):
             print()
             print("  Running final verification gate…")
-            result = subprocess.run(gate_cmd, shell=True, cwd=str(root))
-            if result.returncode == 0:
+            # SECURITY: Use hardened run_gate for environment isolation and safety
+            if run_gate(gate_cmd, root):
                 print("  ✅  Verification gate PASSED.")
                 print()
                 print("  Phase 3 is complete. Proceed to:")

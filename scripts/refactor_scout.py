@@ -77,7 +77,12 @@ def enumerate_files(root: Path, language: str) -> list:
 
 def generate_import_graph(root: Path, language: str) -> None:
     out("📊", f"Generating {IMPORT_GRAPH_FILENAME}…")
-    graph_path = root / IMPORT_GRAPH_FILENAME
+    graph_path = (root / IMPORT_GRAPH_FILENAME).resolve()
+    
+    # SECURITY: Absolute boundary check
+    if not _is_path_in_root(root, graph_path):
+        out("❌", f"SECURITY ALERT: Graph path is outside project root: {graph_path}")
+        return
 
     if language == "python":
         patterns = [r"^from ", r"^import "]
@@ -153,7 +158,13 @@ MANIFEST_HEADER = """\
 
 
 def build_and_write_manifest(root: Path, language: str, files: list) -> None:
-    manifest_path = root / MANIFEST_FILENAME
+    manifest_path = (root / MANIFEST_FILENAME).resolve()
+    
+    # SECURITY: Absolute boundary check
+    if not _is_path_in_root(root, manifest_path):
+        out("❌", f"SECURITY ALERT: Manifest path is outside project root: {manifest_path}")
+        return
+
     data = {
         "project_name": root.name,
         "language": language,
@@ -207,15 +218,42 @@ def print_summary(root: Path, files: list, language: str) -> None:
     print()
 
 
+import os
+
+def _is_path_in_root(root: Path, path: Path) -> bool:
+    """
+    SECURITY: Return True if 'path' is a descendant of 'root'.
+    Prevents workspace escape via malicious paths.
+    """
+    try:
+        root_res = root.resolve()
+        path_res = path.resolve()
+        return os.path.commonpath([root_res]) == os.commonpath([root_res, path_res])
+    except (ValueError, OSError):
+        return False
+
 # ---------------------------------------------------------------------------
 # Language detection
 # ---------------------------------------------------------------------------
 
 def detect_language(root: Path) -> str:
-    py = sum(1 for _ in root.rglob("*.py"))
-    js = sum(1 for ext in ["*.js", "*.ts", "*.jsx", "*.tsx"] for _ in root.rglob(ext))
-    detected = "python" if py >= js else "javascript"
-    out("🔍", f"Auto-detected language: {detected} (py={py}, js/ts={js})")
+    """
+    Detect project language by scanning source file extensions.
+    SECURITY: Uses walk_project to respect SKIP_DIRS and prevent DoS.
+    """
+    py_count = 0
+    js_count = 0
+    
+    for _, _, filenames in walk_project(root):
+        for fn in filenames:
+            ext = Path(fn).suffix.lower()
+            if ext == ".py":
+                py_count += 1
+            elif ext in {".js", ".ts", ".jsx", ".tsx"}:
+                js_count += 1
+                
+    detected = "python" if py_count >= js_count else "javascript"
+    out("🔍", f"Auto-detected language: {detected} (py={py_count}, js/ts={js_count})")
     return detected
 
 

@@ -38,30 +38,63 @@ except ImportError:
     sys.exit(1)
 
 
-def write_shim(target_path: Path, current_path: str, language: str, dry_run: bool) -> None:
-    """Write a shim file at target_path, pointing back to current_path."""
+def _is_path_in_root(root: Path, path: Path) -> bool:
+    """
+    SECURITY: Return True if 'path' is a descendant of 'root'.
+    Prevents workspace escape via malicious paths.
+    """
+    try:
+        # resolve() handles '..' and symlinks, commonpath ensures boundary
+        root_res = root.resolve()
+        path_res = path.resolve()
+        return os.path.commonpath([root_res]) == os.path.commonpath([root_res, path_res])
+    except (ValueError, OSError):
+        return False
+
+def write_shim(root: Path, target_path: Path, current_path: str, language: str, dry_run: bool) -> bool:
+    """
+    Write a shim file at target_path, pointing back to current_path.
+    Returns True if successful.
+    """
+    # SECURITY: Absolute boundary check before any disk write
+    if not _is_path_in_root(root, target_path):
+        out("❌", f"SECURITY ALERT: Target path is outside project root: {target_path}")
+        return False
+
     content = make_shim(language, current_path, str(target_path))
 
     if dry_run:
         out("🔍", f"[DRY RUN] Would write shim → {target_path}")
         out("🔍", f"          Content preview: {content.splitlines()[0]}")
-        return
+        return True
 
-    target_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        target_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if target_path.exists():
-        out("⚠️ ", f"Shim target already exists — skipping: {target_path}")
-        return
+        if target_path.exists():
+            out("⚠️ ", f"Shim target already exists — skipping: {target_path}")
+            return False
 
-    with open(target_path, "w", encoding="utf-8") as f:
-        f.write(content)
-    out("📄", f"Shim written → {target_path}")
+        with open(target_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        out("📄", f"Shim written → {target_path}")
+        return True
+    except (OSError, PermissionError) as e:
+        out("❌", f"Failed to write shim: {e}")
+        return False
 
 
 def ensure_python_init_files(root: Path, target_path: Path) -> None:
     """Ensure all parent directories of a Python target exist and have __init__.py."""
+    # SECURITY: Ensure we don't start walking above the root
+    if not _is_path_in_root(root, target_path):
+        return
+
     candidate = target_path.parent
     while candidate != root and candidate != candidate.parent:
+        if not _is_path_in_root(root, candidate):
+            break
+            
         candidate.mkdir(parents=True, exist_ok=True)
         init = candidate / "__init__.py"
         if not init.exists():
@@ -136,12 +169,23 @@ def main() -> None:
         out("🔧", f"[{action}] Creating shim: {current} → {target}")
 
         target_path = root / target
+        current_source_path = root / current
+
+        # SECURITY: Verify source exists before shimming
+        if not current_source_path.exists():
+            out("⚠️ ", f"Source file does not exist — cannot create shim: {current}")
+            results["skipped"] += 1
+            continue
 
         # Ensure parent __init__.py chain for Python
         if language == "python" and not args.dry_run:
             ensure_python_init_files(root, target_path)
 
-        write_shim(target_path, current, language, dry_run=args.dry_run)
+        if write_shim(root, target_path, current, language, dry_run=args.dry_run):
+            results["success"] += 1
+        else:
+            results["failed"] += 1
+            continue
 
         if not args.dry_run and gate_cmd:
             if not run_gate(gate_cmd, root):

@@ -41,7 +41,10 @@ from typing import Optional
 
 from core.console import out, fail, section_header
 from core.manifest import load_manifest, get_language, MANIFEST_FILENAME
-from core.filesystem import walk_project, is_shim_file, get_source_extensions
+from core.filesystem import (
+    walk_project, is_shim_file, get_source_extensions,
+    read_file_safe, is_forward_shim, is_reverse_shim, shim_points_to
+)
 
 try:
     import yaml
@@ -103,40 +106,6 @@ class DiffReport:
 # Helpers
 # ---------------------------------------------------------------------------
 
-def file_exists(root: Path, rel_path: str) -> bool:
-    return (root / rel_path).exists()
-
-
-def read_file_safe(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8", errors="replace")
-    except (OSError, PermissionError):
-        return ""
-
-
-def is_forward_shim(root: Path, rel_path: str) -> bool:
-    return SHIM_FILE_MARKER in read_file_safe(root / rel_path)
-
-
-def is_reverse_shim(root: Path, rel_path: str) -> bool:
-    return REVERSE_SHIM_MARKER in read_file_safe(root / rel_path)
-
-
-def shim_points_to(root: Path, rel_path: str) -> Optional[str]:
-    """
-    Extract the 'Logic currently lives at:' or 'Logic has MOVED to:' path
-    from a shim file header. Returns None if not found.
-    """
-    content = read_file_safe(root / rel_path)
-    for line in content.splitlines():
-        line = line.strip().lstrip("#").lstrip("//").strip()
-        if line.startswith("Logic currently lives at:"):
-            return line.split(":", 1)[1].strip()
-        if line.startswith("Logic has MOVED to:"):
-            return line.split(":", 1)[1].strip()
-    return None
-
-
 def find_all_shims(root: Path) -> list:
     """Return all rel paths for files containing shim headers."""
     result = []
@@ -193,13 +162,14 @@ def check_phase_p1(root: Path, manifest: dict, report: DiffReport) -> None:
 
         if action in ("MOVE", "SPLIT"):
             # Shim must exist at target
-            if not file_exists(root, target):
+            target_path = root / target
+            if not target_path.exists():
                 report.add(
                     Severity.CRITICAL, "MISSING_SHIM", target,
                     f"Expected a forward shim at target path — file does not exist.",
                     f"Run: python3 refactor_bridge.py --project-root <root>"
                 )
-            elif not is_forward_shim(root, target):
+            elif not is_forward_shim(target_path):
                 report.add(
                     Severity.WARNING, "SHIM_HEADER_MISSING", target,
                     f"File exists at target path but does not contain '⚠️ SHIM FILE' header.",
@@ -207,7 +177,7 @@ def check_phase_p1(root: Path, manifest: dict, report: DiffReport) -> None:
                 )
             else:
                 # Verify shim points to the correct current path
-                pointed_to = shim_points_to(root, target)
+                pointed_to = shim_points_to(target_path)
                 if pointed_to and pointed_to != current:
                     report.add(
                         Severity.CRITICAL, "SHIM_WRONG_SOURCE", target,
@@ -216,13 +186,14 @@ def check_phase_p1(root: Path, manifest: dict, report: DiffReport) -> None:
                     )
 
             # Original file must still exist and be the real thing
-            if not file_exists(root, current):
+            current_path = root / current
+            if not current_path.exists():
                 report.add(
                     Severity.CRITICAL, "SOURCE_MISSING", current,
                     f"Original source file missing — was it moved before Phase 2?",
                     f"Phase 1 must not move files. Check if git mv was run prematurely."
                 )
-            elif is_shim_file(root, current):
+            elif is_shim_file(current_path):
                 report.add(
                     Severity.WARNING, "SOURCE_IS_SHIM", current,
                     f"Original source path contains a shim header — may be a Phase 2 artifact.",
@@ -230,13 +201,14 @@ def check_phase_p1(root: Path, manifest: dict, report: DiffReport) -> None:
                 )
 
         elif action == "KEEP":
-            if not file_exists(root, current):
+            current_path = root / current
+            if not current_path.exists():
                 report.add(
                     Severity.CRITICAL, "KEEP_FILE_MISSING", current,
                     f"KEEP entry does not exist on disk.",
                     f"Verify the path in the manifest is correct."
                 )
-            elif is_shim_file(root, current):
+            elif is_shim_file(current_path):
                 report.add(
                     Severity.WARNING, "KEEP_FILE_IS_SHIM", current,
                     f"KEEP file contains a shim header — should be a real source file.",
@@ -261,19 +233,20 @@ def check_phase_p2(root: Path, manifest: dict, report: DiffReport) -> None:
 
         if action == "MOVE":
             # Target must exist and be a real file (not a shim)
-            if not file_exists(root, target):
+            target_path = root / target
+            if not target_path.exists():
                 report.add(
                     Severity.CRITICAL, "TARGET_MISSING", target,
                     f"Target file does not exist after Phase 2 — was git mv run?",
                     f"Run: python3 refactor_migrate.py --project-root <root> --module <name>"
                 )
-            elif is_forward_shim(root, target):
+            elif is_forward_shim(target_path):
                 report.add(
                     Severity.CRITICAL, "TARGET_STILL_SHIM", target,
                     f"Target path still contains a Phase 1 forward shim — real file not yet moved here.",
                     f"Run git mv for this module: refactor_migrate.py --module <name>"
                 )
-            elif is_reverse_shim(root, target):
+            elif is_reverse_shim(target_path):
                 report.add(
                     Severity.CRITICAL, "TARGET_IS_REVERSE_SHIM", target,
                     f"Target path contains a reverse shim — migration appears inverted.",
@@ -281,13 +254,14 @@ def check_phase_p2(root: Path, manifest: dict, report: DiffReport) -> None:
                 )
 
             # Old path must exist as a reverse shim
-            if not file_exists(root, current):
+            current_path = root / current
+            if not current_path.exists():
                 report.add(
                     Severity.CRITICAL, "REVERSE_SHIM_MISSING", current,
                     f"Old path does not exist — reverse shim was never written.",
                     f"Write a reverse shim at '{current}' pointing to '{target}'."
                 )
-            elif not is_reverse_shim(root, current):
+            elif not is_reverse_shim(current_path):
                 report.add(
                     Severity.WARNING, "REVERSE_SHIM_HEADER_MISSING", current,
                     f"Old path exists but lacks the '⚠️ REVERSE SHIM' header.",
@@ -295,7 +269,7 @@ def check_phase_p2(root: Path, manifest: dict, report: DiffReport) -> None:
                 )
             else:
                 # Reverse shim must point to the target
-                pointed_to = shim_points_to(root, current)
+                pointed_to = shim_points_to(current_path)
                 if pointed_to and pointed_to != target:
                     report.add(
                         Severity.CRITICAL, "REVERSE_SHIM_WRONG_TARGET", current,
@@ -304,7 +278,8 @@ def check_phase_p2(root: Path, manifest: dict, report: DiffReport) -> None:
                     )
 
         elif action == "KEEP":
-            if not file_exists(root, current):
+            current_path = root / current
+            if not current_path.exists():
                 report.add(
                     Severity.CRITICAL, "KEEP_FILE_MISSING", current,
                     f"KEEP file is missing from disk.",
@@ -338,9 +313,10 @@ def check_phase_p3(root: Path, manifest: dict, report: DiffReport) -> None:
         target = entry.get("target", "")
         surgery_complete = entry.get("surgery_complete", False)
 
-        if surgery_complete and file_exists(root, target) and not is_shim_file(root, target):
+        target_path = root / target
+        if surgery_complete and target_path.exists() and not is_shim_file(target_path):
             # Verify the target file doesn't import from any path that is now a shim
-            content = read_file_safe(root / target)
+            content = read_file_safe(target_path)
             # Check if this file imports from any old (current) path
             for other in move_entries:
                 other_current = other.get("current", "")
@@ -419,13 +395,15 @@ def check_phase_p4(root: Path, manifest: dict, report: DiffReport, pre_merge: bo
         if entry.get("action") == "MOVE":
             target = entry.get("target", "")
             current = entry.get("current", "")
-            if not file_exists(root, target):
+            target_path = root / target
+            current_path = root / current
+            if not target_path.exists():
                 report.add(
                     Severity.CRITICAL, "TARGET_MISSING_AT_P4", target,
                     f"MOVE target is missing at Phase 4 — file was never successfully migrated.",
                     f"Investigate: git log --all -- {target}"
                 )
-            if file_exists(root, current):
+            if current_path.exists():
                 # Should not exist after clean (was a reverse shim, removed)
                 report.add(
                     Severity.WARNING, "OLD_PATH_STILL_EXISTS", current,
@@ -436,7 +414,8 @@ def check_phase_p4(root: Path, manifest: dict, report: DiffReport, pre_merge: bo
     if pre_merge:
         # Refactor artifacts should be gone
         for artifact in ["IMPORT_GRAPH.txt", "REFACTOR_MANIFEST.yaml"]:
-            if file_exists(root, artifact):
+            artifact_path = root / artifact
+            if artifact_path.exists():
                 report.add(
                     Severity.WARNING, "ARTIFACT_NOT_CLEANED", artifact,
                     f"Refactor artifact '{artifact}' still exists — remove before merging.",
@@ -446,7 +425,7 @@ def check_phase_p4(root: Path, manifest: dict, report: DiffReport, pre_merge: bo
         # Check for any unexpected source files not in manifest
         unexpected = find_unexpected_files(root, manifest.get("language", "python"), manifest)
         for uf in unexpected:
-            if not is_shim_file(root, uf):
+            if not is_shim_file(root / uf):
                 report.add(
                     Severity.WARNING, "UNEXPECTED_FILE", uf,
                     f"Source file exists on disk but is not referenced in the manifest.",

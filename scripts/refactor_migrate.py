@@ -43,23 +43,41 @@ except ImportError:
 # Core migration logic
 # ---------------------------------------------------------------------------
 
+import os
+from core.filesystem import is_shim_file
+
+def _is_path_in_root(root: Path, path: Path) -> bool:
+    """
+    SECURITY: Return True if 'path' is a descendant of 'root'.
+    Prevents workspace escape via malicious paths.
+    """
+    try:
+        root_res = root.resolve()
+        path_res = path.resolve()
+        return os.path.commonpath([root_res]) == os.path.commonpath([root_res, path_res])
+    except (ValueError, OSError):
+        return False
+
 def git_mv(root: Path, current: str, target: str, dry_run: bool) -> bool:
     """
     Execute git mv. Returns True on success.
     This is the ONLY acceptable move mechanism — preserves full git history.
     """
-    old_abs = root / current
-    new_abs = root / target
+    old_abs = (root / current).resolve()
+    new_abs = (root / target).resolve()
+
+    # SECURITY: Absolute boundary check
+    if not _is_path_in_root(root, old_abs) or not _is_path_in_root(root, new_abs):
+        out("❌", "SECURITY ALERT: Path is outside project root.")
+        return False
 
     if not old_abs.exists():
         out("❌", f"Source file does not exist: {old_abs}")
-        out("❌", "Cannot git mv a file that doesn't exist.")
         return False
 
     if new_abs.exists():
-        # Check if it's a shim (created by bridge.py in Phase 1)
-        content = new_abs.read_text(encoding="utf-8", errors="replace")
-        if "⚠️ SHIM FILE" in content:
+        # SECURITY: Verify it is a shim before removal
+        if is_shim_file(new_abs):
             out("⚠️ ", f"Target is a Phase 1 shim — removing it before git mv: {new_abs.relative_to(root)}")
             if not dry_run:
                 r = run_cmd(["git", "rm", "-f", str(new_abs.relative_to(root))], root)
@@ -92,7 +110,13 @@ def git_mv(root: Path, current: str, target: str, dry_run: bool) -> bool:
 
 def write_reverse_shim(root: Path, current: str, target: str, language: str, dry_run: bool) -> bool:
     """Write the reverse shim at the old (current) path."""
-    old_path = root / current
+    old_path = (root / current).resolve()
+    
+    # SECURITY: Absolute boundary check
+    if not _is_path_in_root(root, old_path):
+        out("❌", f"SECURITY ALERT: Reverse shim path is outside project root: {current}")
+        return False
+
     content = make_reverse_shim(language, current, target)
 
     what = f"{'[DRY RUN] ' if dry_run else ''}reverse shim → {current}"
@@ -102,12 +126,22 @@ def write_reverse_shim(root: Path, current: str, target: str, language: str, dry
     if dry_run:
         return True
 
-    old_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(old_path, "w", encoding="utf-8") as f:
-        f.write(content)
+    try:
+        old_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # SECURITY: Refuse to overwrite if it's not a newly 'git mv'-ed empty spot
+        if old_path.exists() and not is_shim_file(old_path):
+             out("⚠️ ", f"Old path still contains data (not a shim) — skipping reverse shim: {current}")
+             return True # Not a fatal failure, but we don't overwrite
 
-    out("✅", f"Reverse shim written: {current}")
-    return True
+        with open(old_path, "w", encoding="utf-8") as f:
+            f.write(content)
+
+        out("✅", f"Reverse shim written: {current}")
+        return True
+    except (OSError, PermissionError) as e:
+        out("❌", f"Failed to write reverse shim: {e}")
+        return False
 
 
 def migrate_entry(root: Path, entry: dict, language: str, gate_cmd: str,
@@ -176,6 +210,10 @@ def main() -> None:
 
     if not root.exists():
         fail(f"Project root does not exist: {root}")
+
+    # SECURITY: Ensure we are in a git repository
+    if not (root / ".git").exists():
+        fail(f"Project root is not a git repository: {root}")
 
     out("🏗️ ", "Sovereign Refactor Protocol — Phase 2: Physical Migration")
     out("📁", f"Project root: {root}")
