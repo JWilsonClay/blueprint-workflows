@@ -19,11 +19,14 @@ Requirements: Python 3.8+, PyYAML (pip install pyyaml), git in PATH.
 
 import argparse
 import datetime
-import os
-import subprocess
 import sys
 import time
 from pathlib import Path
+
+from core.console import out, fail, section_header
+from core.manifest import MANIFEST_FILENAME
+from core.filesystem import walk_project, is_shim_file, get_source_extensions
+from core.git_ops import run_cmd, check_git_status
 
 try:
     import yaml
@@ -34,65 +37,12 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-MANIFEST_FILENAME = "REFACTOR_MANIFEST.yaml"
 IMPORT_GRAPH_FILENAME = "IMPORT_GRAPH.txt"
-SHIM_HEADER_MARKERS = ["⚠️ SHIM FILE", "⚠️ REVERSE SHIM"]
-
-SKIP_DIRS = {
-    "__pycache__", ".git", ".mypy_cache", ".pytest_cache", ".tox",
-    ".venv", "venv", "env", "node_modules", "dist", "build",
-    ".next", ".nuxt", "coverage", ".coverage", "htmlcov",
-}
-
-PYTHON_EXTENSIONS = {".py"}
-JS_EXTENSIONS = {".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs"}
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def out(emoji: str, msg: str) -> None:
-    print(f"{emoji}  {msg}", flush=True)
-
-
-def fail(msg: str) -> None:
-    out("❌", f"FATAL: {msg}")
-    sys.exit(1)
-
-
-def run(cmd: list, cwd: Path) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True)
-
-
-def is_shim(path: Path) -> bool:
-    try:
-        content = path.read_text(encoding="utf-8", errors="replace")
-        return any(m in content for m in SHIM_HEADER_MARKERS)
-    except (OSError, PermissionError):
-        return False
-
-
-def should_skip_dir(name: str) -> bool:
-    return name in SKIP_DIRS or name.endswith(".egg-info") or name.endswith(".dist-info")
 
 
 # ---------------------------------------------------------------------------
 # Step 1: Pre-flight
 # ---------------------------------------------------------------------------
-
-def check_git_status(root: Path) -> None:
-    out("🔍", "Checking git working tree status…")
-    r = run(["git", "status", "--porcelain"], root)
-    if r.returncode != 0:
-        out("⚠️ ", "Cannot run `git status` — not a git repo? Continuing (read-only).")
-        return
-    if r.stdout.strip():
-        out("⚠️ ", "Uncommitted changes detected. Phase 0 recommends a clean tree.")
-        out("⚠️ ", "Proceeding with read-only scout enumeration.")
-    else:
-        out("✅", "Git working tree is clean.")
-
 
 def check_no_existing_manifest(root: Path) -> None:
     manifest = root / MANIFEST_FILENAME
@@ -111,13 +61,12 @@ def check_no_existing_manifest(root: Path) -> None:
 # ---------------------------------------------------------------------------
 
 def enumerate_files(root: Path, language: str) -> list:
-    exts = PYTHON_EXTENSIONS if language == "python" else JS_EXTENSIONS
+    exts = get_source_extensions(language)
     found = []
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if not should_skip_dir(d)]
+    for dirpath, dirnames, filenames in walk_project(root):
         for fn in filenames:
             fp = Path(dirpath) / fn
-            if fp.suffix in exts and not is_shim(fp):
+            if fp.suffix in exts and not is_shim_file(fp):
                 found.append(fp.relative_to(root))
     return sorted(found)
 
@@ -141,7 +90,7 @@ def generate_import_graph(root: Path, language: str) -> None:
 
     lines = set()
     for pat in patterns:
-        r = run(["grep", "-rn", pat] + includes + ["."], root)
+        r = run_cmd(["grep", "-rn", pat] + includes + ["."], root)
         for line in r.stdout.splitlines():
             if exclude not in line:
                 lines.add(line)
@@ -237,10 +186,7 @@ def build_and_write_manifest(root: Path, language: str, files: list) -> None:
 # ---------------------------------------------------------------------------
 
 def print_summary(root: Path, files: list, language: str) -> None:
-    print()
-    print("═" * 65)
-    print("  🏗️   REFACTOR SCOUT — Phase 0 Complete")
-    print("═" * 65)
+    section_header("REFACTOR SCOUT — Phase 0 Complete")
     print(f"  Project root : {root}")
     print(f"  Language     : {language}")
     print(f"  Files found  : {len(files)}")

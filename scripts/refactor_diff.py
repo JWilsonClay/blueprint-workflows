@@ -33,12 +33,15 @@ Requirements: Python 3.8+, PyYAML (pip install pyyaml).
 """
 
 import argparse
-import os
 import sys
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Optional
+
+from core.console import out, fail, section_header
+from core.manifest import load_manifest, get_language, MANIFEST_FILENAME
+from core.filesystem import walk_project, is_shim_file, get_source_extensions
 
 try:
     import yaml
@@ -46,14 +49,8 @@ except ImportError:
     print("❌  FATAL: PyYAML is required. Install with: pip install pyyaml")
     sys.exit(1)
 
-MANIFEST_FILENAME = "REFACTOR_MANIFEST.yaml"
 SHIM_FILE_MARKER = "⚠️ SHIM FILE"
 REVERSE_SHIM_MARKER = "⚠️ REVERSE SHIM"
-
-SKIP_DIRS = {
-    "__pycache__", ".git", ".mypy_cache", ".pytest_cache", ".tox",
-    ".venv", "venv", "env", "node_modules", "dist", "build",
-}
 
 
 # ---------------------------------------------------------------------------
@@ -106,26 +103,6 @@ class DiffReport:
 # Helpers
 # ---------------------------------------------------------------------------
 
-def out(emoji: str, msg: str) -> None:
-    print(f"{emoji}  {msg}", flush=True)
-
-
-def fail(msg: str) -> None:
-    out("❌", f"FATAL: {msg}")
-    sys.exit(1)
-
-
-def load_manifest(root: Path) -> dict:
-    mp = root / MANIFEST_FILENAME
-    if not mp.exists():
-        fail(f"{MANIFEST_FILENAME} not found at {root}. Run refactor_scout.py (Phase 0) first.")
-    with open(mp, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-    if not data or "files" not in data:
-        fail(f"{MANIFEST_FILENAME} is empty or missing the 'files' key.")
-    return data
-
-
 def file_exists(root: Path, rel_path: str) -> bool:
     return (root / rel_path).exists()
 
@@ -135,11 +112,6 @@ def read_file_safe(path: Path) -> str:
         return path.read_text(encoding="utf-8", errors="replace")
     except (OSError, PermissionError):
         return ""
-
-
-def is_shim_file(root: Path, rel_path: str) -> bool:
-    content = read_file_safe(root / rel_path)
-    return SHIM_FILE_MARKER in content or REVERSE_SHIM_MARKER in content
 
 
 def is_forward_shim(root: Path, rel_path: str) -> bool:
@@ -165,23 +137,15 @@ def shim_points_to(root: Path, rel_path: str) -> Optional[str]:
     return None
 
 
-def _walk_project(root: Path):
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS
-                       and not d.endswith(".egg-info")]
-        yield dirpath, dirnames, filenames
-
-
 def find_all_shims(root: Path) -> list:
     """Return all rel paths for files containing shim headers."""
     result = []
-    for dirpath, _, filenames in _walk_project(root):
+    for dirpath, _, filenames in walk_project(root):
         for fn in filenames:
             fp = Path(dirpath) / fn
-            content = read_file_safe(fp)
-            if SHIM_FILE_MARKER in content or REVERSE_SHIM_MARKER in content:
+            if is_shim_file(fp):
                 result.append(str(fp.relative_to(root)))
-    return result
+    return sorted(result)
 
 
 def find_unexpected_files(root: Path, language: str, manifest: dict) -> list:
@@ -189,10 +153,7 @@ def find_unexpected_files(root: Path, language: str, manifest: dict) -> list:
     Find source files that exist on disk but are not referenced anywhere
     in the manifest (neither as current: nor target:).
     """
-    if language == "python":
-        exts = {".py"}
-    else:
-        exts = {".js", ".ts", ".jsx", ".tsx", ".mjs"}
+    exts = get_source_extensions(language)
 
     known_paths = set()
     for e in manifest.get("files", []):
@@ -200,7 +161,7 @@ def find_unexpected_files(root: Path, language: str, manifest: dict) -> list:
         known_paths.add(e.get("target", ""))
 
     unexpected = []
-    for dirpath, _, filenames in _walk_project(root):
+    for dirpath, _, filenames in walk_project(root):
         for fn in filenames:
             fp = Path(dirpath) / fn
             if fp.suffix not in exts:
@@ -505,10 +466,7 @@ def print_spec_summary(root: Path, manifest: dict) -> None:
         a = e.get("action", "TBD")
         by_action.setdefault(a, []).append(e)
 
-    print()
-    print("═" * 70)
-    print(f"  📋  MANIFEST SPEC SUMMARY — {manifest.get('project_name', root.name)}")
-    print("═" * 70)
+    section_header(f"MANIFEST SPEC SUMMARY — {manifest.get('project_name', root.name)}")
     print(f"  Language         : {manifest.get('language', '?')}")
     print(f"  Verification gate: {manifest.get('verification_gate', '(not set)')}")
     print(f"  Total entries    : {len(files)}")
@@ -547,11 +505,8 @@ def print_spec_summary(root: Path, manifest: dict) -> None:
 
 def print_report(report: DiffReport) -> None:
     total = len(report.deviations)
-    print()
-    print("═" * 70)
-    print(f"  🔍  DIFF REVIEW NODE — Phase {report.phase.upper()} Report")
+    section_header(f"DIFF REVIEW NODE — Phase {report.phase.upper()} Report")
     print(f"       Project: {report.project_root}")
-    print("═" * 70)
     print(f"  Total findings  : {total}")
     print(f"  🔴 CRITICAL     : {len(report.criticals)}")
     print(f"  🟡 WARNING      : {len(report.warnings)}")

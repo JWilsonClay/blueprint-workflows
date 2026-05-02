@@ -24,77 +24,20 @@ Requirements: Python 3.8+, PyYAML (pip install pyyaml), git in PATH.
 """
 
 import argparse
-import os
-import subprocess
 import sys
 from pathlib import Path
+
+from core.console import out, fail, section_header
+from core.manifest import load_manifest, get_language, get_verification_gate
+from core.filesystem import walk_project, is_shim_file, get_source_extensions
+from core.git_ops import run_cmd, run_gate
+from core.import_patterns import path_to_import_patterns
 
 try:
     import yaml
 except ImportError:
     print("❌  FATAL: PyYAML is required. Install with: pip install pyyaml")
     sys.exit(1)
-
-MANIFEST_FILENAME = "REFACTOR_MANIFEST.yaml"
-SHIM_HEADER_MARKERS = ["⚠️ SHIM FILE", "⚠️ REVERSE SHIM"]
-
-SKIP_DIRS = {
-    "__pycache__", ".git", ".mypy_cache", ".pytest_cache", ".tox",
-    ".venv", "venv", "env", "node_modules", "dist", "build",
-}
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def out(emoji: str, msg: str) -> None:
-    print(f"{emoji}  {msg}", flush=True)
-
-
-def fail(msg: str) -> None:
-    out("❌", f"FATAL: {msg}")
-    sys.exit(1)
-
-
-def run_cmd(cmd: list, cwd: Path) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True)
-
-
-def run_gate(gate_cmd: str, root: Path) -> bool:
-    out("🔬", f"Running verification gate: {gate_cmd}")
-    result = subprocess.run(gate_cmd, shell=True, cwd=str(root))
-    if result.returncode == 0:
-        out("✅", "Verification gate PASSED.")
-        return True
-    out("❌", f"Verification gate FAILED (exit code {result.returncode}).")
-    return False
-
-
-def load_manifest(root: Path) -> dict:
-    mp = root / MANIFEST_FILENAME
-    if not mp.exists():
-        # Manifest may have been cleaned already — that's okay in Phase 4
-        out("⚠️ ", f"{MANIFEST_FILENAME} not found — proceeding by scanning for shim headers only.")
-        return {}
-    with open(mp, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f) or {}
-
-
-def is_shim_file(path: Path) -> bool:
-    try:
-        content = path.read_text(encoding="utf-8", errors="replace")
-        return any(m in content for m in SHIM_HEADER_MARKERS)
-    except (OSError, PermissionError):
-        return False
-
-
-def _walk_project(root: Path):
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS
-                       and not d.endswith(".egg-info")]
-        yield dirpath, dirnames, filenames
-
 
 # ---------------------------------------------------------------------------
 # Step 1: Find all shim files
@@ -103,7 +46,7 @@ def _walk_project(root: Path):
 def find_all_shims(root: Path) -> list:
     """Return sorted list of Path objects for every shim file in the project."""
     shims = []
-    for dirpath, dirnames, filenames in _walk_project(root):
+    for dirpath, dirnames, filenames in walk_project(root):
         for fn in filenames:
             fp = Path(dirpath) / fn
             if is_shim_file(fp):
@@ -115,29 +58,6 @@ def find_all_shims(root: Path) -> list:
 # Step 2: Check if a shim is still being imported
 # ---------------------------------------------------------------------------
 
-def path_to_import_patterns(rel_path: str, language: str) -> list:
-    """Convert a shim's relative path to import patterns that would detect usage."""
-    p = Path(rel_path)
-    patterns = []
-
-    if language == "python":
-        module = str(p.with_suffix("")).replace("/", ".").replace("\\", ".")
-        parts = module.split(".")
-        for i in range(len(parts)):
-            partial = ".".join(parts[:i + 1])
-            patterns.append(f"from {partial}")
-            patterns.append(f"import {partial}")
-    else:
-        path_no_ext = str(p.with_suffix("")).replace("\\", "/")
-        path_with_ext = str(p).replace("\\", "/")
-        for fmt in [f"'{path_no_ext}'", f'"{path_no_ext}"',
-                    f"'{path_with_ext}'", f'"{path_with_ext}"']:
-            patterns.append(f"from {fmt}")
-            patterns.append(f"require({fmt})")
-
-    return list(set(patterns))
-
-
 def find_importers(root: Path, shim_path: Path, language: str) -> list:
     """
     Scan the project for any non-shim file that imports from the shim's path.
@@ -146,14 +66,10 @@ def find_importers(root: Path, shim_path: Path, language: str) -> list:
     rel_shim = shim_path.relative_to(root)
     patterns = path_to_import_patterns(str(rel_shim), language)
 
-    if language == "python":
-        include_ext = {".py"}
-    else:
-        include_ext = {".js", ".ts", ".jsx", ".tsx", ".mjs"}
-
+    include_ext = get_source_extensions(language)
     importers = []
 
-    for dirpath, dirnames, filenames in _walk_project(root):
+    for dirpath, dirnames, filenames in walk_project(root):
         for fn in filenames:
             fp = Path(dirpath) / fn
             if fp.suffix not in include_ext:
@@ -281,12 +197,11 @@ def main() -> None:
         out("🔍", "DRY RUN mode — no files will be removed.")
 
     manifest = load_manifest(root)
-    language = manifest.get("language", "python")
-    gate_cmd = manifest.get("verification_gate", "")
+    language = get_language(manifest)
+    gate_cmd = get_verification_gate(manifest)
 
-    if not gate_cmd or gate_cmd.startswith("#"):
+    if not gate_cmd:
         out("⚠️ ", "verification_gate not set — gate will be SKIPPED after each removal.")
-        gate_cmd = ""
 
     # Find shims to process
     if args.shim:
@@ -337,10 +252,7 @@ def main() -> None:
         final_ok = True
 
     # Report
-    print()
-    print("═" * 65)
-    print("  🏗️   REFACTOR CLEAN — Phase 4 Report")
-    print("═" * 65)
+    section_header("REFACTOR CLEAN — Phase 4 Report")
     print(f"  ✅ Shims removed  : {removed}")
     print(f"  🚫 Shims blocked  : {blocked}  (still have dependents)")
     if args.dry_run:

@@ -28,86 +28,21 @@ Requirements: Python 3.8+, PyYAML (pip install pyyaml).
 """
 
 import argparse
-import re
-import subprocess
 import sys
 from pathlib import Path
 from collections import defaultdict
+
+from core.console import out, fail, section_header, section_rule
+from core.manifest import load_manifest, get_language, get_verification_gate
+from core.filesystem import walk_project, is_shim_file, get_source_extensions
+from core.git_ops import run_gate
+from core.import_patterns import path_to_import_patterns
 
 try:
     import yaml
 except ImportError:
     print("❌  FATAL: PyYAML is required. Install with: pip install pyyaml")
     sys.exit(1)
-
-MANIFEST_FILENAME = "REFACTOR_MANIFEST.yaml"
-SHIM_HEADER_MARKERS = ["⚠️ SHIM FILE", "⚠️ REVERSE SHIM"]
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def out(emoji: str, msg: str) -> None:
-    print(f"{emoji}  {msg}", flush=True)
-
-
-def fail(msg: str) -> None:
-    out("❌", f"FATAL: {msg}")
-    sys.exit(1)
-
-
-def load_manifest(root: Path) -> dict:
-    mp = root / MANIFEST_FILENAME
-    if not mp.exists():
-        fail(f"{MANIFEST_FILENAME} not found. Run refactor_scout.py (Phase 0) first.")
-    with open(mp, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-    if not data or "files" not in data:
-        fail(f"{MANIFEST_FILENAME} is empty or missing the 'files' key.")
-    return data
-
-
-def is_shim_file(path: Path) -> bool:
-    try:
-        content = path.read_text(encoding="utf-8", errors="replace")
-        return any(m in content for m in SHIM_HEADER_MARKERS)
-    except (OSError, PermissionError):
-        return False
-
-
-def path_to_import_patterns(rel_path: str, language: str) -> list:
-    """
-    Convert a file's relative path to the grep patterns that would detect
-    imports of that path in source code.
-
-    For Python: 'foo/bar/baz.py' → patterns for 'from foo.bar.baz' and 'import foo.bar.baz'
-    For JS/TS: 'foo/bar/baz.ts' → patterns for "from 'foo/bar/baz'" and "require('foo/bar/baz')"
-    """
-    p = Path(rel_path)
-    patterns = []
-
-    if language == "python":
-        # Dotted module notation
-        module_dotted = str(p.with_suffix("")).replace("/", ".").replace("\\", ".")
-        # Also match partial paths (e.g., 'from foo.bar import baz')
-        parts = module_dotted.split(".")
-        for i in range(len(parts)):
-            partial = ".".join(parts[:i + 1])
-            patterns.append(f"from {partial}")
-            patterns.append(f"import {partial}")
-    else:
-        # JS path (with and without extension)
-        path_no_ext = str(p.with_suffix("")).replace("\\", "/")
-        path_with_ext = str(p).replace("\\", "/")
-        patterns.append(f"from '{path_no_ext}'")
-        patterns.append(f'from "{path_no_ext}"')
-        patterns.append(f"from '{path_with_ext}'")
-        patterns.append(f'from "{path_with_ext}"')
-        patterns.append(f"require('{path_no_ext}')")
-        patterns.append(f'require("{path_no_ext}")')
-
-    return list(set(patterns))
 
 
 # ---------------------------------------------------------------------------
@@ -136,15 +71,12 @@ def find_stale_imports(root: Path, manifest: dict) -> dict:
         return {}
 
     # Walk the project and scan each source file
-    if language == "python":
-        include_ext = {".py"}
-    else:
-        include_ext = {".js", ".ts", ".jsx", ".tsx", ".mjs"}
+    include_ext = get_source_extensions(language)
 
     # Map: source_file_rel → list of stale import findings
     findings: dict = defaultdict(list)
 
-    for dirpath, dirnames, filenames in _walk_project(root):
+    for dirpath, dirnames, filenames in walk_project(root):
         for fn in filenames:
             fp = Path(dirpath) / fn
             if fp.suffix not in include_ext:
@@ -175,19 +107,6 @@ def find_stale_imports(root: Path, manifest: dict) -> dict:
     return dict(findings)
 
 
-SKIP_DIRS = {
-    "__pycache__", ".git", ".mypy_cache", ".pytest_cache", ".tox",
-    ".venv", "venv", "env", "node_modules", "dist", "build",
-}
-
-
-def _walk_project(root: Path):
-    """Walk project tree, skipping irrelevant directories."""
-    import os
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS
-                       and not d.endswith(".egg-info")]
-        yield dirpath, dirnames, filenames
 
 
 # ---------------------------------------------------------------------------
@@ -204,10 +123,7 @@ def run_scan(root: Path, manifest: dict) -> int:
     findings = find_stale_imports(root, manifest)
 
     if not findings:
-        print()
-        print("═" * 65)
-        print("  ✅  SCAN COMPLETE — Zero stale imports found!")
-        print("═" * 65)
+        section_header("SCAN COMPLETE — Zero stale imports found!")
         print("  All source files already import from the new (target) paths.")
         print("  Phase 3 reference surgery is complete.")
         print("  Proceed to: python3 refactor_clean.py --project-root <root>")
@@ -217,10 +133,7 @@ def run_scan(root: Path, manifest: dict) -> int:
 
     total_stale = sum(len(v) for v in findings.values())
 
-    print()
-    print("═" * 65)
-    print(f"  🔬  SURGERY QUEUE — {total_stale} stale import(s) in {len(findings)} file(s)")
-    print("═" * 65)
+    section_header(f"SURGERY QUEUE — {total_stale} stale import(s) in {len(findings)} file(s)")
     print()
     print("  The following files contain imports from OLD paths (moved in Phase 2).")
     print("  Each file must be surgically updated before Phase 4 can begin.")
@@ -228,7 +141,7 @@ def run_scan(root: Path, manifest: dict) -> int:
 
     for file_rel, stale_list in sorted(findings.items()):
         print(f"  📄 {file_rel}  ({len(stale_list)} stale import(s))")
-        print(f"  {'─' * 60}")
+        section_rule()
         for item in stale_list:
             print(f"    Line {item['line_num']:4d} │ {item['line_content']}")
             print(f"           ├─ OLD: {item['old_path']}")
@@ -263,10 +176,7 @@ def run_verify(root: Path, manifest: dict, gate_cmd: str) -> int:
     findings = find_stale_imports(root, manifest)
 
     if not findings:
-        print()
-        print("═" * 65)
-        print("  ✅  VERIFY PASSED — Zero stale imports remain!")
-        print("═" * 65)
+        section_header("VERIFY PASSED — Zero stale imports remain!")
         print("  All source files import directly from new (target) paths.")
 
         if gate_cmd and not gate_cmd.startswith("#"):
@@ -294,10 +204,7 @@ def run_verify(root: Path, manifest: dict, gate_cmd: str) -> int:
 
     # Still stale imports found
     total = sum(len(v) for v in findings.values())
-    print()
-    print("═" * 65)
-    print(f"  ❌  VERIFY FAILED — {total} stale import(s) still found in {len(findings)} file(s)")
-    print("═" * 65)
+    section_header(f"VERIFY FAILED — {total} stale import(s) still found in {len(findings)} file(s)")
     print()
     for file_rel, stale_list in sorted(findings.items()):
         print(f"  📄 {file_rel}")
@@ -345,7 +252,7 @@ def main() -> None:
     out("📁", f"Project root: {root}")
 
     manifest = load_manifest(root)
-    gate_cmd = manifest.get("verification_gate", "")
+    gate_cmd = get_verification_gate(manifest)
 
     if args.scan:
         result = run_scan(root, manifest)

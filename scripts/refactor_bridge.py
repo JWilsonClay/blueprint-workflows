@@ -22,9 +22,14 @@ Requirements: Python 3.8+, PyYAML (pip install pyyaml).
 """
 
 import argparse
-import subprocess
 import sys
+import os
 from pathlib import Path
+
+from core.console import out, fail, section_header
+from core.manifest import load_manifest, get_language, get_verification_gate
+from core.git_ops import run_gate
+from core.shim_templates import make_shim
 
 try:
     import yaml
@@ -32,98 +37,10 @@ except ImportError:
     print("❌  FATAL: PyYAML is required. Install with: pip install pyyaml")
     sys.exit(1)
 
-MANIFEST_FILENAME = "REFACTOR_MANIFEST.yaml"
-SHIM_HEADER = "⚠️ SHIM FILE"
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def out(emoji: str, msg: str) -> None:
-    print(f"{emoji}  {msg}", flush=True)
-
-
-def fail(msg: str) -> None:
-    out("❌", f"FATAL: {msg}")
-    sys.exit(1)
-
-
-def run_gate(gate_cmd: str, root: Path) -> bool:
-    """Run the verification gate command. Returns True if exit code is 0."""
-    out("🔬", f"Running verification gate: {gate_cmd}")
-    result = subprocess.run(gate_cmd, shell=True, cwd=str(root))
-    if result.returncode == 0:
-        out("✅", "Verification gate PASSED.")
-        return True
-    else:
-        out("❌", f"Verification gate FAILED (exit code {result.returncode}).")
-        return False
-
-
-def load_manifest(root: Path) -> dict:
-    manifest_path = root / MANIFEST_FILENAME
-    if not manifest_path.exists():
-        fail(
-            f"{MANIFEST_FILENAME} not found at {root}. "
-            "Run refactor_scout.py (Phase 0) first."
-        )
-    with open(manifest_path, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-    if not data or "files" not in data:
-        fail(f"{MANIFEST_FILENAME} is empty or missing the 'files' key.")
-    return data
-
-
-def path_to_module(rel_path: str, language: str) -> str:
-    """Convert a relative file path to a dotted module identifier (Python) or relative import path (JS)."""
-    p = Path(rel_path)
-    if language == "python":
-        # Strip .py extension, replace / with .
-        without_ext = p.with_suffix("")
-        return str(without_ext).replace(os.sep, ".").replace("/", ".")
-    else:
-        # JS/TS: strip extension, use relative path with leading ./
-        without_ext = p.with_suffix("")
-        return "./" + str(without_ext).replace("\\", "/")
-
-
-# ---------------------------------------------------------------------------
-# Shim templates
-# ---------------------------------------------------------------------------
-
-def python_shim(current_path: str) -> str:
-    p = Path(current_path)
-    module = str(p.with_suffix("")).replace("/", ".").replace("\\", ".")
-    return (
-        f"# {SHIM_HEADER} — Phase 1 of Sovereign Refactor Protocol\n"
-        f"# This file is a temporary compatibility bridge. DO NOT REMOVE until Phase 4.\n"
-        f"# Logic currently lives at: {current_path}\n"
-        f"# This shim will be replaced by the real file in Phase 2 (git mv).\n"
-        f"from {module} import *  # noqa: F401, F403\n"
-    )
-
-
-def js_shim(current_path: str) -> str:
-    p = Path(current_path)
-    # Strip extension for the import path
-    without_ext = str(p.with_suffix("")).replace("\\", "/")
-    # Make it a relative import from the project root perspective
-    rel_import = "/" + without_ext  # absolute project-root-relative import
-    return (
-        f"// {SHIM_HEADER} — Phase 1 of Sovereign Refactor Protocol\n"
-        f"// DO NOT REMOVE until Phase 4.\n"
-        f"// Logic currently lives at: {current_path}\n"
-        f"// This shim will be replaced by the real file in Phase 2 (git mv).\n"
-        f"export * from '{rel_import}';\n"
-    )
-
 
 def write_shim(target_path: Path, current_path: str, language: str, dry_run: bool) -> None:
     """Write a shim file at target_path, pointing back to current_path."""
-    if language == "python":
-        content = python_shim(current_path)
-    else:
-        content = js_shim(current_path)
+    content = make_shim(language, current_path, str(target_path))
 
     if dry_run:
         out("🔍", f"[DRY RUN] Would write shim → {target_path}")
@@ -131,14 +48,6 @@ def write_shim(target_path: Path, current_path: str, language: str, dry_run: boo
         return
 
     target_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Create __init__.py files for new Python packages
-    if language == "python":
-        for parent in target_path.parents:
-            init = parent / "__init__.py"
-            if not init.exists() and parent != target_path.parent.parent:
-                # Only create __init__.py if this looks like it's inside the project
-                break
 
     if target_path.exists():
         out("⚠️ ", f"Shim target already exists — skipping: {target_path}")
@@ -150,9 +59,10 @@ def write_shim(target_path: Path, current_path: str, language: str, dry_run: boo
 
 
 def ensure_python_init_files(root: Path, target_path: Path) -> None:
-    """Ensure all parent directories of a Python target have __init__.py."""
+    """Ensure all parent directories of a Python target exist and have __init__.py."""
     candidate = target_path.parent
     while candidate != root and candidate != candidate.parent:
+        candidate.mkdir(parents=True, exist_ok=True)
         init = candidate / "__init__.py"
         if not init.exists():
             init.touch()
@@ -163,8 +73,6 @@ def ensure_python_init_files(root: Path, target_path: Path) -> None:
 # ---------------------------------------------------------------------------
 # Main logic
 # ---------------------------------------------------------------------------
-
-import os
 
 
 def main() -> None:
@@ -181,16 +89,15 @@ def main() -> None:
         out("🔍", "DRY RUN mode — no files will be written.")
 
     manifest = load_manifest(root)
-    language = manifest.get("language", "python")
-    gate_cmd = manifest.get("verification_gate", "")
+    language = get_language(manifest)
+    gate_cmd = get_verification_gate(manifest)
     files = manifest.get("files", [])
 
     out("📋", f"Manifest loaded: {len(files)} entries, language={language}")
 
-    if not gate_cmd or gate_cmd.startswith("#"):
+    if not gate_cmd:
         out("⚠️ ", "verification_gate is not set in the manifest.")
         out("⚠️ ", "Shims will be created but the gate will be SKIPPED.")
-        gate_cmd = None
 
     # Filter to MOVE and SPLIT entries only
     candidates = [e for e in files if e.get("action") in ("MOVE", "SPLIT")]
@@ -246,10 +153,7 @@ def main() -> None:
         results["success"] += 1
 
     # Final report
-    print()
-    print("═" * 65)
-    print("  🏗️   REFACTOR BRIDGE — Phase 1 Complete")
-    print("═" * 65)
+    section_header("REFACTOR BRIDGE — Phase 1 Complete")
     print(f"  ✅ Shims created  : {results['success']}")
     print(f"  ⏭️  Skipped        : {results['skipped']}")
     print(f"  ❌ Failed         : {results['failed']}")

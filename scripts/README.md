@@ -28,11 +28,31 @@ section below.
 
 ---
 
+## Architecture (SoC Hardening)
+
+As of **2026-05-02**, the script suite has been refactored for **Separation of Concerns (SoC)**. Business logic common to all scripts has been extracted into a centralized `core/` package to ensure absolute consistency and auditability.
+
+### The `core/` Library
+
+| Module | Responsibility |
+|:---|:---|
+| `core.console` | Standardized terminal output (`out`, `fail`), headers, and rules. |
+| `core.manifest` | Ground-truth manifest schema, loading, and field getters. |
+| `core.filesystem` | Deterministic project traversal (`walk_project`), shim detection, and extension maps. |
+| `core.git_ops` | Hardened subprocess execution, git movement, and verification gate orchestration. |
+| `core.import_patterns` | Centralized regex/string logic for generating Python and JS import patterns. |
+| `core.shim_templates` | Single source of truth for shim/reverse-shim content (handles relative import math). |
+
+This architecture ensures that if the logic for "what is a shim" or "how to generate a Python import" changes, it changes everywhere simultaneously, eliminating import regressions and logic drift.
+
+---
+
 ## Requirements
 
 - Python 3.8 or later
 - PyYAML: `pip install pyyaml`
 - `git` available in `PATH`
+- **SoC Structure**: The `core/` directory must be present alongside the scripts.
 - All scripts must be run from any directory; they accept `--project-root` pointing
   to the project being refactored (not the workflow directory itself).
 

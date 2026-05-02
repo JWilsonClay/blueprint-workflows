@@ -24,84 +24,19 @@ Requirements: Python 3.8+, PyYAML (pip install pyyaml), git in PATH.
 """
 
 import argparse
-import subprocess
 import sys
 from pathlib import Path
+
+from core.console import out, fail, section_header, section_rule
+from core.manifest import load_manifest, get_language, get_verification_gate
+from core.git_ops import run_cmd, run_gate
+from core.shim_templates import make_reverse_shim
 
 try:
     import yaml
 except ImportError:
     print("❌  FATAL: PyYAML is required. Install with: pip install pyyaml")
     sys.exit(1)
-
-MANIFEST_FILENAME = "REFACTOR_MANIFEST.yaml"
-REVERSE_SHIM_HEADER = "⚠️ REVERSE SHIM"
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def out(emoji: str, msg: str) -> None:
-    print(f"{emoji}  {msg}", flush=True)
-
-
-def fail(msg: str) -> None:
-    out("❌", f"FATAL: {msg}")
-    sys.exit(1)
-
-
-def run_cmd(cmd: list, cwd: Path) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True)
-
-
-def run_gate(gate_cmd: str, root: Path) -> bool:
-    out("🔬", f"Running verification gate: {gate_cmd}")
-    result = subprocess.run(gate_cmd, shell=True, cwd=str(root))
-    if result.returncode == 0:
-        out("✅", "Verification gate PASSED.")
-        return True
-    out("❌", f"Verification gate FAILED (exit code {result.returncode}).")
-    return False
-
-
-def load_manifest(root: Path) -> dict:
-    mp = root / MANIFEST_FILENAME
-    if not mp.exists():
-        fail(f"{MANIFEST_FILENAME} not found. Run refactor_scout.py (Phase 0) first.")
-    with open(mp, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-    if not data or "files" not in data:
-        fail(f"{MANIFEST_FILENAME} is empty or missing the 'files' key.")
-    return data
-
-
-# ---------------------------------------------------------------------------
-# Shim templates
-# ---------------------------------------------------------------------------
-
-def python_reverse_shim(new_path: str) -> str:
-    p = Path(new_path)
-    module = str(p.with_suffix("")).replace("/", ".").replace("\\", ".")
-    return (
-        f"# {REVERSE_SHIM_HEADER} — Phase 2 of Sovereign Refactor Protocol\n"
-        f"# DO NOT REMOVE until Phase 4 (all references have been surgically updated).\n"
-        f"# This file exists to preserve import compatibility during migration.\n"
-        f"# Logic has MOVED to: {new_path}\n"
-        f"from {module} import *  # noqa: F401, F403\n"
-    )
-
-
-def js_reverse_shim(new_path: str) -> str:
-    p = Path(new_path)
-    without_ext = str(p.with_suffix("")).replace("\\", "/")
-    rel_import = "/" + without_ext
-    return (
-        f"// {REVERSE_SHIM_HEADER} — Phase 2 of Sovereign Refactor Protocol\n"
-        f"// DO NOT REMOVE until Phase 4.\n"
-        f"// Logic has MOVED to: {new_path}\n"
-        f"export * from '{rel_import}';\n"
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -158,11 +93,7 @@ def git_mv(root: Path, current: str, target: str, dry_run: bool) -> bool:
 def write_reverse_shim(root: Path, current: str, target: str, language: str, dry_run: bool) -> bool:
     """Write the reverse shim at the old (current) path."""
     old_path = root / current
-
-    if language == "python":
-        content = python_reverse_shim(target)
-    else:
-        content = js_reverse_shim(target)
+    content = make_reverse_shim(language, current, target)
 
     what = f"{'[DRY RUN] ' if dry_run else ''}reverse shim → {current}"
     out("📄", f"Writing {what}")
@@ -192,8 +123,7 @@ def migrate_entry(root: Path, entry: dict, language: str, gate_cmd: str,
     target = entry["target"]
     action = entry.get("action", "MOVE")
 
-    print()
-    print(f"  ─── [{action}] {current} → {target} " + "─" * 20)
+    section_rule(f"[{action}] {current} → {target}")
 
     # Step 1: git mv
     if not git_mv(root, current, target, dry_run):
@@ -254,13 +184,12 @@ def main() -> None:
         out("🔍", "DRY RUN mode — no files will be moved or written.")
 
     manifest = load_manifest(root)
-    language = manifest.get("language", "python")
-    gate_cmd = manifest.get("verification_gate", "")
+    language = get_language(manifest)
+    gate_cmd = get_verification_gate(manifest)
     files = manifest.get("files", [])
 
-    if not gate_cmd or gate_cmd.startswith("#"):
+    if not gate_cmd:
         out("⚠️ ", "verification_gate is not set — gate will be SKIPPED.")
-        gate_cmd = None
 
     # Get MOVE-eligible entries
     move_entries = [e for e in files if e.get("action") == "MOVE"]
@@ -307,10 +236,7 @@ def main() -> None:
                 break
 
     # Final report
-    print()
-    print("═" * 65)
-    print("  🏗️   REFACTOR MIGRATE — Phase 2 Report")
-    print("═" * 65)
+    section_header("REFACTOR MIGRATE — Phase 2 Report")
     print(f"  ✅ Migrated successfully : {succeeded}")
     print(f"  ❌ Failed               : {failed}")
     if args.dry_run:

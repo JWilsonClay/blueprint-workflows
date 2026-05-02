@@ -1,0 +1,8 @@
+project_name: "Fixture Project"
+language: "python"
+verification_gate: "pytest"
+files:
+  - current: "old_module.py"
+    target: "new_module.py"
+    action: "MOVE"
+    surgery_complete: false
