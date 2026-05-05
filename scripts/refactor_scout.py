@@ -228,7 +228,7 @@ def _is_path_in_root(root: Path, path: Path) -> bool:
     try:
         root_res = root.resolve()
         path_res = path.resolve()
-        return os.path.commonpath([root_res]) == os.commonpath([root_res, path_res])
+        return os.path.commonpath([root_res]) == os.path.commonpath([root_res, path_res])
     except (ValueError, OSError):
         return False
 

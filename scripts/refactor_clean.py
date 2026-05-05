@@ -67,9 +67,9 @@ def _is_path_in_root(root: Path, path: Path) -> bool:
     Prevents workspace escape via malicious paths.
     """
     try:
-        root_res = root.resolve()
-        path_res = path.resolve()
-        return os.commonpath([root_res]) == os.commonpath([root_res, path_res])
+        root_res = str(root.resolve())
+        path_res = str(path.resolve())
+        return os.path.commonpath([root_res]) == os.path.commonpath([root_res, path_res])
     except (ValueError, OSError):
         return False
 
@@ -102,7 +102,8 @@ def find_importers(root: Path, shim_path: Path, language: str) -> list:
             lines = content.splitlines()
             for lineno, line in enumerate(lines, start=1):
                 for pat in patterns:
-                    if pat in line:
+                    import re
+                    if re.search(r'(?<![\w\.])' + re.escape(pat) + r'(?![\w\.])', line):
                         importers.append((
                             str(fp.relative_to(root)),
                             lineno,

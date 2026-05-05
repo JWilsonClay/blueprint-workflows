@@ -28,7 +28,9 @@ def path_to_import_patterns(rel_path: str, language: str) -> list[str]:
         module_dotted = path_to_python_module(rel_path)
         # Match the full module and partial parent modules
         parts = module_dotted.split(".")
-        for i in range(len(parts)):
+        # Skip the root module ('contentflow') if length > 1 to avoid massive false positives
+        start_idx = 1 if len(parts) > 1 else 0
+        for i in range(start_idx, len(parts)):
             partial = ".".join(parts[:i + 1])
             patterns.append(f"from {partial}")
             patterns.append(f"import {partial}")

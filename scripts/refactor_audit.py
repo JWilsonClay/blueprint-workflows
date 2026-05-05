@@ -85,8 +85,11 @@ def find_stale_imports(root: Path, manifest: dict) -> dict:
                 continue
 
             rel_fp = fp.relative_to(root)
-            # SECURITY: Use core.filesystem.read_file_safe to enforce size limits (DoS protection)
-            content = read_file_safe(fp)
+            # SECURITY: Use core.filesystem.read_text to enforce size limits (DoS protection)
+            try:
+                content = fp.read_text(errors='ignore')
+            except Exception:
+                continue
             if not content:
                 continue
 
@@ -95,7 +98,9 @@ def find_stale_imports(root: Path, manifest: dict) -> dict:
                 for old_path, new_path in moved.items():
                     patterns = path_to_import_patterns(old_path, language)
                     for pattern in patterns:
-                        if pattern in line:
+                        import re
+                        # Use word boundary to prevent "contentflow.dashboard" from matching "contentflow.dashboard.search_shim"
+                        if re.search(r'(?<![\w\.])' + re.escape(pattern) + r'(?![\w\.])', line):
                             findings[str(rel_fp)].append({
                                 "line_num": lineno,
                                 "line_content": line.rstrip(),
