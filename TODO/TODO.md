@@ -1,0 +1,134 @@
+# Workflow Suite TODO — Discussion & Deferred Items
+# Location: global_workflows/TODO/TODO.md
+# Purpose: Tracks divergant workflow ideas that require discussion, merger analysis, or further deliberation before building.
+# Updated: 2026-05-07
+
+---
+
+## ITEM 1 — /sentinel (Divergance #2)
+**Status**: HOLD — Merger Candidate Discussion Required
+**Origin**: Divergance Session, 2026-05-07
+
+### Idea Summary
+An ambient workspace monitor that detects when specific workflows should be run and surfaces the recommendation proactively, without being asked. Designed to run at the initialization of a new agentic session as a standing check.
+
+### User Note
+> "Good idea, but needs to be discussed as a potential merger candidate for something else I have already built. Could be powerful to run at the initialization of a new agentic session."
+
+### Discussion Points
+1. **Merger candidate analysis**: The user has built something in their agentic stack that may already perform a similar function. Identify the existing tool before building a duplicate.
+2. **Relationship to /triage**: /sentinel (proactive, ambient, threshold-based triggers) and /triage (reactive, on-demand, evidence-based) are architecturally distinct but functionally related. Should /sentinel be a mode or scheduled variant of /triage rather than a separate workflow?
+3. **Session initialization hook**: If /sentinel runs at session start, is it distinct enough from /triage invoked at session start? What does /sentinel provide that `/triage` with no arguments does not?
+4. **Threshold configuration**: Sentinel requires configurable thresholds ("N days since harden"). Where do these thresholds live? Hardcoded? A config file? This is a design decision that must be made before building.
+
+### Next Action
+Schedule a discussion session. Bring the existing agentic tool to compare. Decide: merge into /triage, build as a separate workflow, or deprecate as redundant.
+
+---
+
+## ITEM 2 — /handoff (Divergance #4)
+**Status**: HOLD — Case Being Built for User Review
+**Origin**: Divergance Session, 2026-05-07
+
+### Idea Summary
+A session-exit workflow that packages current state (in-progress tasks, open decisions, deferred risks, next recommended command) into a `HANDOFF.md` file at workspace root, enabling a subsequent session to resume without re-discovery cost.
+
+### User's Concern
+> "Antigravity has a profound context window both with the brain infrastructure and Gemini's/Claude's massive context window. A fresh session should be utilized as a fresh context window when a session context can go 'sideways'... However, I could be wrong, so dissent is welcomed."
+
+### The Case For /handoff (User Requested)
+
+The user's instinct about fresh sessions being valuable is correct for POISONED contexts. But /handoff addresses a different and specific failure mode:
+
+**The Re-Discovery Tax**: When a session ends mid-work (not poisoned, just paused), the next session begins by spending 10-30 minutes reconstructing: what was being built, which tasks are actually in-progress vs. in-tasks.md-limbo, what risks were identified but not resolved, and what the next command should be. This reconstruction is done from memory + reading multiple files. It is error-prone and consumes productive session time.
+
+**The Distinction from "Poisoned" Sessions**:
+- Poisoned sessions: user correctly uses a FRESH session with zero context. /handoff is irrelevant here.
+- Clean paused sessions: work was going well, session simply ended for the day. /handoff is exactly for this case.
+
+**Specific Agentic Scenario Where /handoff Provides Non-Obvious Value**:
+In /execute-build, tasks are marked `[/]` (in-progress). If a session ends with a task at `[/]`, the next agent sees this and must decide: was this actually started? How far did it get? Was it partially built? The agent has no way to know without reading the entire prior session. /handoff writes a precise state record: "task X was started, file Y was created, file Z still needs to be modified, the risk identified was A." The next agent reads this in 30 seconds instead of reconstructing it in 30 minutes.
+
+**When NOT to use /handoff**:
+- When you're starting a completely fresh topic
+- When the current session went sideways (use a fresh context window instead)
+- For very short sessions with minimal state to carry forward
+
+### Discussion Points
+1. Does the brain's conversation log infrastructure already provide adequate session state for the agent to reconstruct? If yes, /handoff may be redundant.
+2. Should /handoff write to the workspace (`HANDOFF.md` at root) or to the brain directory for the current conversation?
+3. How does /handoff interact with `/document`? They both record session output — but different aspects of it.
+
+### Next Action
+User to review the case above and decide: (a) convinced — schedule build, (b) not convinced — archive as a low-priority idea, (c) need one concrete example from their own workflow to evaluate.
+
+---
+
+## ITEM 3 — /continuous-verify (Divergance #7)
+**Status**: HOLD — Clarification Required, User May Be Right That It's Unnecessary
+**Origin**: Divergance Session, 2026-05-07
+
+### Idea Summary
+A post-phase hook inside /execute-build that automatically runs /focus-plan's Phase 3 substrate check on the code just built, before the next phase begins. Not a separate user-invoked workflow — an automatic gate inside the build loop.
+
+### User's Concern
+> "It feels like workflow bloat. It seems it's supposed to be ran in case I forget to run /focus-plan... if I forget to run /focus-plan, I'll probably forget to run this one too."
+
+### Clarification (Critical Distinction)
+The user's reasoning would be correct if /continuous-verify were a separate workflow the user invokes. **It is not.** It is a gate INSIDE /execute-build that runs automatically at each phase boundary — the user never directly invokes it. The user doesn't need to remember it. It fires as part of the build loop.
+
+The analogy: /continuous-verify is to /execute-build what the per-step test gates are to /soc. You don't "remember to run the test gate" — it just runs after each extraction because the workflow mandates it.
+
+### Why It Might Still Be Unnecessary
+The user's broader concern might be valid from a different angle: if /execute-build's Build Audit (Step 5) already includes acceptance criteria verification and scope compliance, /continuous-verify may be redundant. The Build Audit already checks that the built code matches the plan.
+
+**The real question**: Is there a meaningful gap between "did this phase's code match its acceptance criteria" (Build Audit) and "does this phase's code still match the OVERALL plan's intent" (continuous-verify)? 
+
+For small plans: probably not. For large multi-phase plans where early phases can drift from late-phase requirements: yes.
+
+### Discussion Points
+1. Is the Build Audit in /execute-build Step 5 already sufficient for plan-build alignment?
+2. Should /continuous-verify be folded INTO /execute-build Step 5 as an additional sub-step rather than being a named workflow?
+3. At what project complexity/phase count does /continuous-verify start adding real value vs. adding noise?
+
+### Next Action
+Consider: fold the core concept into /execute-build Step 5 as an optional "deep plan alignment check" triggered only for multi-phase projects. Retire the separate workflow concept.
+
+---
+
+## ITEM 4 — /pipeline (Divergance #8)
+**Status**: HOLD — Deferred Until User Reaches Operational Maturity
+**Origin**: Divergance Session, 2026-05-07
+
+### Idea Summary
+A meta-workflow that composes and sequences the other workflows based on project phase: focus-plan → execute-build → iterate-test → harden → soc → document. Automates the sequencing that the user currently manages manually.
+
+### User's Assessment
+> "I feel like if we build it, I won't fully know how to wield it yet. But I'm open to it."
+
+### Agreed. Here's Why the Timing Matters.
+/pipeline is the most powerful and the most dangerous workflow in the proposed suite. It automates away the human judgment calls that are currently manual — specifically: when to deviate from the standard sequence, when to skip a step, when to insert an extra /focus-plan before proceeding.
+
+Right now, the user IS the pipeline. They've been manually learning what the right sequence is for different situations. That manual experience is exactly what /pipeline would eventually encode. Building /pipeline before the manual sequence is deeply understood risks automating the wrong sequence — or automating too rigidly, removing the flexibility that makes the manual approach valuable.
+
+**The prerequisite**: Run the full manual pipeline (focus-plan → tasks.md → execute-build → iterate-test → harden → document) on 5-10 projects. Notice where you deviate. Notice what you skip and why. Notice what you add that's not in the standard sequence. When that pattern is clear, /pipeline encodes it.
+
+### Discussion Points
+1. After what milestone does /pipeline become appropriate? Specific criterion: "I can describe the standard pipeline from memory AND describe 3 scenarios where I would deviate from it and why."
+2. Should /pipeline be project-type-aware? (A new feature has a different sequence than a refactor or a security hardening sprint.)
+3. Does /triage already provide enough sequencing guidance that /pipeline is less necessary?
+
+### Next Action
+Re-visit this item after completing the Layer 2 build roadmap (Stages 1-3: /receipt-check, /retrospective, /provenance). By then, the user will have more operational experience to evaluate whether /pipeline adds value.
+
+---
+
+## ARCHIVE / COMPLETED
+*(Items move here when built or formally retired)*
+
+| Item | Outcome | Date |
+|------|---------|------|
+| /triage (Divergance #1) | ✅ Built — `triage.md` | 2026-05-07 |
+| /receipt-check (Divergance #3) | 📋 On Implementation Plan — Stage 1 | 2026-05-07 |
+| /retrospective (Divergance #5) | 📋 On Implementation Plan — Stage 2 | 2026-05-07 |
+| /provenance (Divergance #6) | 📋 On Implementation Plan — Stage 3 | 2026-05-07 |
