@@ -1,7 +1,7 @@
 # Workflow Suite TODO — Discussion & Deferred Items
 # Location: global_workflows/TODO/TODO.md
 # Purpose: Tracks divergant workflow ideas that require discussion, merger analysis, or further deliberation before building.
-# Updated: 2026-05-07
+# Updated: 2026-05-07 (v2 — items 2, 3 resolved; item 5 added)
 
 ---
 
@@ -27,8 +27,8 @@ Schedule a discussion session. Bring the existing agentic tool to compare. Decid
 ---
 
 ## ITEM 2 — /handoff (Divergance #4)
-**Status**: HOLD — Case Being Built for User Review
-**Origin**: Divergance Session, 2026-05-07
+**Status**: ✅ COMPLETE — Absorbed into /secretary Phase 3 (2026-05-07)
+**Resolution**: User reviewed the case and approved. HANDOFF.md production is now Phase 3 of the `/secretary` meta-workflow. No separate /handoff workflow was created — /secretary is the session-close orchestrator that produces HANDOFF.md as one of its three primary outputs. See `global_workflows/secretary/core.md` Phase 3.
 
 ### Idea Summary
 A session-exit workflow that packages current state (in-progress tasks, open decisions, deferred risks, next recommended command) into a `HANDOFF.md` file at workspace root, enabling a subsequent session to resume without re-discovery cost.
@@ -65,8 +65,8 @@ User to review the case above and decide: (a) convinced — schedule build, (b) 
 ---
 
 ## ITEM 3 — /continuous-verify (Divergance #7)
-**Status**: HOLD — Clarification Required, User May Be Right That It's Unnecessary
-**Origin**: Divergance Session, 2026-05-07
+**Status**: ✅ COMPLETE — Built and integrated into /execute-build Step 5g (2026-05-07)
+**Resolution**: User was convinced by the clarification that /continuous-verify is NOT a separate user-invoked workflow — it is an automatic gate inside /execute-build. Built as `global_workflows/continuous-verify/core.md` (Sovereign, Standard Version 2). Integrated into `/execute-build/core.md` as Step 5g, injected between Step 5f and Step 6. Three outcomes: PARITY (silent), MISMATCH (halt, block receipt), UNVERIFIABLE (advance with risk note). See `global_workflows/continuous-verify/core.md` and `global_workflows/execute-build/core.md` Step 5g.
 
 ### Idea Summary
 A post-phase hook inside /execute-build that automatically runs /focus-plan's Phase 3 substrate check on the code just built, before the next phase begins. Not a separate user-invoked workflow — an automatic gate inside the build loop.
@@ -121,6 +121,26 @@ Right now, the user IS the pipeline. They've been manually learning what the rig
 ### Next Action
 Re-visit this item after completing the Layer 2 build roadmap (Stages 1-3: /receipt-check, /retrospective, /provenance). By then, the user will have more operational experience to evaluate whether /pipeline adds value.
 
+## ITEM 5 — WORKFLOW_DEPENDENCIES.md (Divergance #5 from /secretary session)
+**Status**: DEFERRED — Approved, Awaiting Optimal Timing
+**Origin**: /secretary Divergance session, 2026-05-07
+**User note**: "#5 should be added to the TODO.md as a TODO item and not as a discussion item; approved, but awaiting optimal timing for implementation."
+
+### Idea Summary
+A machine-readable dependency graph at `global_workflows/WORKFLOW_DEPENDENCIES.md` documenting which workflows depend on which other workflows being configured or built first. Examples: `/receipt-check` requires Stage 1a (receipt-writing) to be operational; `/continuous-verify` requires SoC modularization of /execute-build; `/retrospective` requires `process_learnings/` to exist.
+
+### Why It Matters
+/triage and /secretary could read this file to detect "you can't run X until Y is configured" and surface actionable setup blockers before a user wastes a session attempting to use an underpowered workflow.
+
+### Implementation Notes
+- Format: simple markdown table or structured list at `global_workflows/WORKFLOW_DEPENDENCIES.md`
+- Updated by: /secretary Phase 1 (auto-discovery) or manually
+- Read by: /triage (for setup recommendations), /secretary (for manifest warnings)
+- Complexity: LOW for the file itself; MEDIUM for /triage integration
+
+### Next Action
+Implement after the current suite stabilizes (post-Stage 1a completion and at least one full /secretary run on a real project). The dependency graph is most accurate once all receipt-writing is operational.
+
 ---
 
 ## ARCHIVE / COMPLETED
@@ -129,6 +149,8 @@ Re-visit this item after completing the Layer 2 build roadmap (Stages 1-3: /rece
 | Item | Outcome | Date |
 |------|---------|------|
 | /triage (Divergance #1) | ✅ Built — `triage.md` | 2026-05-07 |
-| /receipt-check (Divergance #3) | 📋 On Implementation Plan — Stage 1 | 2026-05-07 |
-| /retrospective (Divergance #5) | 📋 On Implementation Plan — Stage 2 | 2026-05-07 |
-| /provenance (Divergance #6) | 📋 On Implementation Plan — Stage 3 | 2026-05-07 |
+| /receipt-check (Divergance #3) | ✅ Built — `receipt-check/core.md` (Sovereign, Std. v2) | 2026-05-07 |
+| /retrospective (Divergance #5) | ✅ Built — `retrospective/core.md` (Sovereign, Std. v2) | 2026-05-07 |
+| /provenance (Divergance #6) | ✅ Built — `provenance/core.md` (Sovereign, Std. v2) | 2026-05-07 |
+| ITEM 2 /handoff (Divergance #4) | ✅ Absorbed into /secretary Phase 3 — HANDOFF.md output | 2026-05-07 |
+| ITEM 3 /continuous-verify (Divergance #7) | ✅ Built — `continuous-verify/core.md` + injected into /execute-build Step 5g | 2026-05-07 |

@@ -196,6 +196,48 @@ This is the most critical step. Do not mark a phase complete without passing thi
     If any out-of-scope file was modified: document why and whether it was warranted.
     Unauthorized scope expansion = build drift = a finding to surface to the user.
 
+5g. **Continuous Plan Verification Gate** — [INJECTED 2026-05-07]
+    *Invokes: `/continuous-verify` — full protocol at `global_workflows/continuous-verify/core.md`*
+
+    After 5a-5f pass, run the broader alignment check before issuing the Phase Build Receipt.
+    The Build Audit (5a-5f) asks: "did I build what this phase required?"
+    This gate asks: "does what I just built still agree with the FULL plan, including future phases?"
+
+    **5g.1 — Prepare the invocation context.** Gather:
+    ```
+    INVOCATION CONTEXT for /continuous-verify:
+      Current project:      <IMPL_PLAN location / workspace root>
+      Phase just completed: <ACTIVE_PHASE name and number>
+      Tasks.md phase entry: <the exact task block for ACTIVE_PHASE>
+      Implementation plan:  <path to implementation_plan.md>
+      Code committed:       <git commit hash if committed, else list of files modified>
+      Build Audit result:   PASSED (5a-5f complete)
+    ```
+
+    **5g.2 — Execute the /continuous-verify protocol.** Read and follow:
+    ```
+    view_file /home/jwils/.gemini/antigravity/global_workflows/continuous-verify/core.md
+    ```
+    Execute the gate protocol from HOW TO BEGIN, using the invocation context above.
+    Do not narrate the file read.
+
+    **5g.3 — Handle the gate outcome:**
+
+    PARITY → Silent. Proceed to Step 6. Add the one-line gate contribution to the Phase Build Receipt:
+      `Continuous Verify (5g): PARITY — no forward-contract violations detected.`
+
+    MISMATCH → **HALT. Do not proceed to Step 6. Do not issue the Phase Build Receipt.**
+      Surface the MISMATCH report from /continuous-verify to the user.
+      Await instruction: fix code (return to Step 4), fix plan (update implementation_plan.md), or accept deviation.
+      Only return to Step 6 after the MISMATCH is resolved and 5g re-confirms PARITY.
+
+    UNVERIFIABLE → Proceed to Step 6. Add the risk note to the Phase Build Receipt:
+      `Continuous Verify (5g): UNVERIFIABLE — advancing with risk note. [items listed]`
+
+    **5g is non-optional.** A phase cannot be certified complete without 5g running.
+    Exception: if `implementation_plan.md` does not exist, 5g cannot run — note this in the Build Receipt
+    and advance. The Build Audit (5a-5f) remains the quality gate in this case.
+
 ────────────────────────────────────────────
 STEP 6  — PHASE BUILD RECEIPT
 ────────────────────────────────────────────
@@ -213,6 +255,7 @@ Emit the Phase Build Receipt:
   |  Files Modified: [list with absolute paths]      |
   |  Risks Resolved: N/N identified risks cleared    |
   |  Regressions:    0 detected                      |
+  |  Continuous Verify (5g): PARITY / UNVERIFIABLE   |
   |  Intent Doc:     <IMPL_PLAN or INTENT_DOC>       |
   |  Status:         PHASE COMPLETE                  |
   +--------------------------------------------------+
@@ -289,10 +332,19 @@ INTEGRATION WITH OTHER WORKFLOWS
 ────────────────────────────────────────────
 This workflow is designed to operate in this sequence within the broader development pipeline:
 
-  1. /focus-plan    → Verify implementation_plan.md is complete and contradiction-free
-  2. [Generate tasks.md] → Agent breaks implementation_plan.md into phased tasks.md
-  3. /execute-build → THIS WORKFLOW — implement each phase of tasks.md
-  4. /iterate-test  → Validate each built stage in isolation
-  5. /harden        → Apply Diamond-level security hardening to all new scripts
-  6. /soc           → Refactor for Separation of Concerns if needed
-  7. /document      → Update the DevJournal with build session entries
+  1. /focus-plan          → Verify implementation_plan.md is complete and contradiction-free
+  2. [Generate tasks.md]  → Agent breaks implementation_plan.md into phased tasks.md
+  3. /execute-build       → THIS WORKFLOW — implement each phase of tasks.md
+     └─ Step 5g           → /continuous-verify gate runs inside each phase's Build Audit
+  4. /iterate-test        → Validate each built stage in isolation
+  5. /harden              → Apply Diamond-level security hardening to all new scripts
+  6. /soc                 → Refactor for Separation of Concerns if needed
+  7. /document            → Update the DevJournal with build session entries
+
+**[INJECTION — 2026-05-07]** Step 5g dependency: /continuous-verify requires `implementation_plan.md` to exist at the project root. If it is absent, 5g is skipped and the Build Audit (5a-5f) remains the sole quality gate. This is a known limitation: projects without a formal implementation plan cannot use forward-contract verification.
+
+---
+
+### Change Log
+1. **[ORIGINAL]**: `[CREATED]` Full execute-build protocol written. Established PHASE 0 workspace discovery, 7-step build loop, 6-sub-step Build Audit (5a-5f), Phase Build Receipt, STRICT RULES (14 rules), and Integration section.
+2. **2026-05-07**: `[INJECTED — /nodelete, Layer 2 Stage 4]` Step 5g — Continuous Plan Verification Gate — injected after Step 5f. Invokes `/continuous-verify` (payload at `global_workflows/continuous-verify/core.md`) to check whether the phase just built still aligns with the full implementation plan's intent, including forward contracts to future phases. Three outcomes: PARITY (silent, advance to Step 6), MISMATCH (halt, block receipt), UNVERIFIABLE (advance with risk note). Phase Build Receipt updated to include Continuous Verify (5g) field. Integration section updated to reflect the 5g sub-step relationship. Change Log added (first entry).
