@@ -71,12 +71,55 @@ Before beginning any hardening work, evaluate whether the target workflow requir
 
 **0a. Identify the target scope.**
 
-The user may invoke `/harden-workflow` in three modes:
+The user may invoke `/harden-workflow` in four modes:
 - **Single workflow**: "Harden `/focus-plan`" → target is one workflow file
 - **Batch**: "Harden all monolithic workflows" → target is all workflows currently NOT in pointer/payload architecture
-- **New build**: "Build a new workflow called `/X`" → target is a blank pointer file + new payload
+- **New build / Generator**: "Build a new workflow called `/X`" → target is a blank pointer file + new payload
+- **Ticket mode** (`--ticket`): "Harden faulting workflows from open tickets" → scan `helpdesk-tickets/` for any file NOT prefixed `CLOSED_`; each open ticket is an intake manifest that specifies the faulting workflow and its root cause. See **TICKET MODE PROTOCOL** below.
 
 Read the invocation context and identify which mode is active. If ambiguous, ask before proceeding.
+
+**TICKET MODE PROTOCOL — [INJECTED 2026-05-08, /nodelete]**
+
+Ticket mode replaces manual target specification with ticket-driven intake. The helpdesk ticket IS the intake manifest.
+
+*Step TM-1: Scan for open tickets.*
+```bash
+ls /home/jwils/.gemini/antigravity/global_workflows/helpdesk-tickets/ | grep -v '^CLOSED_'
+```
+If zero open tickets: halt. Report: `TICKET MODE: No open tickets found in helpdesk-tickets/. Nothing to harden.`
+
+If one or more open tickets: list them to the user and proceed.
+
+*Step TM-2: For each open ticket — read and extract:*
+- **Faulting workflow**: named explicitly in the ticket body ("Faulting workflow: /[name]" or from Subject line)
+- **Root cause**: Section 2 of the ticket — the specific structural gap
+- **Recommendations**: Section 5 of the ticket — the workflow-level structural change requested
+- **Urgency**: from the ticket header — process CRITICAL tickets first
+
+```
+TICKET INTAKE MANIFEST:
+  Ticket file:        [filename]
+  Faulting workflow:  /[name]
+  Urgency:            [level]
+  Root cause:         [one-line summary]
+  Recommended fix:    [one-line summary from Section 5]
+```
+
+*Step TM-3: Route to Phase 1.*
+
+Proceed with Phase 0b using the faulting workflow as the target. The ticket's Section 5 recommendation is treated as a prioritized hardening directive — address it explicitly in Phase 4 (Execution Hardening).
+
+*Step TM-4: Close the ticket after Phase 8 (Hardening Certificate).*
+
+After emitting the Hardening Certificate, execute Phase 4 of `/helpdesk-tickets` to close the ticket:
+```bash
+mv /home/jwils/.gemini/antigravity/global_workflows/helpdesk-tickets/[YYYYMMDD]_[workflow]_workflow.md \
+   /home/jwils/.gemini/antigravity/global_workflows/helpdesk-tickets/CLOSED_[YYYYMMDD]_[workflow]_workflow.md
+```
+Update the ticket's Status line to `REMEDIATED` and add a Verification link to the Hardening Certificate.
+
+If there are multiple open tickets: process them in urgency order (CRITICAL → HIGH → MEDIUM → LOW). After each ticket's workflow is hardened and closed, advance to the next ticket. Emit one Hardening Certificate per workflow per STRICT RULE 7.
 
 **0b. For each target workflow: locate the pointer and payload.**
 
@@ -579,6 +622,7 @@ After the certificate is emitted: ask the user whether to proceed to the next wo
 12. Never trust the hardcoded file sizes in the Suite Audit Table. Sizes change as workflows evolve. Always use `view_file` Total Bytes output or `wc -c` to get actual current sizes before assigning priorities.
 13. When using the Sovereign Scaffold Generator (Phase 2b): never leave a `[PLACEHOLDER]` unfilled before certifying a grade. A scaffold with unfilled placeholders is not a completed workflow — it is a template. Certifying it as Sovereign is a grade fraud.
 14. **Generator mode requires a pre-existing pointer file.** Antigravity cannot assign the `/` slash trigger to a workflow unless the pointer `.md` file already exists at `global_workflows/[name].md`. In Generator mode (Phase 2b), if the pointer file does not already exist: HALT before creating any files. Report: `GENERATOR HALT: Pointer file global_workflows/[name].md must be created by the user before Generator mode can proceed. Antigravity requires the file to exist to assign the @[/name] trigger.` Do not create the pointer as the first step — the user must create it manually so the trigger registration occurs.
+15. **[INJECTED 2026-05-08 — Ticket mode closure, /nodelete]** In ticket mode, the ticket closure (Phase 4 of `/helpdesk-tickets`) is MANDATORY after Phase 8. Never certify a hardening and leave the ticket open. The `CLOSED_` prefix rename is the machine-readable closure signal — updating a status field inside the file is not sufficient. If the rename fails (file not found, permission error), halt and surface the error to the user before ending the session.
 
 ---
 
@@ -666,3 +710,4 @@ Typical /triage triggers for this workflow:
 2. **2026-05-07**: `[HARDENED — Self-Pass]` Applied /harden-workflow against itself via /focus-plan + /quality. Six gaps resolved: (a) Orphaned payload detection added to Phase 0b; (b) Batch-mode Sovereign-skip decision branch added to Phase 1; (c) Phase 7a upgraded from mental simulation to actual view_file verification; (d) Suite Audit Mode hardened against stale static sizes — live read now required; (e) STRICT RULE 11 added: halt if Phase 2 verification fails; (f) STRICT RULE 12 added: never trust hardcoded sizes. Grade elevated from Hardened to Sovereign.
 3. **2026-05-07**: `[INJECTED — Divergance Pass, /nodelete]` Three Divergance-approved additions injected. (a) GLOSSARY block added after preamble — key terms for context-portable operation by any agent; defines Standard Version as a first-class concept. (b) Degradation Check injected into Phase 1 — detects when a Sovereign workflow was certified under an older Standard Version and flags it for re-certification. (c) Sovereign Scaffold Generator injected into Phase 2b — full pre-populated Sovereign-grade core.md template eliminating Legacy-grade new workflows from this point forward. Standard Version incremented to 2. STRICT RULE 13 added (no unfilled scaffold placeholders). Hardening Certificate standard_version field mandated. Suite Audit Table updated with Standard Version column.
 4. **2026-05-07**: `[INJECTED — Generator session governance, /nodelete]` STRICT RULE 14 added: Generator mode requires a pre-existing pointer file (user-created) as a halt condition. Surfaced during the /continuous-verify Generator build session — user confirmed that Antigravity cannot assign the `/` slash trigger to a workflow unless `[name].md` already exists at the time of invocation.
+5. **2026-05-08**: `[INJECTED — Ticket mode, /nodelete]` Fourth invocation mode added: `--ticket`. Scans `helpdesk-tickets/` for open tickets (files without `CLOSED_` prefix), uses each ticket as an intake manifest to identify the faulting workflow and recommended fix (Section 5 of ticket), routes to Phase 1 hardening, then closes the ticket via `CLOSED_` prefix rename after Phase 8 certificate. STRICT RULE 15 added: ticket closure is mandatory after hardening in ticket mode. TICKET MODE PROTOCOL block injected into Phase 0a. Complements /helpdesk-tickets workflow (also created this session). Standard Version: 2.

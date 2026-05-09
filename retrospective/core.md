@@ -136,16 +136,32 @@ If no suggestion is warranted: state "NO IMPROVEMENT SUGGESTED — clean session
 
 ## PHASE 5 — APPEND TO PROCESS_LEARNINGS.md
 
-If file does not exist, create it with this header first:
-```markdown
+**This is a critical durability phase. Never overwrite PROCESS_LEARNINGS.md.**
+
+**5a. Verify target existence.**
+```bash
+ls /home/jwils/.gemini/antigravity/global_workflows/process_learnings/PROCESS_LEARNINGS.md || echo "MISSING"
+```
+
+If missing, create with header first (Phase 5b). If exists, skip to Phase 5c.
+
+**5b. Initialize (if missing).**
+```bash
+mkdir -p /home/jwils/.gemini/antigravity/global_workflows/process_learnings
+cat <<EOF > /home/jwils/.gemini/antigravity/global_workflows/process_learnings/PROCESS_LEARNINGS.md
 # PROCESS_LEARNINGS.md — Global Workflow Institutional Memory
 # Location: /home/jwils/.gemini/antigravity/global_workflows/process_learnings/PROCESS_LEARNINGS.md
 # Append-only. Each entry is one /retrospective session.
 ---
+EOF
 ```
 
-Append this entry:
-```markdown
+**5c. Atomic Append.**
+Use the `run_command` tool with `cat >>` to ensure the new entry is appended to the substrate without reading/rewriting the entire file. This prevents truncation if the agent's context is overloaded.
+
+```bash
+cat <<EOF >> /home/jwils/.gemini/antigravity/global_workflows/process_learnings/PROCESS_LEARNINGS.md
+
 ## [DATE] — [PROJECT] — [SESSION NAME]
 
 ### Session Summary
@@ -170,9 +186,14 @@ Append this entry:
 [Something that applies beyond this project, or NONE]
 
 ---
+EOF
 ```
 
-Verify the write: read the last 20 lines of PROCESS_LEARNINGS.md.
+**5d. Verification.**
+```bash
+tail -n 25 /home/jwils/.gemini/antigravity/global_workflows/process_learnings/PROCESS_LEARNINGS.md
+```
+Verify that the new entry is present and the file size has increased. Log the "Verification: PASS/FAIL" in your final report.
 
 ---
 
@@ -186,6 +207,7 @@ Verify the write: read the last 20 lines of PROCESS_LEARNINGS.md.
 6. If receipt files are absent: proceed with git log + conversation. Do not halt.
 7. After appending: verify by reading the last 20 lines of the file.
 8. Do not evaluate code quality. Patterns relate to process only.
+9. **[INJECTION 2026-05-08 — append safety]** Use shell-level redirection (`cat >>`) via `run_command` for all appends to `PROCESS_LEARNINGS.md`. Never use `write_to_file` with `Overwrite: true` for this file, as it risks silent truncation if the agent's context read of the existing file is partial or failed. Mechanical append is the only sovereign-grade method for ledgers.
 
 ---
 
@@ -227,3 +249,4 @@ Output: `/home/jwils/.gemini/antigravity/global_workflows/process_learnings/PROC
 
 ### Change Log
 1. **2026-05-07**: `[CREATED]` Created via Sovereign Scaffold Generator. Stage 2 of the Layer 2 Workflow Suite (see layer2_implementation_plan.md). Origin: Divergance #5 (process learning). Five-phase protocol: intake, workflow usage, problem analysis, pattern identification, append to PROCESS_LEARNINGS.md. Standard Version: 2.
+2. **2026-05-08**: `[INJECTED — append safety hardening, /focus-plan + /nodelete]` Resolved reported issue of silent overwrites/truncation. Phase 5 rewritten to mandate shell-level atomic append (`cat >>`) instead of semantic instructions. STRICT RULE 9 added to codify mechanical append safety. Verification step expanded to mandate `tail` check.
