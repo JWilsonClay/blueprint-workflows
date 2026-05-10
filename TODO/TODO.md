@@ -1,12 +1,25 @@
 # Workflow Suite TODO — Discussion & Deferred Items
 # Location: global_workflows/TODO/TODO.md
 # Purpose: Tracks divergant workflow ideas that require discussion, merger analysis, or further deliberation before building.
-# Updated: 2026-05-07 (v2 — items 2, 3 resolved; item 5 added)
+# Updated: 2026-05-10 (v3 — ITEM 1 resolved)
 
 ---
 
 ## ITEM 1 — /sentinel (Divergance #2)
-**Status**: HOLD — Merger Candidate Discussion Required
+**Status**: ✅ COMPLETE — Built 2026-05-10
+
+**[RESOLUTION — 2026-05-10, /nodelete]**
+Merger candidate identified and confirmed: the .blueprints `Doorway Protocol` (`thedoorway/dynamic_contextualizer.py`) is exactly the ambient substrate monitor the user had already built. Rather than merging /sentinel into it or duplicating it, the Doorway system was extracted, refactored to a workspace-agnostic CLI package at `scripts/doorway/doorway.py` (Diamond-hardened), and /sentinel was built as the **workflow-layer orchestrator** that calls the Doorway tool and routes findings to the appropriate workflows. The hover-train/engine metaphor from the original discussion: Doorway is the track-sensing instrument; /sentinel is the control system that reads the instrument and tells the driver what to do.
+
+All four Discussion Points resolved:
+1. **Merger candidate**: Identified as .blueprints Doorway Protocol — NOT a duplicate; /sentinel wraps and elevates it.
+2. **Relationship to /triage**: Documented in sentinel/core.md — /sentinel is proactive (session-init, physical substrate evidence), /triage is reactive (on-demand, symptom-based). Complementary, not redundant. Running both gives physical + symptomatic evidence before work begins.
+3. **Session init hook distinctiveness**: /sentinel's evidence source is `doorway.py --output-json` (a real-time filesystem hash scan). /triage with no arguments has no evidence — it waits for user description. Architecturally distinct.
+4. **Threshold configuration**: Severity levels (HIGH/MEDIUM/LOW) defined in `recommender.py`. The ticket threshold defaults to HIGH and is configurable per-session via `--no-ticket` flag. No external config file required at this stage — thresholds live in the recommender module.
+
+**Artifacts produced:**
+- `sentinel.md` — Sovereign pointer (P/P architecture, YAML frontmatter)
+- `sentinel/core.md` — Full payload: 5-phase protocol, 8 STRICT RULES, 10-term GLOSSARY, routing table, multi-workspace mode, ticket gate
 **Origin**: Divergance Session, 2026-05-07
 
 ### Idea Summary
@@ -154,3 +167,4 @@ Implement after the current suite stabilizes (post-Stage 1a completion and at le
 | /provenance (Divergance #6) | ✅ Built — `provenance/core.md` (Sovereign, Std. v2) | 2026-05-07 |
 | ITEM 2 /handoff (Divergance #4) | ✅ Absorbed into /secretary Phase 3 — HANDOFF.md output | 2026-05-07 |
 | ITEM 3 /continuous-verify (Divergance #7) | ✅ Built — `continuous-verify/core.md` + injected into /execute-build Step 5g | 2026-05-07 |
+| ITEM 1 /sentinel (Divergance #2) | ✅ Built — `sentinel.md` + `sentinel/core.md` (Sovereign, Std. v1). Doorway Protocol extracted to `scripts/doorway/` (Diamond-hardened). | 2026-05-10 |
