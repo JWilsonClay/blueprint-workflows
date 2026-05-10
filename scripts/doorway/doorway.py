@@ -44,6 +44,7 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE.parent) not in sys.path:
     sys.path.insert(0, str(_HERE.parent))
 
+from doorway._utils import atomic_write, safe_mkdir, safe_read
 from doorway.scanner import WorkspaceScanner
 from doorway.breadcrumb import BreadcrumbManager
 from doorway.integrity import IntegrityManager
@@ -163,6 +164,8 @@ class DoorwayContextualizer:
         start = time.time()
 
         # Step 0 — Ensure data directory and critical governance files.
+        # safe_mkdir creates .doorway/ with mode=0o700 (CWE-732).
+        safe_mkdir(self.data_dir)
         critical_files = {}
         if not self.architecture_file.exists():
             critical_files[self.architecture_file] = "Architecture.md.template"
@@ -262,16 +265,18 @@ class DoorwayContextualizer:
             return
 
         try:
-            chron_content = chronology_file.read_text(encoding="utf-8")
+            chron_content = safe_read(  # CWE-400: bounded read
+                chronology_file, max_bytes=10 * 1024 * 1024
+            )
             header = "\n## Promoted Workspace Worklogs\n"
             if header not in chron_content:
                 chron_content += header
             for entry in promoted_entries:
                 if entry not in chron_content:
                     chron_content += entry
-            chronology_file.write_text(chron_content, encoding="utf-8")
+            atomic_write(chronology_file, chron_content)  # CWE-362
             print(f"[PROMOTION] Promoted {len(promoted_entries)} worklogs to Chronology.md")
-        except OSError as e:
+        except (OSError, ValueError) as e:
             print(f"[PROMOTION] Failed to write Chronology.md: {e}")
 
     # ------------------------------------------------------------------
@@ -295,9 +300,12 @@ class DoorwayContextualizer:
     def _save_snapshot(self, data: dict) -> None:
         """Persists the current workspace map to .doorway/workspace_snapshot.json."""
         try:
-            self.data_dir.mkdir(parents=True, exist_ok=True)
-            self.snapshot_file.write_text(json.dumps(data, indent=2), encoding="utf-8")
-        except OSError as e:
+            # safe_mkdir ensures .doorway/ exists with 0o700 (CWE-732).
+            safe_mkdir(self.data_dir)
+            atomic_write(  # CWE-362: atomic snapshot write
+                self.snapshot_file, json.dumps(data, indent=2)
+            )
+        except (OSError, ValueError) as e:
             print(f"[SNAPSHOT] Failed to save snapshot: {e}")
 
 

@@ -10,9 +10,17 @@ Refactored from .blueprints/governance/thedoorway/integrity_manager.py:
   - 'project_root' constructor argument renamed to 'workspace' throughout.
   - Added explicit encoding on all read/write operations.
   - Added path validation in heal() to prevent writes outside workspace.
+
+[SECURITY — 2026-05-10 — /harden pass, /nodelete]
+  - write_text() replaced with atomic_write() throughout (CWE-362 / CWE-732).
+  - read_text() replaced with safe_read() with template size cap (CWE-400).
+  - mkdir() + touch() in ensure_substrate replaced with safe_mkdir() (CWE-732).
+  - assert_within() added to heal() and create_readme() (CWE-22).
 """
 
 from pathlib import Path
+
+from doorway._utils import atomic_write, assert_within, safe_mkdir, safe_read
 
 
 class IntegrityManager:
@@ -51,8 +59,9 @@ class IntegrityManager:
         """
         if not data_dir.exists():
             try:
-                data_dir.mkdir(parents=True, exist_ok=True)
-                (data_dir / ".gitkeep").touch()
+                # safe_mkdir creates with mode=0o700 (owner-only, CWE-732).
+                safe_mkdir(data_dir)
+                atomic_write(data_dir / ".gitkeep", "")  # CWE-362
                 print("[SELF-HEAL] Created missing .doorway/ data directory.")
             except OSError as e:
                 print(f"[SELF-HEAL] Failed to create data directory: {e}")
@@ -75,38 +84,34 @@ class IntegrityManager:
             target_path:   The path that should exist but doesn't.
             template_name: Filename of the template to use (e.g. 'Architecture.md.template').
         """
-        # Validate target stays within workspace.
+        # Validate target stays within workspace (CWE-22).
         try:
-            target_path.resolve().relative_to(self.workspace.resolve())
-        except ValueError:
-            print(f"[SELF-HEAL] Blocked: target outside workspace: {target_path}")
+            assert_within(target_path, self.workspace)
+        except ValueError as e:
+            print(f"[SELF-HEAL] {e}")
             return
 
         template_content = None
 
-        primary = self.primary_templates / template_name
-        if primary.exists():
-            try:
-                template_content = primary.read_text(encoding="utf-8")
-            except OSError:
-                pass
-
-        if template_content is None:
-            backup = self.backup_templates / template_name
-            if backup.exists():
+        for base in [self.primary_templates, self.backup_templates]:
+            primary = base / template_name
+            if primary.exists():
                 try:
-                    template_content = backup.read_text(encoding="utf-8")
-                    print(
-                        f"[SELF-HEAL] Primary template missing. Used backup for "
-                        f"{target_path.name}."
-                    )
-                except OSError:
-                    pass
+                    # safe_read: template files should be small (CWE-400).
+                    template_content = safe_read(primary, max_bytes=512 * 1024)
+                    if base == self.backup_templates:
+                        print(
+                            f"[SELF-HEAL] Primary template missing. Used backup for "
+                            f"{target_path.name}."
+                        )
+                    break
+                except (OSError, ValueError):
+                    continue
 
         if template_content is not None:
             try:
                 target_path.parent.mkdir(parents=True, exist_ok=True)
-                target_path.write_text(template_content, encoding="utf-8")
+                atomic_write(target_path, template_content)  # CWE-362 / CWE-732
                 print(
                     f"[SELF-HEAL] Recreated {target_path.relative_to(self.workspace)} "
                     f"from template."
@@ -138,11 +143,11 @@ class IntegrityManager:
         target = self.workspace / folder_path_str / "README.md"
         name = Path(folder_path_str).name
 
-        # Validate target stays within workspace.
+        # Validate target stays within workspace (CWE-22).
         try:
-            target.resolve().relative_to(self.workspace.resolve())
-        except ValueError:
-            print(f"[SELF-HEAL] Blocked: README target outside workspace: {target}")
+            assert_within(target, self.workspace)
+        except ValueError as e:
+            print(f"[SELF-HEAL] {e}")
             return False
 
         template_content = None
@@ -150,9 +155,9 @@ class IntegrityManager:
             tpl_file = base / "README.md.template"
             if tpl_file.exists():
                 try:
-                    template_content = tpl_file.read_text(encoding="utf-8")
+                    template_content = safe_read(tpl_file, max_bytes=512 * 1024)  # CWE-400
                     break
-                except OSError:
+                except (OSError, ValueError):
                     continue
 
         if template_content:
@@ -172,8 +177,8 @@ class IntegrityManager:
 
         try:
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(template_content, encoding="utf-8")
+            atomic_write(target, template_content)  # CWE-362 / CWE-732
             return True
-        except OSError as e:
+        except (OSError, ValueError) as e:
             print(f"[SELF-HEAL] Failed to create README at {target}: {e}")
             return False

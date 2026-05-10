@@ -17,10 +17,18 @@ Refactored from .blueprints/governance/thedoorway/breadcrumb_manager.py:
   - All internal path references use self.workspace.
   - Added explicit file encoding ('utf-8') on all read/write operations.
   - Added Path validation before write operations.
+
+[SECURITY — 2026-05-10 — /harden pass, /nodelete]
+  - All write_text() calls replaced with atomic_write() (CWE-362 / CWE-732).
+  - open(append) replaced with atomic_write of full log content.
+  - read_text() replaced with safe_read() with 5 MB cap (CWE-400).
+  - str-based path guard replaced with assert_within() (CWE-22).
 """
 
 from datetime import datetime
 from pathlib import Path
+
+from doorway._utils import atomic_write, assert_within, safe_read
 
 
 class BreadcrumbManager:
@@ -51,10 +59,14 @@ class BreadcrumbManager:
             f"Proposed breadcrumb: [PENDING AGENT SUMMARIZATION]\n"
             f"Reason: {reason}\n\n"
         )
+        # Atomic append: read existing log, append, atomic_write full content.
+        # Avoids the non-atomic open("a") pattern (CWE-362).
         try:
-            with open(self.update_log, "a", encoding="utf-8") as f:
-                f.write(log_entry)
-        except OSError as e:
+            existing = ""
+            if self.update_log.exists():
+                existing = safe_read(self.update_log)
+            atomic_write(self.update_log, existing + log_entry)
+        except (OSError, ValueError) as e:
             print(f"[BREADCRUMB] Failed to write proposal: {e}")
 
     # ------------------------------------------------------------------
@@ -71,7 +83,7 @@ class BreadcrumbManager:
             return
 
         try:
-            content = self.update_log.read_text(encoding="utf-8")
+            content = safe_read(self.update_log)  # CWE-400: bounded read
             if not content.strip():
                 return
 
@@ -108,13 +120,13 @@ class BreadcrumbManager:
                 else:
                     remaining_proposals.append(prop_str)
 
-            # Rewrite log with only the unapplied entries.
-            self.update_log.write_text(
+            # Atomic rewrite log with only unapplied entries (CWE-362).
+            atomic_write(
+                self.update_log,
                 "\n\n".join(remaining_proposals) + "\n" if remaining_proposals else "",
-                encoding="utf-8",
             )
 
-        except OSError as e:
+        except (OSError, ValueError) as e:
             print(f"[BREADCRUMB] Auto-apply failed: {e}")
 
     # ------------------------------------------------------------------
@@ -139,28 +151,28 @@ class BreadcrumbManager:
         Returns:
             True if the README was successfully written; False on error.
         """
-        # Resolve and validate the target path stays within workspace.
+        # Resolve and validate the target path stays within workspace (CWE-22).
         target = (self.workspace / folder_path_str / "README.md").resolve()
-        workspace_resolved = self.workspace.resolve()
-        if not str(target).startswith(str(workspace_resolved)):
-            print(f"[BREADCRUMB] Path traversal blocked: {target}")
+        try:
+            assert_within(target, self.workspace)
+        except ValueError as e:
+            print(f"[BREADCRUMB] {e}")
             return False
 
-        # Create a minimal README if it does not exist.
+        # Create a minimal README if it does not exist (atomic write, CWE-362).
         if not target.exists():
             try:
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_text(
+                atomic_write(
+                    target,
                     f"# {folder_path_str}\n\n## Contents\n"
                     "<!-- BREADCRUMB -->\n[PENDING]\n<!-- BREADCRUMB_END -->\n",
-                    encoding="utf-8",
                 )
             except OSError as e:
                 print(f"[BREADCRUMB] Could not create README: {e}")
                 return False
 
         try:
-            content = target.read_text(encoding="utf-8")
+            content = safe_read(target, max_bytes=2 * 1024 * 1024)  # 2 MB README cap (CWE-400)
 
             def replace_tag(text: str, start_tag: str, end_tag: str, new_val: str) -> str:
                 """Replace content between start_tag and end_tag, or append if absent."""
@@ -197,9 +209,9 @@ class BreadcrumbManager:
                 else:
                     content += f"\n\n<!-- WORKLOG -->\n{new_entry}\n<!-- WORKLOG_END -->\n"
 
-            target.write_text(content, encoding="utf-8")
+            atomic_write(target, content)  # CWE-362: atomic README update
             return True
 
-        except OSError as e:
+        except (OSError, ValueError) as e:
             print(f"[BREADCRUMB] Failed to update README at {target}: {e}")
             return False

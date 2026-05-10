@@ -11,6 +11,10 @@ Refactored from .blueprints/governance/thedoorway/audit_repairs.py:
   - Added explicit encoding on all read/write operations.
   - Broad 'except Exception' replaced with specific OSError handling.
   - Missing audit_results keys handled gracefully (uses .get() with defaults).
+
+[SECURITY — 2026-05-10 — /harden pass, /nodelete]
+  - write_text() replaced with atomic_write() throughout (CWE-362 / CWE-732).
+  - read_text() replaced with safe_read() with 512 KB template cap (CWE-400).
 """
 
 import json
@@ -22,6 +26,8 @@ try:
     from doorway.best_practices import BestPracticesAuditor
 except ImportError:
     BestPracticesAuditor = None  # type: ignore
+
+from doorway._utils import atomic_write, safe_read
 
 
 class AuditRepairManager:
@@ -119,15 +125,17 @@ class AuditRepairManager:
             tpl_file = base / "repair_plan.md.template"
             if tpl_file.exists():
                 try:
-                    template_content = tpl_file.read_text(encoding="utf-8")
+                    template_content = safe_read(tpl_file, max_bytes=512 * 1024)  # CWE-400
                     break
-                except OSError:
+                except (OSError, ValueError):
                     continue
 
         if template_content is None and self.repair_template_file.exists():
             try:
-                template_content = self.repair_template_file.read_text(encoding="utf-8")
-            except OSError:
+                template_content = safe_read(
+                    self.repair_template_file, max_bytes=512 * 1024  # CWE-400
+                )
+            except (OSError, ValueError):
                 pass
 
         if not template_content:
@@ -180,9 +188,9 @@ class AuditRepairManager:
 
         try:
             self.repair_plan_file.parent.mkdir(parents=True, exist_ok=True)
-            self.repair_plan_file.write_text(report, encoding="utf-8")
+            atomic_write(self.repair_plan_file, report)  # CWE-362 / CWE-732
             print(f"\n[!] Audit findings: repair plan written to {self.repair_plan_file}")
-        except OSError as e:
+        except (OSError, ValueError) as e:
             print(f"[AUDIT] Failed to write repair plan: {e}")
 
     # ------------------------------------------------------------------
@@ -202,9 +210,11 @@ class AuditRepairManager:
 
         try:
             self.success_cert_file.parent.mkdir(parents=True, exist_ok=True)
-            self.success_cert_file.write_text(json.dumps(cert, indent=2), encoding="utf-8")
+            atomic_write(  # CWE-362 / CWE-732
+                self.success_cert_file, json.dumps(cert, indent=2)
+            )
             if self.repair_plan_file.exists():
                 self.repair_plan_file.unlink()
             print(f"\n[+] ZERO-FINDING STATE: Certificate written at {cert['timestamp']}")
-        except OSError as e:
+        except (OSError, ValueError) as e:
             print(f"[AUDIT] Failed to write success certificate: {e}")

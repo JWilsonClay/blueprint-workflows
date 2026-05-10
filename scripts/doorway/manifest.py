@@ -10,9 +10,16 @@ Refactored from .blueprints/governance/thedoorway/manifest_manager.py:
   - Added explicit encoding on all read/write operations.
   - Added existence checks before Architecture.md update (workspace may not have one).
   - Silenced print on Architecture.md update when file does not exist.
+
+[SECURITY — 2026-05-10 — /harden pass, /nodelete]
+  - write_text() replaced with atomic_write() throughout (CWE-362 / CWE-732).
+  - read_text() replaced with safe_read() with size caps (CWE-400).
+  - assert_within() added before each README is read during sync (CWE-22).
 """
 
 from pathlib import Path
+
+from doorway._utils import atomic_write, assert_within, safe_read
 
 
 class ManifestManager:
@@ -61,9 +68,14 @@ class ManifestManager:
                     )
                     discovered_readmes.append((path, entry))
 
-                    # Extract INTERFACE tag for Global API Map.
+                    # Validate README path stays within workspace (CWE-22).
                     try:
-                        content = abs_readme.read_text(encoding="utf-8")
+                        assert_within(abs_readme, self.workspace)
+                    except ValueError as e:
+                        print(f"[MANIFEST] {e}")
+                        continue
+                    try:
+                        content = safe_read(abs_readme, max_bytes=2 * 1024 * 1024)  # CWE-400
                         if (
                             "<!-- INTERFACE -->" in content
                             and "<!-- INTERFACE_END -->" in content
@@ -75,7 +87,7 @@ class ManifestManager:
                             )
                             if interface:
                                 api_map_entries.append(f"### /{path}\n{interface}\n")
-                    except OSError:
+                    except (OSError, ValueError):
                         pass
 
             # Sort: root (.) first, then alphabetical.
@@ -95,8 +107,8 @@ class ManifestManager:
         the current list of discovered README directories.
         """
         try:
-            content = self.manifest_file.read_text(encoding="utf-8")
-        except OSError as e:
+            content = safe_read(self.manifest_file, max_bytes=5 * 1024 * 1024)  # CWE-400
+        except (OSError, ValueError) as e:
             print(f"[MANIFEST] Cannot read MANIFEST.md: {e}")
             return
 
@@ -131,10 +143,11 @@ class ManifestManager:
             new_lines.extend(formatted_entries)
 
         try:
-            self.manifest_file.write_text(
-                "\n".join(new_lines) + "\n", encoding="utf-8"
+            atomic_write(  # CWE-362 / CWE-732
+                self.manifest_file,
+                "\n".join(new_lines) + "\n",
             )
-        except OSError as e:
+        except (OSError, ValueError) as e:
             print(f"[MANIFEST] Cannot write MANIFEST.md: {e}")
 
     def _update_api_map(self, api_map_entries: list) -> None:
@@ -147,8 +160,8 @@ class ManifestManager:
             return
 
         try:
-            content = arch_file.read_text(encoding="utf-8")
-        except OSError as e:
+            content = safe_read(arch_file, max_bytes=5 * 1024 * 1024)  # CWE-400
+        except (OSError, ValueError) as e:
             print(f"[MANIFEST] Cannot read Architecture.md: {e}")
             return
 
@@ -170,7 +183,7 @@ class ManifestManager:
             )
 
         try:
-            arch_file.write_text(new_content, encoding="utf-8")
+            atomic_write(arch_file, new_content)  # CWE-362 / CWE-732
             print("[API MAP] Updated Global API Map in Architecture.md.")
-        except OSError as e:
+        except (OSError, ValueError) as e:
             print(f"[MANIFEST] Cannot write Architecture.md: {e}")
