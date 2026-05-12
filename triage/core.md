@@ -251,7 +251,7 @@ Evaluate the collected state against the **Trigger Matrix** below. For each work
 | `<FAILURE_SIGNALS>` contains Ghost Logic evidence | P1 | |
 | Intent is "release" or "production" with no redteam on record | P0 (intent-driven) | |
 
-**`/divergance`**
+**`/divergence`**
 | Trigger | Priority | Intent Modifier |
 |---------|----------|-----------------|
 | Plan just approved and build not yet started | P3 | |

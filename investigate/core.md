@@ -22,10 +22,10 @@ This workflow does NOT implement fixes. It does NOT propose code changes as its 
 | **Investigatory authority** | Permission to read any file, run any non-destructive command (`view_file`, `grep`, `ls`, `find`, `cat`, `wc`, `git log`, `git diff`), and follow any trail the evidence leads. |
 | **Remediation discussion** | The conversation about how to fix the issue. This always comes SECOND — after the user has confirmed they understand the finding. Never lead with the fix. |
 | **Ambiguity halt** | A pause at Phase 0 when the issue is not clear enough to investigate. One precise question. Not a list of questions. |
-| **Evidence Chain** | The ordered, timestamped ledger of every file viewed and every search run during the investigation — appended to the Investigation Report as an audit trail. Makes the investigation itself reproducible and the conclusions verifiable. Derived from Divergance #2 (Chain of Custody). |
-| **Differential** | The list of 2–4 competing root-cause hypotheses generated before the root cause is named, with explicit evidence used to eliminate each alternative. A diagnosis reached by elimination is more credible than a first-match finding. Derived from Divergance #4. |
-| **Minimal Reproducible Case (MRC)** | The smallest possible reproduction of the issue — a short script, minimal config, or single function — that demonstrates the failure without any surrounding complexity. Produced in Phase 4a before remediation options are presented. Derived from Divergance #3. |
-| **Mute Witness Protocol** | The principle that the mutation prohibition should be enforced architecturally (by tool access restriction or subagent scoping), not only by instruction. A well-designed crime scene investigator cannot accidentally contaminate the scene — the access model prevents it, not the agent's willpower alone. Derived from Divergance #5. |
+| **Evidence Chain** | The ordered, timestamped ledger of every file viewed and every search run during the investigation — appended to the Investigation Report as an audit trail. Makes the investigation itself reproducible and the conclusions verifiable. Derived from Divergence #2 (Chain of Custody). |
+| **Differential** | The list of 2–4 competing root-cause hypotheses generated before the root cause is named, with explicit evidence used to eliminate each alternative. A diagnosis reached by elimination is more credible than a first-match finding. Derived from Divergence #4. |
+| **Minimal Reproducible Case (MRC)** | The smallest possible reproduction of the issue — a short script, minimal config, or single function — that demonstrates the failure without any surrounding complexity. Produced in Phase 4a before remediation options are presented. Derived from Divergence #3. |
+| **Mute Witness Protocol** | The principle that the mutation prohibition should be enforced architecturally (by tool access restriction or subagent scoping), not only by instruction. A well-designed crime scene investigator cannot accidentally contaminate the scene — the access model prevents it, not the agent's willpower alone. Derived from Divergence #5. |
 
 ---
 
@@ -63,7 +63,7 @@ CRIME SCENE SCOPE:
                      [ARCHITECTURAL — if invoked via restricted subagent or read-only shell profile]
 ```
 
-*Mute Witness Protocol note [INJECTED 2026-05-09 — Divergance #5, /nodelete]:* The strongest form of the zero-mutation guarantee is architectural, not instructional. When operating in fully autonomous pipelines or without human oversight, prefer invoking `/investigate` via a subagent or restricted shell profile that physically cannot write files. When architectural enforcement is not available, STRICT RULE 1 and STRICT RULE 11 apply — but acknowledge that instructional enforcement is weaker than structural enforcement. If architectural mode is active, record it in the Enforcement field above.
+*Mute Witness Protocol note [INJECTED 2026-05-09 — Divergence #5, /nodelete]:* The strongest form of the zero-mutation guarantee is architectural, not instructional. When operating in fully autonomous pipelines or without human oversight, prefer invoking `/investigate` via a subagent or restricted shell profile that physically cannot write files. When architectural enforcement is not available, STRICT RULE 1 and STRICT RULE 11 apply — but acknowledge that instructional enforcement is weaker than structural enforcement. If architectural mode is active, record it in the Enforcement field above.
 
 ---
 
@@ -128,7 +128,7 @@ CAUSE:    [what is actually wrong — in plain language, with a citation]
 
 If the cause is not yet known: state that explicitly. "The symptom is clear; the cause requires further investigation in [specific area]."
 
-**2b. Run the Differential. [INJECTED 2026-05-09 — Divergance #4, /nodelete]**
+**2b. Run the Differential. [INJECTED 2026-05-09 — Divergence #4, /nodelete]**
 
 Before naming the root cause, generate the 2–4 most plausible competing explanations for the symptom. Then use evidence to eliminate each alternative, leaving only the surviving cause.
 
@@ -206,7 +206,7 @@ Confidence:
   MEDIUM — the evidence strongly suggests the cause; one more step would confirm
   LOW — the trail points here but the cause is not yet proven
 
-Evidence Chain: [INJECTED 2026-05-09 — Divergance #2 Chain of Custody, /nodelete]
+Evidence Chain: [INJECTED 2026-05-09 — Divergence #2 Chain of Custody, /nodelete]
   Files read (in order):
     1. [path]  Lines: [range]  Purpose: [why this file was read]
     2. [path]  Lines: [range]  Purpose: [why this file was read]
@@ -235,7 +235,7 @@ Do not proceed to remediation discussion until the user confirms they understand
 
 This phase is a **discussion**, not an implementation. No mutations. You are describing options, not executing them.
 
-**4a. Produce the Minimal Reproducible Case (MRC). [INJECTED 2026-05-09 — Divergance #3, /nodelete]**
+**4a. Produce the Minimal Reproducible Case (MRC). [INJECTED 2026-05-09 — Divergence #3, /nodelete]**
 
 Before presenting fix options, produce the smallest possible reproduction of the issue. This is a short script, minimal config block, or single function call that demonstrates the exact failure — without any of the surrounding project complexity.
 
@@ -302,7 +302,7 @@ Once the user chooses: the next step is typically `/iterate-test` (for a code fi
 8. **"What it is NOT" is not optional for complex issues.** When the issue is one that could be confused with something adjacent, rule out the adjacent thing explicitly. This prevents the user from pursuing the wrong fix.
 9. **No jargon without immediate definition.** If a technical term must appear in the plain-language section, define it in parentheses at first use. "The async handler (the part of the code that waits for a response before moving on)..." — that level.
 10. **The crime scene is preserved.** Even if you are certain of the fix, you do not implement it. You describe it. Implementation belongs to the next workflow invocation, authorized by the user after the report is accepted.
-11. **[INJECTED 2026-05-09 — Mute Witness Protocol, Divergance #5, /nodelete]** The mutation prohibition is strongest when enforced architecturally. When used in autonomous pipelines or without human oversight, prefer invoking `/investigate` via a subagent or restricted shell profile that cannot write workspace files. When only instructional enforcement is available (STRICT RULE 1), acknowledge this limitation in the Phase 0b Enforcement field. Do not claim structural enforcement if only instructional enforcement is in place — the distinction matters for autonomous deployments.
+11. **[INJECTED 2026-05-09 — Mute Witness Protocol, Divergence #5, /nodelete]** The mutation prohibition is strongest when enforced architecturally. When used in autonomous pipelines or without human oversight, prefer invoking `/investigate` via a subagent or restricted shell profile that cannot write workspace files. When only instructional enforcement is available (STRICT RULE 1), acknowledge this limitation in the Phase 0b Enforcement field. Do not claim structural enforcement if only instructional enforcement is in place — the distinction matters for autonomous deployments.
 
 ---
 
@@ -347,4 +347,4 @@ Standard position in the fix pipeline:
 
 ### Change Log
 1. **2026-05-09**: `[CREATED — Sovereign Scaffold Generator, /harden-workflow Generator mode + /focus-plan + /quality]` Converted from Legacy-grade monolithic (1,136 bytes, blank description). All original user-authored content preserved verbatim in the persona statement, mutation prohibition, investigatory authority grant, ordering constraint, and audience sensitivity directive. Expanded into Sovereign Pointer/Payload architecture with four phases: Intake & Scope (0), Evidence Collection (1), Root Cause Analysis (2), Investigation Report (3), Remediation Discussion (4 — gated behind user confirmation). GLOSSARY with 8 terms. 10 STRICT RULES. Structured output: Investigation Report and Remediation Options formats. HOW TO BEGIN activation point. Integration pipeline. Change Log. Standard Version: 2.
-2. **2026-05-09**: `[INJECTED — /divergance pass, /harden-workflow + /quality + /focus-plan, /nodelete]` Four Divergance-approved additions injected. (a) Divergance #2 Chain of Custody: Evidence Chain block added to Phase 3 Investigation Report format — ordered ledger of every file read and every search run, making the investigation itself reproducible and the conclusions auditable by future agents. (b) Divergance #3 Minimal Reproducible Case (MRC): New Phase 4a added before existing remediation options (4a→4b, 4b→4c, 4c→4d) — produces the smallest possible demonstration of the failure before fix options are presented; becomes the baseline input for /iterate-test. (c) Divergance #4 Differential Diagnosis: Phase 2 renamed to "Differential → Root Cause Analysis"; new step 2b injected (existing 2b becomes 2c) — generates 2–4 competing hypotheses and eliminates each with evidence before naming the root cause; surviving hypothesis is the root cause. DIFFERENTIAL block format added. (d) Divergance #5 Mute Witness Protocol: GLOSSARY term added; Phase 0b CRIME SCENE SCOPE block extended with Enforcement field distinguishing instructional vs. architectural mutation prohibition; STRICT RULE 11 added requiring honest disclosure of enforcement type. GLOSSARY expanded from 8 to 12 terms. STRICT RULES expanded from 10 to 11. Standard Version: 2.
+2. **2026-05-09**: `[INJECTED — /divergence pass, /harden-workflow + /quality + /focus-plan, /nodelete]` Four Divergence-approved additions injected. (a) Divergence #2 Chain of Custody: Evidence Chain block added to Phase 3 Investigation Report format — ordered ledger of every file read and every search run, making the investigation itself reproducible and the conclusions auditable by future agents. (b) Divergence #3 Minimal Reproducible Case (MRC): New Phase 4a added before existing remediation options (4a→4b, 4b→4c, 4c→4d) — produces the smallest possible demonstration of the failure before fix options are presented; becomes the baseline input for /iterate-test. (c) Divergence #4 Differential Diagnosis: Phase 2 renamed to "Differential → Root Cause Analysis"; new step 2b injected (existing 2b becomes 2c) — generates 2–4 competing hypotheses and eliminates each with evidence before naming the root cause; surviving hypothesis is the root cause. DIFFERENTIAL block format added. (d) Divergence #5 Mute Witness Protocol: GLOSSARY term added; Phase 0b CRIME SCENE SCOPE block extended with Enforcement field distinguishing instructional vs. architectural mutation prohibition; STRICT RULE 11 added requiring honest disclosure of enforcement type. GLOSSARY expanded from 8 to 12 terms. STRICT RULES expanded from 10 to 11. Standard Version: 2.

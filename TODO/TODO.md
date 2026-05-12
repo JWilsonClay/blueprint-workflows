@@ -5,7 +5,7 @@
 
 ---
 
-## ITEM 1 — /sentinel (Divergance #2)
+## ITEM 1 — /sentinel (Divergence #2)
 **Status**: ✅ COMPLETE — Built 2026-05-10
 
 **[RESOLUTION — 2026-05-10, /nodelete]**
@@ -20,7 +20,7 @@ All four Discussion Points resolved:
 **Artifacts produced:**
 - `sentinel.md` — Sovereign pointer (P/P architecture, YAML frontmatter)
 - `sentinel/core.md` — Full payload: 5-phase protocol, 8 STRICT RULES, 10-term GLOSSARY, routing table, multi-workspace mode, ticket gate
-**Origin**: Divergance Session, 2026-05-07
+**Origin**: Divergence Session, 2026-05-07
 
 ### Idea Summary
 An ambient workspace monitor that detects when specific workflows should be run and surfaces the recommendation proactively, without being asked. Designed to run at the initialization of a new agentic session as a standing check.
@@ -39,7 +39,7 @@ Schedule a discussion session. Bring the existing agentic tool to compare. Decid
 
 ---
 
-## ITEM 2 — /handoff (Divergance #4)
+## ITEM 2 — /handoff (Divergence #4)
 **Status**: ✅ COMPLETE — Absorbed into /secretary Phase 3 (2026-05-07)
 **Resolution**: User reviewed the case and approved. HANDOFF.md production is now Phase 3 of the `/secretary` meta-workflow. No separate /handoff workflow was created — /secretary is the session-close orchestrator that produces HANDOFF.md as one of its three primary outputs. See `global_workflows/secretary/core.md` Phase 3.
 
@@ -77,7 +77,7 @@ User to review the case above and decide: (a) convinced — schedule build, (b) 
 
 ---
 
-## ITEM 3 — /continuous-verify (Divergance #7)
+## ITEM 3 — /continuous-verify (Divergence #7)
 **Status**: ✅ COMPLETE — Built and integrated into /execute-build Step 5g (2026-05-07)
 **Resolution**: User was convinced by the clarification that /continuous-verify is NOT a separate user-invoked workflow — it is an automatic gate inside /execute-build. Built as `global_workflows/continuous-verify/core.md` (Sovereign, Standard Version 2). Integrated into `/execute-build/core.md` as Step 5g, injected between Step 5f and Step 6. Three outcomes: PARITY (silent), MISMATCH (halt, block receipt), UNVERIFIABLE (advance with risk note). See `global_workflows/continuous-verify/core.md` and `global_workflows/execute-build/core.md` Step 5g.
 
@@ -109,9 +109,9 @@ Consider: fold the core concept into /execute-build Step 5 as an optional "deep 
 
 ---
 
-## ITEM 4 — /pipeline (Divergance #8)
+## ITEM 4 — /pipeline (Divergence #8)
 **Status**: HOLD — Deferred Until User Reaches Operational Maturity
-**Origin**: Divergance Session, 2026-05-07
+**Origin**: Divergence Session, 2026-05-07
 
 ### Idea Summary
 A meta-workflow that composes and sequences the other workflows based on project phase: focus-plan → execute-build → iterate-test → harden → soc → document. Automates the sequencing that the user currently manages manually.
@@ -134,9 +134,9 @@ Right now, the user IS the pipeline. They've been manually learning what the rig
 ### Next Action
 Re-visit this item after completing the Layer 2 build roadmap (Stages 1-3: /receipt-check, /retrospective, /provenance). By then, the user will have more operational experience to evaluate whether /pipeline adds value.
 
-## ITEM 5 — WORKFLOW_DEPENDENCIES.md (Divergance #5 from /secretary session)
+## ITEM 5 — WORKFLOW_DEPENDENCIES.md (Divergence #5 from /secretary session)
 **Status**: DEFERRED — Approved, Awaiting Optimal Timing
-**Origin**: /secretary Divergance session, 2026-05-07
+**Origin**: /secretary Divergence session, 2026-05-07
 **User note**: "#5 should be added to the TODO.md as a TODO item and not as a discussion item; approved, but awaiting optimal timing for implementation."
 
 ### Idea Summary
@@ -161,10 +161,10 @@ Implement after the current suite stabilizes (post-Stage 1a completion and at le
 
 | Item | Outcome | Date |
 |------|---------|------|
-| /triage (Divergance #1) | ✅ Built — `triage.md` | 2026-05-07 |
-| /receipt-check (Divergance #3) | ✅ Built — `receipt-check/core.md` (Sovereign, Std. v2) | 2026-05-07 |
-| /retrospective (Divergance #5) | ✅ Built — `retrospective/core.md` (Sovereign, Std. v2) | 2026-05-07 |
-| /provenance (Divergance #6) | ✅ Built — `provenance/core.md` (Sovereign, Std. v2) | 2026-05-07 |
-| ITEM 2 /handoff (Divergance #4) | ✅ Absorbed into /secretary Phase 3 — HANDOFF.md output | 2026-05-07 |
-| ITEM 3 /continuous-verify (Divergance #7) | ✅ Built — `continuous-verify/core.md` + injected into /execute-build Step 5g | 2026-05-07 |
-| ITEM 1 /sentinel (Divergance #2) | ✅ Built — `sentinel.md` + `sentinel/core.md` (Sovereign, Std. v1). Doorway Protocol extracted to `scripts/doorway/` (Diamond-hardened). | 2026-05-10 |
+| /triage (Divergence #1) | ✅ Built — `triage.md` | 2026-05-07 |
+| /receipt-check (Divergence #3) | ✅ Built — `receipt-check/core.md` (Sovereign, Std. v2) | 2026-05-07 |
+| /retrospective (Divergence #5) | ✅ Built — `retrospective/core.md` (Sovereign, Std. v2) | 2026-05-07 |
+| /provenance (Divergence #6) | ✅ Built — `provenance/core.md` (Sovereign, Std. v2) | 2026-05-07 |
+| ITEM 2 /handoff (Divergence #4) | ✅ Absorbed into /secretary Phase 3 — HANDOFF.md output | 2026-05-07 |
+| ITEM 3 /continuous-verify (Divergence #7) | ✅ Built — `continuous-verify/core.md` + injected into /execute-build Step 5g | 2026-05-07 |
+| ITEM 1 /sentinel (Divergence #2) | ✅ Built — `sentinel.md` + `sentinel/core.md` (Sovereign, Std. v1). Doorway Protocol extracted to `scripts/doorway/` (Diamond-hardened). | 2026-05-10 |

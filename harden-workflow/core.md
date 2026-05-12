@@ -373,7 +373,7 @@ Execute the protocol exactly as written in core.md. Do not narrate the file read
 - `/execute-build` → "Phase 0 immediately"
 - `/refactor` → "Phase 0 immediately"
 - `/soc` → "Step 0 immediately"
-- `/divergance` → "Phase 0 silently"
+- `/divergence` → "Phase 0 silently"
 - `/harden-workflow` → "Phase 0 immediately"
 - For a new workflow: name the first phase or step explicitly
 
@@ -645,7 +645,7 @@ Workflow         Size (live)  Architecture    Grade    Std. Version
 REFERENCE ONLY — baseline snapshot from 2026-05-07 (MAY BE STALE):
   /canvas          3,130 b     Monolithic      Structured
   /deepcode        5,046 b     Monolithic      Structured
-  /divergance        660 b     Pointer → core  Sovereign
+  /divergence        660 b     Pointer → core  Sovereign
   /document        5,873 b     Monolithic      Structured
   /execute-build     698 b     Pointer → core  Sovereign
   /focus-plan      9,843 b     Monolithic      Legacy (near cap)
@@ -691,7 +691,7 @@ INTEGRATION WITH OTHER WORKFLOWS
 ────────────────────────────────────────────
 This workflow operates in this position within the workflow maintenance pipeline:
 
-  1. /divergance       → surfaces new workflow ideas and architectural improvements
+  1. /divergence       → surfaces new workflow ideas and architectural improvements
   2. /harden-workflow  → THIS WORKFLOW — hardens existing or newly created workflow files
   3. /triage           → uses the hardened frontmatter tags to recommend workflows
   4. /receipt-check    → reads Hardening Certificates to track suite coverage (Layer 2)
@@ -708,6 +708,6 @@ Typical /triage triggers for this workflow:
 ### Change Log
 1. **2026-05-07**: `[CREATED]` Full workflow built from blank pointer. Origin: Session discussion identifying /harden-workflow as the formalization of the workflow hardening practice developed throughout the session. Established the four-grade system (Sovereign/Hardened/Structured/Legacy), the eight-phase hardening protocol, the Pointer/Payload decision tree, and the Suite-Wide Audit Mode. Pointer/Payload architecture applied at creation.
 2. **2026-05-07**: `[HARDENED — Self-Pass]` Applied /harden-workflow against itself via /focus-plan + /quality. Six gaps resolved: (a) Orphaned payload detection added to Phase 0b; (b) Batch-mode Sovereign-skip decision branch added to Phase 1; (c) Phase 7a upgraded from mental simulation to actual view_file verification; (d) Suite Audit Mode hardened against stale static sizes — live read now required; (e) STRICT RULE 11 added: halt if Phase 2 verification fails; (f) STRICT RULE 12 added: never trust hardcoded sizes. Grade elevated from Hardened to Sovereign.
-3. **2026-05-07**: `[INJECTED — Divergance Pass, /nodelete]` Three Divergance-approved additions injected. (a) GLOSSARY block added after preamble — key terms for context-portable operation by any agent; defines Standard Version as a first-class concept. (b) Degradation Check injected into Phase 1 — detects when a Sovereign workflow was certified under an older Standard Version and flags it for re-certification. (c) Sovereign Scaffold Generator injected into Phase 2b — full pre-populated Sovereign-grade core.md template eliminating Legacy-grade new workflows from this point forward. Standard Version incremented to 2. STRICT RULE 13 added (no unfilled scaffold placeholders). Hardening Certificate standard_version field mandated. Suite Audit Table updated with Standard Version column.
+3. **2026-05-07**: `[INJECTED — Divergence Pass, /nodelete]` Three Divergence-approved additions injected. (a) GLOSSARY block added after preamble — key terms for context-portable operation by any agent; defines Standard Version as a first-class concept. (b) Degradation Check injected into Phase 1 — detects when a Sovereign workflow was certified under an older Standard Version and flags it for re-certification. (c) Sovereign Scaffold Generator injected into Phase 2b — full pre-populated Sovereign-grade core.md template eliminating Legacy-grade new workflows from this point forward. Standard Version incremented to 2. STRICT RULE 13 added (no unfilled scaffold placeholders). Hardening Certificate standard_version field mandated. Suite Audit Table updated with Standard Version column.
 4. **2026-05-07**: `[INJECTED — Generator session governance, /nodelete]` STRICT RULE 14 added: Generator mode requires a pre-existing pointer file (user-created) as a halt condition. Surfaced during the /continuous-verify Generator build session — user confirmed that Antigravity cannot assign the `/` slash trigger to a workflow unless `[name].md` already exists at the time of invocation.
 5. **2026-05-08**: `[INJECTED — Ticket mode, /nodelete]` Fourth invocation mode added: `--ticket`. Scans `helpdesk-tickets/` for open tickets (files without `CLOSED_` prefix), uses each ticket as an intake manifest to identify the faulting workflow and recommended fix (Section 5 of ticket), routes to Phase 1 hardening, then closes the ticket via `CLOSED_` prefix rename after Phase 8 certificate. STRICT RULE 15 added: ticket closure is mandatory after hardening in ticket mode. TICKET MODE PROTOCOL block injected into Phase 0a. Complements /helpdesk-tickets workflow (also created this session). Standard Version: 2.

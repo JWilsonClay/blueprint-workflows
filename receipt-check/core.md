@@ -250,14 +250,14 @@ sub-steps are added, receipt files will not exist for most projects and /receipt
 will return RECEIPT INFRASTRUCTURE NOT INITIALIZED. Stage 1a must be completed before
 this workflow becomes fully operational.
 
-**[INJECTION — 2026-05-07, Divergance #4]**: DOCS_RECEIPTS.md added as the fourth receipt
+**[INJECTION — 2026-05-07, Divergence #4]**: DOCS_RECEIPTS.md added as the fourth receipt
 dimension. Written by /document when Stage 1a is complete. Until then, Documented dimension
 uses git log grep as an UNVERIFIABLE fallback. Infrastructure Status block now reports
 all four receipt files. This closes the documentation coverage gap identified in the /secretary
-Divergance report.
+Divergence report.
 
 ---
 
 ### Change Log
-1. **2026-05-07**: `[CREATED]` Created via Sovereign Scaffold Generator. Stage 1 of the Layer 2 Workflow Suite (see layer2_implementation_plan.md). Origin: Divergance #3 (observability layer). Reads three receipt files from `.workflow_state/receipts/`, produces Coverage Map with Built/Validated/Hardened/Documented dimensions, surfaces gaps and stale harden grades. Includes receipt infrastructure status report. Standard Version: 2.
-2. **2026-05-07**: `[INJECTED — Divergance #4, /nodelete]` DOCS_RECEIPTS.md added as fourth receipt file. Glossary entry added. INTAKE MANIFEST updated to include DOCS_RECEIPTS.md. Phase 2 Documentation dimension source updated: DOCS_RECEIPTS.md is now primary; git log grep is fallback (UNVERIFIABLE). Phase 4 Infrastructure Status block updated from 3-file to 4-file report. Integration section updated with /document as source workflow. DOCS_RECEIPTS.md path added to receipt file location list.
+1. **2026-05-07**: `[CREATED]` Created via Sovereign Scaffold Generator. Stage 1 of the Layer 2 Workflow Suite (see layer2_implementation_plan.md). Origin: Divergence #3 (observability layer). Reads three receipt files from `.workflow_state/receipts/`, produces Coverage Map with Built/Validated/Hardened/Documented dimensions, surfaces gaps and stale harden grades. Includes receipt infrastructure status report. Standard Version: 2.
+2. **2026-05-07**: `[INJECTED — Divergence #4, /nodelete]` DOCS_RECEIPTS.md added as fourth receipt file. Glossary entry added. INTAKE MANIFEST updated to include DOCS_RECEIPTS.md. Phase 2 Documentation dimension source updated: DOCS_RECEIPTS.md is now primary; git log grep is fallback (UNVERIFIABLE). Phase 4 Infrastructure Status block updated from 3-file to 4-file report. Integration section updated with /document as source workflow. DOCS_RECEIPTS.md path added to receipt file location list.

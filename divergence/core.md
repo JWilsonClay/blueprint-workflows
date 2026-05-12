@@ -1,4 +1,4 @@
-# /divergance — Sovereign Lateral Thinking & Adjacent Possibility Engine
+# /divergence — Sovereign Lateral Thinking & Adjacent Possibility Engine
 
 *"Not what we're building — what we haven't thought to build yet, but should."*
 
@@ -8,7 +8,7 @@ This is not brainstorming. Brainstorming produces the agent's first-pass associa
 
 This workflow produces **genuinely orthogonal insight**: ideas that arrive from outside the current frame, that could not have been derived by continuing in the current direction, but that — once stated — are obviously relevant to the intent.
 
-**The Three Laws of Divergance:**
+**The Three Laws of Divergence:**
 1. **No idea may be something already discussed** — not explicitly, not implicitly, not as a variation of a discussed idea. If the current conversation contains it, it is disqualified.
 2. **Every idea must earn its connection** — wild ideas with no path to the project's stated intent are noise. Each idea must articulate exactly how and why it connects.
 3. **The most obvious idea is the most suspect** — if an idea feels immediately natural or obvious given the conversation, it is probably the agent's first-pass association, not a divergent insight. It requires extra scrutiny.
@@ -53,11 +53,11 @@ You will explore the project through **Six Divergence Vectors** — six structur
 
 For each vector, you will ask a forcing question — one that cannot be answered by continuing in the current direction. The forcing question makes it structurally impossible to stay inside the Current Frame.
 
-**Select all six vectors for full divergance.** Do not skip vectors because they seem less applicable. The most useful insights often come from the vectors that seem least relevant at first.
+**Select all six vectors for full divergence.** Do not skip vectors because they seem less applicable. The most useful insights often come from the vectors that seem least relevant at first.
 
 ---
 
-## PHASE 2 — THE SIX VECTORS (The Divergance Engine)
+## PHASE 2 — THE SIX VECTORS (The Divergence Engine)
 
 Execute each vector fully and independently. Do not let the output of one vector influence the others during generation — complete all six in isolation, then synthesize in Phase 3.
 
@@ -230,14 +230,14 @@ After all ideas, add a brief **Synthesis Note**: are any of the passing ideas re
 
 1. Never present an idea that is inside the Current Frame. Disqualify before presenting.
 2. Never present an idea without stating its Correlation Gate result explicitly (passed Novelty Test + Relevance Test).
-3. Never produce more than 8 Divergance ideas per session. Scarcity is the point. Volume dilutes value.
-4. Never produce fewer than 2 Divergance ideas per session. If the Correlation Gate eliminates everything, re-run the weakest vector with a different forcing angle.
+3. Never produce more than 8 Divergence ideas per session. Scarcity is the point. Volume dilutes value.
+4. Never produce fewer than 2 Divergence ideas per session. If the Correlation Gate eliminates everything, re-run the weakest vector with a different forcing angle.
 5. Never skip a vector because it "doesn't seem applicable." The most useful ideas often come from the most unlikely vectors.
-6. Never label a variation of an existing idea as divergent. A better version of a discussed solution is an improvement, not a divergance.
+6. Never label a variation of an existing idea as divergent. A better version of a discussed solution is an improvement, not a divergence.
 7. The Phase 0 context ingestion is mandatory. Never diverge from memory. Read the actual documents.
 8. Novelty is verified, not assumed. Explicitly check each candidate against the exclusion zone.
 9. Do not rank ideas by how comfortable they are. The most uncomfortable idea — the one that most challenges the current frame — deserves the most careful presentation, not suppression.
-10. End every Divergance Report with the Synthesis Note. Pattern recognition across ideas is itself a divergant output.
+10. End every Divergence Report with the Synthesis Note. Pattern recognition across ideas is itself a divergant output.
 
 ---
 
@@ -252,8 +252,8 @@ Then execute Phase 2 (all six vectors) internally, without presenting interim wo
 
 Then apply Phase 3 (Correlation Gate) to all candidates.
 
-Then present only the Phase 4 Divergance Report to the user.
+Then present only the Phase 4 Divergence Report to the user.
 
-The user receives ONLY the final report — no running commentary, no "I'm now thinking about Vector 3...", no stream of consciousness. The divergance process is invisible. The insight is what surfaces.
+The user receives ONLY the final report — no running commentary, no "I'm now thinking about Vector 3...", no stream of consciousness. The divergence process is invisible. The insight is what surfaces.
 
 You are now live. Begin Phase 0 silently.

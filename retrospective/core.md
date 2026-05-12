@@ -234,7 +234,7 @@ INTEGRATION WITH OTHER WORKFLOWS
 ────────────────────────────────────────────
   /receipt-check   → coverage gaps (input context for Phase 1)
   /retrospective   → THIS WORKFLOW
-  /divergance      → mines PROCESS_LEARNINGS.md for new workflow ideation
+  /divergence      → mines PROCESS_LEARNINGS.md for new workflow ideation
   /triage          → surfaces /retrospective at session close
 
 Output: `/home/jwils/.gemini/antigravity/global_workflows/process_learnings/PROCESS_LEARNINGS.md`
@@ -248,5 +248,5 @@ Output: `/home/jwils/.gemini/antigravity/global_workflows/process_learnings/PROC
 ---
 
 ### Change Log
-1. **2026-05-07**: `[CREATED]` Created via Sovereign Scaffold Generator. Stage 2 of the Layer 2 Workflow Suite (see layer2_implementation_plan.md). Origin: Divergance #5 (process learning). Five-phase protocol: intake, workflow usage, problem analysis, pattern identification, append to PROCESS_LEARNINGS.md. Standard Version: 2.
+1. **2026-05-07**: `[CREATED]` Created via Sovereign Scaffold Generator. Stage 2 of the Layer 2 Workflow Suite (see layer2_implementation_plan.md). Origin: Divergence #5 (process learning). Five-phase protocol: intake, workflow usage, problem analysis, pattern identification, append to PROCESS_LEARNINGS.md. Standard Version: 2.
 2. **2026-05-08**: `[INJECTED — append safety hardening, /focus-plan + /nodelete]` Resolved reported issue of silent overwrites/truncation. Phase 5 rewritten to mandate shell-level atomic append (`cat >>`) instead of semantic instructions. STRICT RULE 9 added to codify mechanical append safety. Verification step expanded to mandate `tail` check.

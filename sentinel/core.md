@@ -300,5 +300,5 @@ AND the pre-flight check in Phase 0b.
 
 ### Change Log
 1. **2026-05-10**: `[CREATED — Phase 5 of Doorway Extraction, /focus-plan + /quality + /nodelete]`
-   Sovereign-grade initial build. Resolves TODO ITEM 1 (Divergance #2 — /sentinel ambient monitor).
+   Sovereign-grade initial build. Resolves TODO ITEM 1 (Divergence #2 — /sentinel ambient monitor).
    P/P architecture. 4-phase protocol: Workspace Resolution (0), Doorway Scan (1), Triage Classification (2), Sentinel Report (3), Post-Report Actions (4). 8 STRICT RULES. GLOSSARY with 10 terms. Full integration map. Routing table: 6 Doorway protocol IDs mapped to global_workflows workflow triggers. Multi-workspace mode documented. Ticket threshold gate (HIGH → auto-file). Mute Witness enforcement. HOW TO BEGIN activation block. Resolves all 4 Discussion Points from TODO ITEM 1. Standard Version: 1.
