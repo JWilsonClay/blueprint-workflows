@@ -28,6 +28,9 @@ description: A recursive verification loop to synchronize Intent, Plan, and Subs
 | **Hallucinated Success** | A Focus Loop that produces PARITY results without having actually executed the Phase 3 substrate verification — SEARCH EVIDENCE stated but not performed. The false-negative problem realized. |
 | **Mock Trap** | A Triad Table showing PARITY where substrate verification was run against a test stub or fixture rather than the real implementation. The verification passed; the actual substrate was never checked. |
 | **Context Erosion** | Verification rigor decaying over a long Focus Loop — Phase 3 SEARCH EVIDENCE blocks becoming thinner, Anchor Manifests becoming less exhaustive as the session extends. Countermeasure: re-read STRICT RULES before each new item in sessions with more than 5 items. |
+| **Active Witness Marker** | **[INJECTED 2026-05-11 — Divergence #1]** Self-reporting provenance comment or metadata block embedded in substrate code that automatically testifies about its own alignment state. |
+| **Suite Memory Ledger** | **[INJECTED 2026-05-11 — Divergence #2]** Persistent append-only record of every Candidate Forgotten Detail across all /focus-plan sessions. |
+| **Triad Confidence Oracle** | **[INJECTED 2026-05-11 — Divergence #3]** Forward-looking risk forecast generated from Triad patterns and historical memory. |
 
 ---
 
@@ -115,6 +118,14 @@ Before closing Phase 3, explicitly check for these failure patterns:
 | **Sound Effect Execution** | A function or handler exists in the substrate but is never called on the actual execution path for this feature. Code is present; it is never reached. | Verify call sites — not just definition existence. |
 | **Hallucinated Success** | SEARCH EVIDENCE block is present but searches were not actually executed — block was written from memory or assumption. | Re-execute every search command listed. Show live output, not reconstructed output. |
 
+**[INJECTED 2026-05-11 — Divergence #1: Substrate as Active Witness]**  
+**Phase 3b: Active Witness Marker Embedding (optional but recommended for new code)**  
+When updating `implementation_plan.md` or creating new substrate files during a build, embed lightweight self-witnessing markers:
+```python
+# FOCUS-ANCHOR: item-N, intent-hash:abc123, last-verified:2026-05-11
+```
+These markers allow future Phase 3 scans to receive direct testimony from the substrate itself, reducing external search overhead and eliminating Sound Effect Execution blind spots.
+
 ---
 
 ### Phase 4: The Triad Alignment Table
@@ -189,6 +200,11 @@ FORGOTTEN DETAIL CHECKLIST:
 
 For each unchecked item: ask "Was this considered? If not, should it be added to the plan?"
 
+**[INJECTED 2026-05-11 — Divergence #2: Memory-Augmented Negative Space]**  
+**Persistent Suite Memory Ledger**  
+After listing Candidate Forgotten Details, append every new detail (and its recommendation) to the suite-wide ledger at `manifest/FOCUS-MEMORY-LEDGER.md` (append-only per /nodelete).  
+Future Negative Space Scans automatically cross-reference this ledger to detect recurring omission patterns and surface *meta-patterns* (e.g., “security is forgotten in 70% of new items”).
+
 ---
 
 ## Final Review
@@ -222,6 +238,17 @@ At the end, provide a single overall confidence score for the entire plan:
 - **YELLOW** (some MED confidence or UNVERIFIABLE items): proceed with caution, document risks
 - **RED** (any MISMATCH or multiple UNVERIFIABLEs): resolve before execution
 
+**[INJECTED 2026-05-11 — Divergence #3: Triad Confidence Oracle]**  
+**Triad Confidence Oracle**  
+After the Alignment Summary, generate a machine-readable forecast block:
+```
+TRIAD CONFIDENCE ORACLE
+Predicted Ghost Logic risk: X% (based on historical patterns + memory ledger)
+High-risk items: [list]
+Recommended pre-emptive actions: [list]
+```
+This oracle is emitted for downstream consumption by /execute-build and /continuous-verify.
+
 ---
 
 ## STRICT RULES (never violate)
@@ -238,6 +265,8 @@ At the end, provide a single overall confidence score for the entire plan:
 10. **[INJECTED — 2026-05-11]** Never overwrite existing `implementation_plan.md` entries. Inject reconciliation notes; append new items. Preserve prior content per /nodelete discipline.
 11. **[INJECTED — 2026-05-11]** If Ghost Logic, Mock Trap, Sound Effect Execution, or Hallucinated Success is detected at any phase, name it explicitly, log it in the Phase 5 Reconciliation Gap, and file a helpdesk ticket before proceeding.
 12. **[INJECTED — 2026-05-11]** SEARCH EVIDENCE must reflect live command execution, not reconstructed output. If a search was not actually run, do not fabricate its output — state "search not yet executed" and run it before advancing.
+
+13. **[INJECTED 2026-05-11 — Divergences #1–#3]** Always apply Active Witness markers when possible, maintain the Suite Memory Ledger, and generate the Triad Confidence Oracle in every Final Review. These evolutionary extensions are now core responsibilities of /focus-plan.
 
 ---
 
@@ -274,7 +303,14 @@ Do not confirm activation to the user. Do not summarize what was read. Produce t
 
 **Critical pipeline rule**: /focus-plan is a blocking pre-condition for /execute-build when `implementation_plan.md` has been modified since the last verified focus-plan run. /triage enforces this at P0 when intent is "start building."
 
+**New immunity & evolution seeding**: /focus-plan now calls the Ecosystem Immunity Layer (`/harden-workflow --immunity`) after every loop and surfaces Divergence recommendations to /harden-workflow.
+
 ---
 
 ### Change Log
 1. **2026-05-11**: `[CREATED / HARDENED — /harden-workflow, Standard Version 2]` Payload existed as a substantively strong monolithic file with robust Triad model, Negative Space Scan, Sovereign Gate, and null-result enforcement — but missing all five required Sovereign structural shells. Hardening run added: GLOSSARY (19 terms), HOW TO BEGIN block, STRICT RULES block (12 rules, consolidating distributed rules from phase prose), INTEGRATION block documenting pipeline position, Change Log. Failure pattern hooks injected into Phase 3 (Ghost Logic, Mock Trap, Sound Effect Execution, Hallucinated Success table). Context Erosion countermeasure injected into Phase 5. /nodelete discipline injected into Plan Update section. STRICT RULES 9–12 injected as new entries. No original content removed. Grade achieved: **Diamond**.
+2. **2026-05-11**: `[INJECTED — Divergences #1, #2, #3, /nodelete + /quality + /focus-plan]` Substrate as Active Witness (Phase 3b), Memory-Augmented Negative Space (persistent ledger in Negative Space Scan), and Triad Confidence Oracle (Final Review) injected. Pointer/Payload conversion completed. STRICT RULE 13 added. All prior content preserved. Grade elevated to **Sovereign** with evolutionary extensions. Standard Version: 2.
+
+---
+
+**You are now live. Begin Initialization.**

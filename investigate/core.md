@@ -26,6 +26,7 @@ This workflow does NOT implement fixes. It does NOT propose code changes as its 
 | **Differential** | The list of 2–4 competing root-cause hypotheses generated before the root cause is named, with explicit evidence used to eliminate each alternative. A diagnosis reached by elimination is more credible than a first-match finding. Derived from Divergence #4. |
 | **Minimal Reproducible Case (MRC)** | The smallest possible reproduction of the issue — a short script, minimal config, or single function — that demonstrates the failure without any surrounding complexity. Produced in Phase 4a before remediation options are presented. Derived from Divergence #3. |
 | **Mute Witness Protocol** | The principle that the mutation prohibition should be enforced architecturally (by tool access restriction or subagent scoping), not only by instruction. A well-designed crime scene investigator cannot accidentally contaminate the scene — the access model prevents it, not the agent's willpower alone. Derived from Divergence #5. |
+| **Doorway Drift Report** | **[INJECTED 2026-05-12]** Structured JSON output from `doorway.py` (via /sentinel) containing new/modified/deleted/unowned directories, missing READMEs, recommendations, metrics, and zero_finding state. Primary data source for amplified Divergances. |
 
 ---
 
@@ -109,6 +110,14 @@ SEARCH LOG:
 
 A zero-result search is evidence too. It means the thing is not where you looked.
 
+**[INJECTED 2026-05-12 — Divergence #1: Autonomous Crime Scene Patrol (Doorway-integrated)]**  
+**Phase 1d — Autonomous Patrol (background mode)**  
+If invoked via `/investigate --patrol` (or automatically by /sentinel / /continuous-verify / /receipt-check), silently load the most recent Doorway drift report from `{workspace}/.doorway/` or `/sentinel` output.
+
+**Doorway HALT condition**: If `{workspace}/.doorway/` does not exist or contains no drift reports, log `DOORWAY: ABSENT — patrol mode skipped` in the Crime Scene Scope block and continue to Phase 2 using standard evidence collection. Do not halt the investigation — proceed without Doorway data.
+
+Severity tiers for HIGH-severity notification: consult the severity tier definitions in `/sentinel/core.md`. HIGH = structural drift or missing critical governance files. Use it as the initial evidence layer when available. Generate a preliminary Investigation Report and append to the Suite Memory Ledger. Notify user only on HIGH-severity findings.
+
 ---
 
 ## PHASE 2 — DIFFERENTIAL → ROOT CAUSE ANALYSIS
@@ -164,6 +173,12 @@ CAUSAL CHAIN:
 ```
 
 A one-link chain is fine if that's what the evidence shows. Don't manufacture depth. But if there is a chain, document it — because fixing the wrong link leaves the root cause in place.
+
+**[INJECTED 2026-05-12 — Divergence #2: Forensic DNA Registry (Doorway-integrated)]**  
+**Phase 2d — Forensic DNA Registry Lookup**  
+**Doorway HALT condition**: If `workspace_snapshot.json` or `context_updates.log` are absent (Doorway has never been run on this workspace), log `DOORWAY DNA: ABSENT — registry lookup skipped` and proceed to Phase 3 without lineage data. Do not halt the investigation.
+
+When Doorway data is present: query Doorway’s `workspace_snapshot.json` and `context_updates.log` for the target directory’s hash history, last-scan timestamp, and any auto-repairs. Include lineage in the Differential table so root-cause elimination can consider evolutionary context.
 
 ---
 
@@ -227,6 +242,13 @@ After delivering the report: **stop.** Ask the user:
 
 Do not proceed to remediation discussion until the user confirms they understand the finding.
 
+**Confirmation Token Protocol [HARDENED 2026-05-12]**: The following tokens are recognized as explicit gate-passage signals and unlock Phase 4 immediately when received:
+- `UNDERSTOOD` — user confirms full understanding, proceed to Phase 4
+- `CLARIFY: [question]` — user needs clarification on a specific point; answer it, then re-ask the gate question
+- `REDIRECT: [new scope]` — user wants to reframe the investigation; return to Phase 0 with the new scope
+
+Free-text confirmation ("yes", "got it", "makes sense", "proceed") is also valid — read the user's intent. The tokens are an additional recognized protocol for autonomous pipeline contexts where structured signals are required. Do NOT proceed to Phase 4 on an ambiguous or non-confirmatory response.
+
 ---
 
 ## PHASE 4 — REMEDIATION DISCUSSION (only after user confirms understanding)
@@ -288,6 +310,13 @@ If one option is clearly better for this specific situation: say so. Don't hedge
 
 Once the user chooses: the next step is typically `/iterate-test` (for a code fix — pass it the MRC from 4a), `/harden` (for a security gap), or `/harden-workflow` (for a workflow structural gap). Name the workflow that should be invoked next, so the user knows the handoff.
 
+**[INJECTED 2026-05-12 — Divergence #3: Silent MRC Oracle (Doorway-integrated)]**  
+**[HARDENED 2026-05-12 — Mutation relocation per ticket 20260512_investigate_workflow.md, /nodelete]**  
+**Phase 4e — Silent MRC Oracle**  
+After generating the MRC in Phase 4a, present it to the user for inclusion in the session record. **`/investigate` does NOT write MRC-ORACLE.md** — this workflow is zero-mutation (STRICT RULE 1). The MRC Oracle persistence responsibility belongs to `/sentinel`: when `/sentinel` is invoked at session close, it reads any MRC produced during this session from the session record and appends it to `manifest/MRC-ORACLE.md` keyed by Doorway drift signature.
+
+On future investigations when Doorway data is available: `/sentinel` pre-loads the matching historical MRC from `manifest/MRC-ORACLE.md` and includes it as context in the Doorway drift report consumed by Phase 1d. The Oracle is read-only from `/investigate`'s perspective.
+
 ---
 
 ## STRICT RULES (never violate)
@@ -303,6 +332,8 @@ Once the user chooses: the next step is typically `/iterate-test` (for a code fi
 9. **No jargon without immediate definition.** If a technical term must appear in the plain-language section, define it in parentheses at first use. "The async handler (the part of the code that waits for a response before moving on)..." — that level.
 10. **The crime scene is preserved.** Even if you are certain of the fix, you do not implement it. You describe it. Implementation belongs to the next workflow invocation, authorized by the user after the report is accepted.
 11. **[INJECTED 2026-05-09 — Mute Witness Protocol, Divergence #5, /nodelete]** The mutation prohibition is strongest when enforced architecturally. When used in autonomous pipelines or without human oversight, prefer invoking `/investigate` via a subagent or restricted shell profile that cannot write workspace files. When only instructional enforcement is available (STRICT RULE 1), acknowledge this limitation in the Phase 0b Enforcement field. Do not claim structural enforcement if only instructional enforcement is in place — the distinction matters for autonomous deployments.
+
+12. **[INJECTED 2026-05-12 — Divergances #1–#3 amplified with Doorway protocol] [HARDENED 2026-05-12 — fallback defined per ticket 20260512_investigate_workflow.md]** Consume the latest Doorway drift report (JSON from `doorway.py` or `.doorway/` directory) when present. Integrate Autonomous Patrol (Phase 1d), Forensic DNA Registry (Phase 2d), and Silent MRC Oracle (Phase 4e) when Doorway data is available. **If no `.doorway/` directory exists at the target workspace**: log `DOORWAY: ABSENT` in the Crime Scene Scope block, skip Phases 1d and 2d, and proceed with standard evidence collection. The investigation is fully functional without Doorway data — Doorway is an enhancement layer, not a dependency. `/investigate` does not write any Doorway artifact files — it reads them only. All injections follow /nodelete.
 
 ---
 
@@ -343,8 +374,16 @@ Standard position in the fix pipeline:
   - "Don't fix it yet, just tell me what's wrong" → /investigate
   - "I'm seeing an error I don't understand" → /investigate
 
+**New Doorway-native seeding**: /sentinel, /continuous-verify, /receipt-check, and /focus-plan now call `/investigate --patrol` when Doorway reports HIGH findings or drift. This creates a closed-loop early-warning + forensic nervous system.
+
 ---
 
 ### Change Log
 1. **2026-05-09**: `[CREATED — Sovereign Scaffold Generator, /harden-workflow Generator mode + /focus-plan + /quality]` Converted from Legacy-grade monolithic (1,136 bytes, blank description). All original user-authored content preserved verbatim in the persona statement, mutation prohibition, investigatory authority grant, ordering constraint, and audience sensitivity directive. Expanded into Sovereign Pointer/Payload architecture with four phases: Intake & Scope (0), Evidence Collection (1), Root Cause Analysis (2), Investigation Report (3), Remediation Discussion (4 — gated behind user confirmation). GLOSSARY with 8 terms. 10 STRICT RULES. Structured output: Investigation Report and Remediation Options formats. HOW TO BEGIN activation point. Integration pipeline. Change Log. Standard Version: 2.
 2. **2026-05-09**: `[INJECTED — /divergence pass, /harden-workflow + /quality + /focus-plan, /nodelete]` Four Divergence-approved additions injected. (a) Divergence #2 Chain of Custody: Evidence Chain block added to Phase 3 Investigation Report format — ordered ledger of every file read and every search run, making the investigation itself reproducible and the conclusions auditable by future agents. (b) Divergence #3 Minimal Reproducible Case (MRC): New Phase 4a added before existing remediation options (4a→4b, 4b→4c, 4c→4d) — produces the smallest possible demonstration of the failure before fix options are presented; becomes the baseline input for /iterate-test. (c) Divergence #4 Differential Diagnosis: Phase 2 renamed to "Differential → Root Cause Analysis"; new step 2b injected (existing 2b becomes 2c) — generates 2–4 competing hypotheses and eliminates each with evidence before naming the root cause; surviving hypothesis is the root cause. DIFFERENTIAL block format added. (d) Divergence #5 Mute Witness Protocol: GLOSSARY term added; Phase 0b CRIME SCENE SCOPE block extended with Enforcement field distinguishing instructional vs. architectural mutation prohibition; STRICT RULE 11 added requiring honest disclosure of enforcement type. GLOSSARY expanded from 8 to 12 terms. STRICT RULES expanded from 10 to 11. Standard Version: 2.
+3. **2026-05-12**: `[HARDENED — /harden-workflow + /quality + /nodelete + /focus-plan]` Pointer/Payload conversion completed. All three amplified Divergances (#1 Autonomous Crime Scene Patrol, #2 Forensic DNA Registry, #3 Silent MRC Oracle) injected with full Doorway protocol integration (JSON drift reports, snapshot, repairs, metrics). STRICT RULE 12 added. All prior content preserved verbatim per /nodelete. Grade remains Sovereign. Standard Version: 2.
+4. **2026-05-12**: `[TICKET HARDENING — /harden-workflow --ticket 20260512_investigate_workflow.md + /focus-plan + /quality + /nodelete]` Resolved two CRITICAL internal contradictions introduced by the 2026-05-12 Doorway injection. (a) Phase 4e mutation relocation: removed write directive for MRC-ORACLE.md — /investigate is zero-mutation; Oracle write responsibility relocated to /sentinel per architectural separation of concerns. (b) Phase 1d and 2d Doorway HALT conditions added: explicit named fallback (`DOORWAY: ABSENT — patrol/registry skipped`) when .doorway/ directory or Doorway data files are absent. (c) STRICT RULE 12 "always/when available" contradiction resolved: replaced with explicit fallback protocol — Doorway is an enhancement layer, not a dependency. (d) Phase 3 confirmation gate hardened: Confirmation Token Protocol injected — UNDERSTOOD / CLARIFY: / REDIRECT: tokens recognized as explicit gate-passage signals for autonomous pipeline contexts. Zero content removed per /nodelete. Standard Version: 2.
+
+---
+
+**You are now live. Begin Phase 0.**

@@ -15,7 +15,46 @@ This workflow produces **genuinely orthogonal insight**: ideas that arrive from 
 
 ---
 
+## GLOSSARY — Key Terms for This Protocol
+
+*This section exists for context portability. Any agent, in any session, with no prior context of this workspace's architecture decisions should be able to read this glossary and operate the protocol correctly.*
+
+| Term | Definition |
+|------|------------|
+| **Divergence** | The deliberate production of orthogonal, non-obvious ideas that lie outside the Current Frame but connect meaningfully to project intent. |
+| **Current Frame** | The complete set of discussed ideas, assumptions, directions, and solutions that form the exclusion zone for all new ideas. |
+| **Foundational Assumptions** | Unexamined givens embedded in every plan and decision that are the highest-value targets for divergent thinking. |
+| **Correlation Gate** | The two-axis filter (Novelty Test + Relevance Test) that every candidate idea must pass before presentation. |
+| **Adjacent Possible** | Second-order capabilities unlocked by the current build that have not yet been named or discussed. |
+| **Scarcity Principle** | Only the rarest, highest-quality divergent ideas are presented — quality over volume. |
+
+---
+
 ## PHASE 0 — CONTEXT INGESTION & FRAME EXTRACTION
+
+---
+
+────────────────────────────────────────────
+INTEGRATION WITH OTHER WORKFLOWS
+────────────────────────────────────────────
+This workflow operates in this position within the broader Sovereign Suite pipeline:
+
+  1. /focus-plan       → establishes verified baseline Intent/Plan/Substrate
+  2. /divergence       → THIS WORKFLOW — surfaces orthogonal ideas and adjacent possibilities
+  3. /harden-workflow  → consumes divergent ideas for evolutionary improvements
+  4. /execute-build    → downstream execution benefits from the expanded possibility space
+
+Typical /triage triggers for this workflow:
+  - Intent is ambiguous or the team feels stuck in local optima
+  - A major architectural decision is about to be locked in
+  - The suite needs fresh evolutionary direction (e.g., after /focus-plan or /receipt-check)
+
+---
+
+### Change Log
+1. **2026-05-11**: `[HARDENED — /harden-workflow, Standard Version 2]` Payload existed as a strong monolithic file with excellent protocol content but missing full Sovereign structural shells. Hardening run performed: (a) GLOSSARY added after preamble, (b) INTEGRATION WITH OTHER WORKFLOWS section added, (c) Change Log created, (d) Pointer/Payload architecture confirmed for size safety. All original content preserved per /nodelete. Grade elevated to **Sovereign**. 
+
+---
 
 Before diverging from anything, you must know exactly what frame you are diverging FROM. This phase is silent — no output to the user until Phase 2.
 
@@ -256,4 +295,4 @@ Then present only the Phase 4 Divergence Report to the user.
 
 The user receives ONLY the final report — no running commentary, no "I'm now thinking about Vector 3...", no stream of consciousness. The divergence process is invisible. The insight is what surfaces.
 
-You are now live. Begin Phase 0 silently.
+**You are now live. Begin Phase 0 silently.**
