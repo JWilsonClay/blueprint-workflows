@@ -208,6 +208,26 @@ The hardening summary above is **append-only**. If a prior hardening session rec
 - Append the new session record below it, marked with the current date.
 - A script hardened twice has two records. Both are preserved. The most recent grade is authoritative; the prior grade is historical.
 
+**[STAGE 1a — HARDEN_GRADES.md writer — INJECTED 2026-05-15, /nodelete]**
+
+After the git commit, persist the hardening grade to the receipt infrastructure using atomic append.
+Workspace root is the parent directory of the file being hardened.
+
+```bash
+_WORKSPACE_ROOT="$(git -C "$(dirname <filename>)" rev-parse --show-toplevel 2>/dev/null || dirname <filename>)"
+mkdir -p "${_WORKSPACE_ROOT}/.workflow_state/receipts"
+cat >> "${_WORKSPACE_ROOT}/.workflow_state/receipts/HARDEN_GRADES.md" << 'RECEIPT_EOF'
+## $(date +%Y-%m-%d) — /harden — <filename>
+- Phase/Stage: Phase 2f
+- Grade/Status: <Diamond / Gold / Silver / Bronze>
+- Files: <absolute path to filename>
+- Commit: $(git -C "${_WORKSPACE_ROOT}" rev-parse --short HEAD 2>/dev/null || echo "N/A")
+---
+RECEIPT_EOF
+```
+
+If the `cat >>` command fails: print `[HARDEN-RECEIPT] WARNING: could not write to HARDEN_GRADES.md — {error}` and continue. Do not halt for a receipt write failure.
+
 ---
 
 ### Phase 3: Project-Wide Final Validation

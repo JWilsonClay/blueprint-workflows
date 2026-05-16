@@ -295,7 +295,19 @@ Downstream relationships:
   - If a user asks "how do I know if my built phases still match the plan?" → /triage
     should surface this gate's existence and explain it runs automatically inside /execute-build.
 
+**[User-Facing Advisory — INJECTED 2026-05-15, /harden-workflow --ticket 20260512_continuous-verify_workflow.md + /nodelete]**
+
+This gate is not user-invocable by design. However, users need to be able to discover it and understand what it does. The following advisory guidance applies when users ask about plan alignment, drift detection, or forward-contract verification:
+
+- **If using /execute-build**: this gate is already active at every phase boundary (Step 5g). No additional action is required. PARITY outcomes are silent; MISMATCH outcomes surface automatically.
+- **If not using /execute-build** (manual phase builds, or ad-hoc implementations): there is no automatic gate. The manual equivalent is `/focus-plan` run between phases — it performs Triad Alignment (Intent → Plan → Substrate) which covers the same conceptual territory.
+- **If a user asks "how do I run /continuous-verify manually"**: the correct answer is — you cannot. It is a sub-workflow of /execute-build. The question to ask instead is: "are you using /execute-build? If yes, it's already running." If no, recommend adopting /execute-build or running /focus-plan between phases.
+
+/triage Trigger Matrix now includes two advisory trigger rows for this gate. When users ask about plan alignment or validation, /triage will surface the above guidance rather than suggesting a direct invocation.
+
 ---
 
 ### Change Log
 1. **2026-05-07**: `[CREATED]` Created via Sovereign Scaffold Generator. Stage 4 of the Layer 2 Workflow Suite (see layer2_implementation_plan.md). Origin: Divergence #7 promoted to active plan by user. Defined as sub-step 5g inside /execute-build Build Audit, not a standalone user-invoked workflow. Three outcomes: PARITY (silent), MISMATCH (halt), UNVERIFIABLE (risk log). Scope constrained to Phase N acceptance criteria + forward contract verification only — not a full plan re-audit. Standard Version: 2.
+2. **2026-05-15**: `[INJECTED — /harden-workflow --ticket 20260512_continuous-verify_workflow.md + /nodelete]` Routing gap resolved. User-Facing Advisory sub-section added to INTEGRATION section — explains that the gate is not user-invocable, clarifies the /execute-build automatic path, names /focus-plan as the manual equivalent when /execute-build is not in use. Two advisory trigger rows added to /triage/core.md's continuous-verify block (also in this commit) to make the gate discoverable via /triage. Closes ticket 20260512_continuous-verify_workflow.md.
+

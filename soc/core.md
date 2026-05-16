@@ -15,8 +15,20 @@ Use this EXACT workflow for:
 
 **Prerequisites (always start here)**
 - Work on a dedicated feature branch.
-- Have (or immediately add) characterization tests / unit tests covering the current behavior.
 - Understand the business domain, key use cases, and data flow of the code being refactored.
+
+**[ADDENDUM D — Test/Baseline Commit Order — INJECTED 2026-05-15, /harden-workflow --ticket 20260512_soc_workflow.md + /nodelete]**
+
+When characterization tests do NOT yet exist, the commit order is NOT optional. Follow this exact 3-commit sequence to prevent `$BASELINE` ambiguity:
+
+1. `git commit -m "chore: pre-soc baseline -- NO TESTS"` ← TRUE baseline: current state, zero test coverage. This is the rollback target. Record this hash as `$BASELINE`.
+2. Add characterization tests / unit tests covering the current behavior.
+3. `git commit -m "chore: characterization tests for soc refactor of <module-name>"` ← Tests only. Code unchanged.
+
+SOC_MANIFEST.md records BOTH hashes with labels (see Step 0). The ROLLBACK PROTOCOL targets Commit 1 (`$BASELINE`), not Commit 3.
+
+If tests already exist and are green: skip Commits 1–3 and use the current HEAD as `$BASELINE` directly.
+
 
 **Recommended Folder Structure (Feature-Sliced / Vertical Slice — best for most modern codebases)**
 src/
@@ -45,7 +57,7 @@ Alternative for small or legacy projects: traditional layered architecture (pres
 --------------------------------------------
 STEP 0 -- PREPARATION & SAFETY NET
 --------------------------------------------
-- Commit the current state with a clear baseline message: `git commit -m "chore: baseline before SoC refactor of <module-name>"`
+- Commit the current state with a clear baseline message (see Prerequisites for 3-commit sequence if tests are absent).
 - Record the baseline commit hash: `BASELINE=$(git rev-parse HEAD)`
 - Run the full test suite. Record the result. If tests are failing before you start, STOP and resolve first.
 - Analyze: file size (LOC), cyclomatic complexity, number of imports/callers, dependency graph.
@@ -58,7 +70,58 @@ STEP 0 -- PREPARATION & SAFETY NET
   - Config files that reference module paths
   - Test fixtures and mocks that import the module
   Store this as the CALLER MAP. It is referenced at every subsequent step.
-- Success criterion: clear baseline commit, passing tests, complete caller map, risks identified.
+
+**[ADDENDA A + B + F3 — SOC_MANIFEST.md Persistence — INJECTED 2026-05-15, /harden-workflow --ticket 20260512_soc_workflow.md + /nodelete]**
+
+Immediately after recording the baseline hash and building the CALLER MAP, persist both to `SOC_MANIFEST.md` at the workspace root. This file is the cross-session memory for the entire refactor — without it, `$BASELINE` and the CALLER MAP evaporate at session end, making multi-session SoC refactors unsafe.
+
+```bash
+cat > SOC_MANIFEST.md << 'SOC_EOF'
+# SOC_MANIFEST.md — Sovereign SoC Refactor State
+# Generated: $(date +%Y-%m-%d)
+
+god_file: <path/to/god_file>
+baseline_commit_no_tests: <hash of Commit 1 if 3-commit sequence was used, else N/A>
+baseline_commit: $(git rev-parse HEAD)
+branch: $(git rev-parse --abbrev-ref HEAD)
+
+## Verification Gate Command
+<CAPTURE THE EXACT COMMAND USED TO RUN THE FULL TEST SUITE>
+example: pytest tests/ -x | npm test | python -m unittest discover
+
+## CALLER MAP
+(paste caller map here — one entry per line)
+- direct_imports:
+- barrel_exports:
+- framework_registries:
+- dynamic_imports:
+- test_fixtures:
+
+## Responsibility List
+(populated in Step 1)
+
+## Module Groupings
+(populated in Step 2)
+
+## Step Completion
+- [ ] Step 0: Baseline & Manifest
+- [ ] Step 1: Inventory
+- [ ] Step 2: Group Concerns
+- [ ] Step 3: Extract (Strangler Fig)
+- [ ] Step 4: Decouple
+- [ ] Step 5: Update Callers
+- [ ] Step 6: Clean Up
+- [ ] Step 7: Validate
+- [ ] Step 8: Receipt
+SOC_EOF
+git add SOC_MANIFEST.md
+git commit -m "chore: initialize SOC_MANIFEST.md for <module-name> soc refactor"
+```
+
+On every subsequent session resumption: re-read `SOC_MANIFEST.md` first. It is the source of truth for `$BASELINE`, the gate command, and the CALLER MAP. Do NOT attempt to reconstruct these from memory.
+
+- Success criterion: clear baseline commit, passing tests (or 3-commit sequence complete), CALLER MAP fully populated in SOC_MANIFEST.md, verification gate command captured, risks identified.
+
 
 --------------------------------------------
 STEP 1 -- INVENTORY
@@ -97,6 +160,17 @@ In the ORIGINAL file, immediately after extraction, add a shim that re-exports f
   Node/TS: `export { ConcernClass } from './new-module/concern'; // SHIM -- remove after all callers migrated`
 This keeps ALL existing callers working with zero changes while you migrate them individually.
 Do NOT remove the shim until Step 5 is fully complete.
+
+**[ADDENDUM C — Shim Verification Contract — INJECTED 2026-05-15, /harden-workflow --ticket 20260512_soc_workflow.md + /nodelete]**
+
+The shim itself must be verified before any callers are migrated. Immediately after adding the shim:
+
+1. Run the full test suite. If any test fails at the shim boundary, the extraction is broken — do NOT proceed to Step 5.
+2. Write or confirm at least one test that imports the concern through the shim's original path (the god file), verifying that the re-export is live and correct.
+3. Confirm `SOC_MANIFEST.md` Step 3 checkbox is marked `[x]` before beginning Step 4.
+
+The shim is a contract: it guarantees zero-breakage during caller migration. A shim that has not been tested is a liability masquerading as a safety net.
+
 
 --------------------------------------------
 STEP 4 -- DECOUPLE (remove tight coupling)
@@ -205,3 +279,64 @@ After rollback: diagnose the failure before re-attempting. Do not re-apply the s
 - Revisit the structure periodically as the codebase grows.
 
 Follow this workflow strictly and incrementally. Ask the user for clarification on any domain concept you don't fully understand. Always prioritize small, safe, reversible changes over big-bang rewrites.
+
+--------------------------------------------
+STEP 8 -- SOC COMPLETION RECEIPT
+--------------------------------------------
+**[ADDENDUM E/F6 — SoC Completion Receipt — INJECTED 2026-05-15, /harden-workflow --ticket 20260512_soc_workflow.md + /nodelete]**
+
+After Step 7 passes with zero regressions, emit the SoC Completion Receipt and persist it:
+
+```
++────────────────────────────────────────────────────+
+|  SOC COMPLETION RECEIPT                          |
+|  God File:          <original god file path>      |
+|  Concerns Extracted: N                            |
+|  Baseline Commit:   <$BASELINE hash>              |
+|  Final Commit:      <HEAD hash>                   |
+|  Verification Gate: <command from SOC_MANIFEST>   |
+|  Regressions:       0                             |
+|  Shims Removed:     N/N                           |
+|  Status:            SOC_COMPLETE                  |
++────────────────────────────────────────────────────+
+```
+
+Persist to the receipt infrastructure using atomic append:
+
+```bash
+mkdir -p .workflow_state/receipts
+cat >> .workflow_state/receipts/SOC_RECEIPTS.md << 'RECEIPT_EOF'
+## $(date +%Y-%m-%d) — /soc — <god_file>
+- Phase/Stage: SoC Complete
+- Grade/Status: SOC_COMPLETE
+- Files: <concerns extracted, list new module paths>
+- Commit: $(git rev-parse --short HEAD)
+---
+RECEIPT_EOF
+```
+
+Mark `SOC_MANIFEST.md` Step 8 checkbox `[x]` and commit:
+```bash
+git add SOC_MANIFEST.md .workflow_state/receipts/SOC_RECEIPTS.md
+git commit -m "chore: soc complete for <module-name> -- receipt filed"
+```
+
+**Post-Workflow Best Practices**
+- Commit after every successful step with a descriptive message (e.g., "Extract user authentication concern to core/auth").
+- For greenfield / new code design (when no god file is provided): skip straight to Step 2 and design modules upfront using the same principles and folder structure.
+- Document each new module's responsibility (JSDoc / README).
+- Monitor performance and behavior after major extractions.
+- Revisit the structure periodically as the codebase grows.
+- SOC_MANIFEST.md remains in the workspace after completion as a permanent refactor record. Do not delete it.
+
+### Change Log
+1. **[ORIGINAL]**: Created. 8-step SoC workflow with Strangler Fig pattern, ROLLBACK PROTOCOL, folder structure guidance, and inline success criteria per step.
+2. **2026-05-06**: `[INJECTION]` Step 3e: verify green state between EVERY extraction, not just at the end.
+3. **2026-05-15**: `[INJECTED — /harden-workflow --ticket 20260512_soc_workflow.md + /nodelete]` Five addenda from CRITICAL open ticket resolved:
+   (A) CALLER MAP persistence: SOC_MANIFEST.md creation injected at Step 0 with full template. CALLER MAP now persists to workspace root file across session resets.
+   (B) $BASELINE evaporation: baseline hash written to SOC_MANIFEST.md immediately upon capture. ROLLBACK PROTOCOL now reads from file, not shell variable.
+   (C) Shim verification contract: added mandatory shim test gate before any caller migration begins.
+   (D) Test/baseline commit ordering: 3-commit sequence defined in Prerequisites to eliminate `$BASELINE` ambiguity when tests are absent.
+   (E/F3) Verification gate command: captured into SOC_MANIFEST.md template at Step 0 as a required field.
+   (E/F6) Step 8 SoC Completion Receipt: added after Step 7 with structured receipt format and `cat >>` persist to `.workflow_state/receipts/SOC_RECEIPTS.md`. Closes the /receipt-check integration gap.
+   Divergence D4 (soc_caller_scan.py automation script) deferred to separate ticket — requires new Python code outside workflow scope.

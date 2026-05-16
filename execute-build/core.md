@@ -260,7 +260,26 @@ Emit the Phase Build Receipt:
   |  Status:         PHASE COMPLETE                  |
   +--------------------------------------------------+
 
-Then: automatically re-read the Phase Map from <TASKS_FILE>.
+**[STAGE 1a — BUILD_RECEIPTS.md writer — INJECTED 2026-05-15, /nodelete]**
+
+After emitting the receipt to chat, persist it to disk using atomic append.
+Workspace root is the parent directory of `<TASKS_FILE>`.
+
+```bash
+mkdir -p "$(dirname <TASKS_FILE>)/.workflow_state/receipts"
+cat >> "$(dirname <TASKS_FILE>)/.workflow_state/receipts/BUILD_RECEIPTS.md" << 'RECEIPT_EOF'
+## $(date +%Y-%m-%d) — /execute-build — <ACTIVE_PHASE name>
+- Phase/Stage: <ACTIVE_PHASE name>
+- Grade/Status: PHASE COMPLETE
+- Files: <Files Created> | <Files Modified>
+- Commit: $(git -C "$(dirname <TASKS_FILE>)" rev-parse --short HEAD 2>/dev/null || echo "N/A")
+---
+RECEIPT_EOF
+```
+
+If the `cat >>` command fails (non-zero exit): print `[BUILD-RECEIPT] WARNING: could not write to BUILD_RECEIPTS.md — {error}` and continue. Do not halt the build for a receipt write failure.
+
+Then: automatically re-read the Phase Map from `<TASKS_FILE>`.
   - If more phases remain: advance <ACTIVE_PHASE> to the next incomplete phase and return to STEP 1.
   - If all phases are complete: proceed to STEP 7.
 
@@ -288,6 +307,20 @@ Emit the Final Build Receipt:
   |  Regressions:    0 detected                      |
   |  Status:         PROJECT BUILD COMPLETE          |
   +--------------------------------------------------+
+
+**[STAGE 1a — BUILD_RECEIPTS.md final entry — INJECTED 2026-05-15, /nodelete]**
+
+```bash
+mkdir -p "$(dirname <TASKS_FILE>)/.workflow_state/receipts"
+cat >> "$(dirname <TASKS_FILE>)/.workflow_state/receipts/BUILD_RECEIPTS.md" << 'RECEIPT_EOF'
+## $(date +%Y-%m-%d) — /execute-build — PROJECT COMPLETE
+- Phase/Stage: ALL PHASES
+- Grade/Status: PROJECT BUILD COMPLETE
+- Files: <N files created> | <N files modified>
+- Commit: $(git -C "$(dirname <TASKS_FILE>)" rev-parse --short HEAD 2>/dev/null || echo "N/A")
+---
+RECEIPT_EOF
+```
 
 Ask the user: proceed to /iterate-test validation, run /harden, or declare ready for review?
 

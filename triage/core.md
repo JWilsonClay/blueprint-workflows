@@ -166,6 +166,8 @@ Evaluate the collected state against the **Trigger Matrix** below. For each work
 | Build receipt present but no corresponding verification receipt | P1 | |
 | More than 2 completed phases since last `/continuous-verify` run | P2 | |
 | `/execute-build` was the last workflow run with no verification following it | P1 | |
+| User asks "does my built code still match the plan?" or "how do I check plan alignment?" | P2 — Advisory: explain that /continuous-verify runs automatically inside /execute-build Step 5g. If /execute-build is not in use, recommend /focus-plan as the manual equivalent. | |
+| User asks "is my implementation plan still valid?" after completing phases manually | P2 — Advisory: surface /continuous-verify's existence; if user is running /execute-build, it is already active. If not, recommend /focus-plan --verify mode. | |
 
 **`/soc`**
 | Trigger | Priority | Intent Modifier |
@@ -188,6 +190,14 @@ Evaluate the collected state against the **Trigger Matrix** below. For each work
 | More than 200 LOC added since last deepcode run | P2 | |
 | New feature branch or major phase just completed | P2 | |
 | No deepcode run documented in journal at all | P3 | |
+| intent includes "code review" or "review all scripts" or "quality audit" | P2 (intent-driven) | |
+
+**`/canvas`**
+| Trigger | Priority | Intent Modifier |
+|---------|----------|-----------------|
+| User requests "visualize the codebase" or "generate a canvas" or "Obsidian map" | P2 (intent-driven) | |
+| Major architecture phase complete with no visual documentation | P3 | |
+| New team member onboarding or project handoff anticipated | P3 | |
 
 **`/document`**
 | Trigger | Priority | Intent Modifier |
@@ -371,3 +381,5 @@ Typical invocation triggers:
 ### Change Log
 1. **2026-05-11**: `[INJECTED]` Migrated to Sovereign Pointer/Payload architecture (Standard Version 2) per `/harden-workflow`. Monolithic content preserved in full. Structural elements (INTEGRATION, Change Log) appended.
 2. **2026-05-11**: `[HARDENED — /harden-workflow, Standard Version 2]` Sovereign grade hardening run. Findings: GLOSSARY missing (CRITICAL), Trigger Matrix incomplete — 8 Sovereign workflows absent (HIGH), failure pattern hooks absent (MEDIUM), /nodelete discipline not anchored (MEDIUM). All four findings resolved via targeted injection. GLOSSARY block added (17 terms). Trigger Matrix expanded with rows for `/continuous-verify`, `/refactor`, `/retrospective`, `/helpdesk-tickets`, `/secretary`, `/provenance`, `/receipt-check`, `/redteam`. Phase 0g failure pattern surface scan injected. STRICT RULES expanded from 8 to 11. Report template expanded with FAILURE SIGNALS DETECTED section. /nodelete record discipline injected into Phase 2. No prior content removed. Grade achieved: **Diamond**.
+3. **2026-05-15**: `[INJECTED — /harden-workflow --ticket 20260512_continuous-verify_workflow.md + /nodelete]` Advisory routing gap resolved. Two user-facing advisory trigger rows added to the `/continuous-verify` Trigger Matrix block. These rows fire when a user asks about plan alignment or validation — they surface /continuous-verify's existence and route appropriately to /execute-build (if in use) or /focus-plan (if not). /continuous-verify remains a Step 5g sub-gate inside /execute-build, not a standalone user-invocable workflow.
+4. **2026-05-15**: `[INJECTED — /harden-workflow --ticket 20260512_canvas-deepcode_workflow.md + /nodelete]` Suite orphan wiring: `/canvas` Trigger Matrix block added (was completely absent). `/deepcode` block updated with intent-driven trigger row. Both workflows are now discoverable via /triage. Closes canvas-deepcode routing gap.

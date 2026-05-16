@@ -244,11 +244,10 @@ Receipt file location (all projects):
   - "Which files need to be hardened?" → /receipt-check (Hardened column)
   - "Which stages are missing validation?" → /receipt-check (Validated column)
 
-**[DEPENDENCY NOTE — 2026-05-07]**: The receipt-writing sub-steps in /execute-build,
-/iterate-test, and /harden are not yet implemented (Layer 2 Stage 1a). Until those
-sub-steps are added, receipt files will not exist for most projects and /receipt-check
-will return RECEIPT INFRASTRUCTURE NOT INITIALIZED. Stage 1a must be completed before
-this workflow becomes fully operational.
+**[DEPENDENCY NOTE — 2026-05-07, RESOLVED 2026-05-15]**: The receipt-writing sub-steps in
+/execute-build, /iterate-test, /harden, and /document (Stage 1a) have been implemented.
+All four workflows now write atomic-append entries to `{workspace_root}/.workflow_state/receipts/`
+at their natural completion points. /receipt-check is fully operational.
 
 **[INJECTION — 2026-05-07, Divergence #4]**: DOCS_RECEIPTS.md added as the fourth receipt
 dimension. Written by /document when Stage 1a is complete. Until then, Documented dimension
@@ -261,3 +260,4 @@ Divergence report.
 ### Change Log
 1. **2026-05-07**: `[CREATED]` Created via Sovereign Scaffold Generator. Stage 1 of the Layer 2 Workflow Suite (see layer2_implementation_plan.md). Origin: Divergence #3 (observability layer). Reads three receipt files from `.workflow_state/receipts/`, produces Coverage Map with Built/Validated/Hardened/Documented dimensions, surfaces gaps and stale harden grades. Includes receipt infrastructure status report. Standard Version: 2.
 2. **2026-05-07**: `[INJECTED — Divergence #4, /nodelete]` DOCS_RECEIPTS.md added as fourth receipt file. Glossary entry added. INTAKE MANIFEST updated to include DOCS_RECEIPTS.md. Phase 2 Documentation dimension source updated: DOCS_RECEIPTS.md is now primary; git log grep is fallback (UNVERIFIABLE). Phase 4 Infrastructure Status block updated from 3-file to 4-file report. Integration section updated with /document as source workflow. DOCS_RECEIPTS.md path added to receipt file location list.
+3. **2026-05-15**: `[STAGE 1a COMPLETE — /focus-plan + /implementation-plan + /quality, /nodelete]` All four receipt-writing sub-steps implemented. /execute-build Step 6+7 now writes to BUILD_RECEIPTS.md. /iterate-test Step 6 now writes to VALIDATION_RECEIPTS.md. /harden Phase 2f now writes to HARDEN_GRADES.md. /document Phase 2 now writes to DOCS_RECEIPTS.md. All injections use atomic `cat >>` append with `mkdir -p` guard and non-blocking failure handling. /secretary Phase 3 updated with escalation gate: auto-files helpdesk ticket after 2+ consecutive RECEIPT INFRASTRUCTURE NOT INITIALIZED sessions. STRICT RULE 16 added to /secretary. Dependency note in INTEGRATION section retired. Stage 1a is now operational. Source: helpdesk ticket 20260512_receipt-check_workflow.md.

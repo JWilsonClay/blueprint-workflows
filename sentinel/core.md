@@ -99,6 +99,113 @@ Extract from the JSON:
 
 ---
 
+## PHASE 1.5 — AGENT BREADCRUMB POPULATION (SILENT)
+
+**[INJECTED 2026-05-15 — Bug #2 fix: LLM breadcrumb generation stage,
+/harden-workflow --ticket 20260514_sentinel_workflow.md + /nodelete]**
+
+**Objective**: Populate all `[PENDING AGENT SUMMARIZATION]` entries in the
+context log with real, compact, agentic-language directory summaries optimized
+for rapid LLM workspace contextualization. This phase runs silently — the user
+sees nothing until Phase 3 (Sentinel Report).
+
+**Intent**: When an agent later ingests 5–30 READMEs from a workspace, the
+BREADCRUMB section of each README should give it full context — module type,
+language, file inventory, dependencies detected, purpose — in compact key:value
+format. No placeholder language should remain after a /sentinel run.
+
+### Step 1.5a — Read the Pending Log
+
+```bash
+cat {WORKSPACE_PATH}/.doorway/context_updates.log
+```
+
+If the file does not exist or contains no `[PENDING AGENT SUMMARIZATION]` lines:
+skip this phase entirely. The breadcrumbs are current.
+
+### Step 1.5b — For Each Pending Directory: Generate Agentic Summary
+
+For each log entry containing `[PENDING AGENT SUMMARIZATION]`:
+
+1. **Extract the structural inventory** already in the log entry:
+   - `Files (N): file1.py, file2.py, ...` — provided by Doorway's propose()
+   - `Subdirs: subdir1/, subdir2/, ...`
+   - `Reason: new directory / hash drift detected`
+
+2. **Sample key files** to understand purpose. Use `view_file` on 1–3 of the
+   most informative-looking files (prefer: `__init__.py`, top-level `.py`,
+   `README.md`, `config.*`, `main.*`, `index.*`). Read only what is needed to
+   understand the module's role — do not read every file.
+
+3. **Generate a compact agentic summary** in the following key:value format.
+   This format is designed for LLM ingestion, not human readability. Be dense,
+   factual, and precise. All values on one line:
+
+   ```
+   MODULE:{dirname} TYPE:{data-pipeline|service|config|test|docs|scripts|ui|storage|infra} LANG:{python|js|ts|bash|mixed|none} FILES:{count}({top3filenames...}) SUBDIRS:{list|none} PURPOSE:{2-5-word-hyphenated-description} DEPS-DETECTED:{package1,package2|none} DRIFT:{reason-from-log} SCANNED:{YYYY-MM-DD}
+   ```
+
+   Example:
+   ```
+   MODULE:email_inbox TYPE:data-pipeline LANG:python FILES:12(orchestrator.py,janitor.py,learner.py...) SUBDIRS:logs/,config/ PURPOSE:autonomous-email-ingest-classify-archive DEPS-DETECTED:sqlite,langchain,gmail_api DRIFT:hash-drift-detected SCANNED:2026-05-15
+   ```
+
+4. **Write the summary back to `context_updates.log`** by replacing the
+   `[PENDING AGENT SUMMARIZATION]` token for that entry with the generated
+   summary. Do this via `run_command` using a Python one-liner that reads
+   the log, performs the targeted string replacement, and atomically rewrites:
+
+   ```bash
+   python3 -c "
+   import pathlib
+   log = pathlib.Path('{WORKSPACE_PATH}/.doorway/context_updates.log')
+   content = log.read_text(encoding='utf-8')
+   # Replace only the first [PENDING AGENT SUMMARIZATION] occurrence
+   # that belongs to folder '{FOLDER_PATH}'
+   old = 'Folder: {FOLDER_PATH}\nProposed breadcrumb: [PENDING AGENT SUMMARIZATION]'
+   new = 'Folder: {FOLDER_PATH}\nProposed breadcrumb: {GENERATED_SUMMARY}'
+   log.write_text(content.replace(old, new, 1), encoding='utf-8')
+   print('Updated: {FOLDER_PATH}')
+   "
+   ```
+
+5. Repeat for every pending entry in the log.
+
+### Step 1.5c — Apply Summaries to READMEs
+
+After all pending entries have been populated with real summaries, invoke
+`--auto-apply` to push them into the README files:
+
+```bash
+python3 /home/jwils/.gemini/antigravity/global_workflows/scripts/doorway/doorway.py \
+  --workspace {WORKSPACE_PATH} \
+  --auto-apply \
+  --quiet
+```
+
+### Step 1.5d — Verify
+
+Confirm at least one README was updated by checking one of the pending
+directories:
+
+```bash
+head -20 {WORKSPACE_PATH}/{FIRST_PENDING_FOLDER}/README.md
+```
+
+The `<!-- BREADCRUMB -->` section must contain the generated agentic summary,
+not `[PENDING AGENT SUMMARIZATION]` or `Auto-generated summary for navigation`.
+
+If the placeholder is still present: re-run Step 1.5c with `--full-scan` flag.
+If it persists after retry: log `[SENTINEL] BREADCRUMB POPULATION FAILED for
+{folder}` and continue — do not halt the session for a breadcrumb write failure.
+
+**STRICT RULE for this phase**: Never write prose summaries. Always use the
+compact key:value agentic format. Human-readable explanation belongs in the
+human-authored sections of the README (above/below the BREADCRUMB tags). The
+BREADCRUMB tag region is exclusively for LLM rapid context ingestion.
+
+---
+
 ## PHASE 2 — TRIAGE CLASSIFICATION (SILENT)
 
 **Objective**: Classify findings by severity and determine routing.
@@ -302,3 +409,9 @@ AND the pre-flight check in Phase 0b.
 1. **2026-05-10**: `[CREATED — Phase 5 of Doorway Extraction, /focus-plan + /quality + /nodelete]`
    Sovereign-grade initial build. Resolves TODO ITEM 1 (Divergence #2 — /sentinel ambient monitor).
    P/P architecture. 4-phase protocol: Workspace Resolution (0), Doorway Scan (1), Triage Classification (2), Sentinel Report (3), Post-Report Actions (4). 8 STRICT RULES. GLOSSARY with 10 terms. Full integration map. Routing table: 6 Doorway protocol IDs mapped to global_workflows workflow triggers. Multi-workspace mode documented. Ticket threshold gate (HIGH → auto-file). Mute Witness enforcement. HOW TO BEGIN activation block. Resolves all 4 Discussion Points from TODO ITEM 1. Standard Version: 1.
+2. **2026-05-15**: `[INJECTED — /harden-workflow --ticket 20260514_sentinel_workflow.md + /focus-plan + /quality + /nodelete]`
+   Resolved two bugs surfaced by helpdesk ticket and session clarification:
+   (a) Bug #1 — Template verbatim-clone: Fixed in `integrity.py` via new `_expand_template()` method that dynamically enumerates workspace top-level directories and replaces `[DIRECTORY_LIST_PLACEHOLDER]` before any template is written to disk.
+   (b) Bug #2 — Permanent `[PENDING AGENT SUMMARIZATION]` placeholders: Fixed by injecting **Phase 1.5 (Agent Breadcrumb Population)** into this workflow. After doorway.py runs, the agent now reads `context_updates.log`, samples key files in each pending directory, generates a compact agentic-language summary in `MODULE:{x} TYPE:{x} LANG:{x} FILES:{x} PURPOSE:{x} DEPS-DETECTED:{x}` key:value format optimized for LLM ingestion (not human readability), writes summaries back to the log, and pushes them into READMEs via `--auto-apply`. The BREADCRUMB region in every README is now populated with real semantic content on the first /sentinel run.
+   (c) `README.md.template`: Removed hardcoded `.blueprints architecture` project-specific reference; replaced with neutral `Sovereign Workspace Substrate architecture`.
+   (d) `breadcrumb.py:propose()`: Enhanced to enumerate and include directory file inventory (names, count, subdirectory list) in the log entry, giving the LLM agent in Phase 1.5 the structural facts it needs without an additional filesystem scan. All changes follow /nodelete discipline. Standard Version: 2.

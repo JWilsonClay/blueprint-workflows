@@ -116,6 +116,21 @@ Produce or update `global_workflows/manifest/WORKFLOW_MANIFEST.md`:
 
 If `WORKFLOW_MANIFEST.md` already exists at `global_workflows/manifest/`: update it in place using targeted tool calls (`replace_file_content` or `multi_replace_file_content`). Inject the updated Suite Health block and update changed rows in the Workflow Index. **Do not rewrite the full file via write_to_file** — only update the specific lines that changed. This prevents truncation if the manifest grows beyond a single tool-view window.
 
+**[ADDENDUM C — Manifest Existence Fail-Safe Gate — INJECTED 2026-05-15, /harden-workflow --ticket 20260512_secretary_workflow.md + /nodelete]**
+
+Before deciding which branch to take (update in place / create new / migrate), run BOTH of the following shell commands and use their exit codes — not agent inference — to determine the branch:
+
+```bash
+ls /home/jwils/.gemini/antigravity/global_workflows/manifest/WORKFLOW_MANIFEST.md
+ls /home/jwils/.gemini/antigravity/global_workflows/WORKFLOW_MANIFEST.md
+```
+
+- Both return non-zero (file absent at both paths) → `write_to_file` create at `manifest/WORKFLOW_MANIFEST.md`.
+- First returns zero (file exists at `manifest/`) → update in place with `replace_file_content`.
+- First returns non-zero, second returns zero (file exists at root) → migrate: copy content to `manifest/`, delete root copy.
+
+Never infer the branch from memory or conversation context. This gate is mandatory on every run.
+
 If `WORKFLOW_MANIFEST.md` does not exist: create it from scratch at `global_workflows/manifest/WORKFLOW_MANIFEST.md` using `write_to_file`.
 
 **If WORKFLOW_MANIFEST.md is found at the old path (`global_workflows/WORKFLOW_MANIFEST.md`):** move its content to `global_workflows/manifest/WORKFLOW_MANIFEST.md` and delete the old file. The root location is incorrect and will cause Antigravity injection issues.
@@ -160,11 +175,47 @@ Execute /receipt-check for the current project. Receive the Coverage Map and Gap
 
 Record the Coverage Map summary in the HANDOFF.md (Phase 4). If the receipt infrastructure is not yet initialized, note this in HANDOFF.md as a setup item for the next session.
 
+**[STAGE 1a — Receipt Infrastructure Escalation — INJECTED 2026-05-15, /nodelete]**
+
+After receiving the /receipt-check result, apply the following escalation gate:
+
+1. If the result is `RECEIPT INFRASTRUCTURE NOT INITIALIZED`:
+   - Scan the current project's HANDOFF.md history (prior sessions) for the phrase
+     `RECEIPT INFRASTRUCTURE NOT INITIALIZED`. Count consecutive occurrences.
+   - If count ≥ 2: automatically file a helpdesk ticket now (before proceeding to Phase 4):
+     ```
+     To:      Senior Architect
+     From:    /secretary automated escalation
+     Subject: Receipt infrastructure uninitialized for {project} — {N} consecutive sessions
+     Urgency: HIGH
+     Finding: /receipt-check has returned RECEIPT INFRASTRUCTURE NOT INITIALIZED for {N}
+              consecutive sessions on project {project}. Stage 1a receipt-writing sub-steps
+              may not be configured. Action required: verify /execute-build, /iterate-test,
+              /harden, and /document are configured to write receipt files to
+              {project}/.workflow_state/receipts/.
+     ```
+     Store ticket in: `/home/jwils/.gemini/antigravity/global_workflows/helpdesk-tickets/`
+     using format: `YYYYMMDD-{project}_receipt_infra.md`
+   - If count < 2: note in HANDOFF.md — note this is occurrence {N}, escalation at 2.
+
 If this was a **workflow-suite-only session** (no project code built): skip Phase 3 and note `RECEIPT-CHECK: SKIPPED — workflow suite session, no project receipts applicable.`
 
 ---
 
 ## PHASE 4 — PRODUCE HANDOFF.md
+
+**[ADDENDUM A — HANDOFF Pre-Flight Anomaly Scan — INJECTED 2026-05-15, /harden-workflow --ticket 20260512_secretary_workflow.md + /nodelete]**
+
+Before overwriting HANDOFF.md, run a pre-flight scan of the prior HANDOFF.md to detect any anomaly language not yet captured in ANOMALY_LOG.md:
+
+```bash
+grep -i "STRICT RULE\|MISMATCH\|workflow skipped\|anomaly\|override\|deviated" \
+  "{project}/.workflow_state/HANDOFF.md" 2>/dev/null
+```
+
+If the grep returns matches: cross-reference each match against ANOMALY_LOG.md. Any anomaly-language in HANDOFF.md that is NOT already in ANOMALY_LOG.md must be appended to ANOMALY_LOG.md (using `cat >>`, see Phase 5) BEFORE this phase overwrites HANDOFF.md. The prior anomaly cannot be lost.
+
+If the grep returns no matches, or if HANDOFF.md does not yet exist: proceed directly to write.
 
 Write (or overwrite) `{project}/.workflow_state/HANDOFF.md`:
 
@@ -205,7 +256,7 @@ Write (or overwrite) `{project}/.workflow_state/HANDOFF.md`:
 ---
 ```
 
-**Note on HANDOFF.md overwrite**: If a prior HANDOFF.md exists, its content is superseded by this new one. The prior HANDOFF is not archived unless it contains anomalies not yet in ANOMALY_LOG.md. This is the one case in the suite where overwrite is correct — HANDOFF.md is always the current-session briefing, not a history.
+**Note on HANDOFF.md overwrite**: HANDOFF.md is always the current-session briefing. The pre-flight scan above ensures any anomaly history in the prior HANDOFF is preserved in ANOMALY_LOG.md before it is superseded.
 
 ---
 
@@ -217,9 +268,14 @@ For each anomaly identified in Phase 0a:
 view_file {project}/.workflow_state/ANOMALY_LOG.md
 ```
 
-Append entries (or create the file if absent):
+**[ADDENDUM D — Atomic-Append Enforcement — INJECTED 2026-05-15, /harden-workflow --ticket 20260512_secretary_workflow.md + /nodelete]**
 
-```markdown
+ANOMALY_LOG.md is append-only (STRICT RULE 4). All writes to this file MUST use shell-level redirection via `run_command`. Never use `write_to_file` with `Overwrite: true` for ANOMALY_LOG.md — this is the exact failure mode that silently destroys prior anomaly history.
+
+Append entries using:
+
+```bash
+cat >> "{project}/.workflow_state/ANOMALY_LOG.md" << 'ANOMALY_EOF'
 # ANOMALY_LOG.md — Approved Exception Ledger
 # Project: [name]
 # Append-only. Each entry is one user-approved deviation.
@@ -233,9 +289,12 @@ Append entries (or create the file if absent):
 - Impact:       [which future phases or workflows may be affected]
 - Resolved by:  [what would close this anomaly — e.g., "re-harden after Phase 5 complete"]
 ---
+ANOMALY_EOF
 ```
 
-If no anomalies were detected: append `NO ANOMALIES — [date] — [session type] session completed within standard parameters.`
+If the file does not exist yet, create it first with `write_to_file`, then all subsequent writes use `cat >>`.
+
+If no anomalies were detected: append `NO ANOMALIES — [date] — [session type] session completed within standard parameters.` using the same `cat >>` mechanism.
 
 ---
 
@@ -250,7 +309,17 @@ Execute /retrospective with the session boundary established in Phase 0. Supply 
 The /retrospective entry will be appended to:
 `/home/jwils/.gemini/antigravity/global_workflows/process_learnings/PROCESS_LEARNINGS.md`
 
-Receive confirmation that the append succeeded. Do not proceed to Phase 7 until confirmation is received or failure is logged.
+**[ADDENDUM E — Machine-Readable /retrospective Confirmation — INJECTED 2026-05-15, /harden-workflow --ticket 20260512_secretary_workflow.md + /nodelete]**
+
+Do not rely on prose output from /retrospective to confirm the append succeeded. After /retrospective completes, independently verify the entry by running:
+
+```bash
+tail -n 10 /home/jwils/.gemini/antigravity/global_workflows/process_learnings/PROCESS_LEARNINGS.md
+```
+
+Confirm that the last entry's date matches today's session date (`$(date +%Y-%m-%d)`). If the date does not match: log `RETROSPECTIVE: FAILED — entry date mismatch or file unmodified` in the Secretary Receipt and continue. Do not halt for a retrospective failure, but do not declare COMPLETE either.
+
+Do not proceed to Phase 7 until this verification is confirmed or the failure is explicitly logged.
 
 ---
 
@@ -275,9 +344,16 @@ Artifacts produced:
 Sub-workflows triggered:
   /document:             [COMPLETE — files updated: list / SKIPPED — suite session / FAILED: reason]
   /receipt-check:        [COMPLETE — Coverage Map produced / SKIPPED — suite session / FAILED: reason]
-  /retrospective:        [COMPLETE — entry appended to PROCESS_LEARNINGS.md / FAILED: reason]
+  /retrospective:        [COMPLETE — entry verified via tail -n 10 / FAILED: reason]
 
-Suite Health Score:    [N]% ([N] Sovereign, [N] Hardened, [N] Legacy)
+**[ADDENDUM B — Suite Health Score Re-Read Gate — INJECTED 2026-05-15, /harden-workflow --ticket 20260512_secretary_workflow.md + /nodelete]**
+Before emitting the Suite Health Score field below, re-read WORKFLOW_MANIFEST.md NOW:
+```bash
+tail -n 30 /home/jwils/.gemini/antigravity/global_workflows/manifest/WORKFLOW_MANIFEST.md
+```
+Use the Suite Health block from this live read — not the value cached from Phase 1. If hardening occurred during this session after Phase 1 ran, the score would otherwise reflect a pre-hardening state.
+
+Suite Health Score:    [N]% ([N] Sovereign, [N] Hardened, [N] Legacy)  ← re-read value
 
 Status:                SESSION CLOSE COMPLETE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -302,6 +378,8 @@ Status:                SESSION CLOSE COMPLETE
 13. All six phases (0–6) must be executed in order and confirmed before emitting the Phase 7 receipt. An agent that produces only the three artifact files (WORKFLOW_MANIFEST, HANDOFF, ANOMALY_LOG) without executing Phases 2, 3, and 6 has NOT completed /secretary — it has completed Phase 1 only. The Secretary Receipt is only valid when all phases are confirmed.
 14. If `WORKFLOW_MANIFEST.md` is found at the old path `global_workflows/WORKFLOW_MANIFEST.md`: migrate it to `global_workflows/manifest/WORKFLOW_MANIFEST.md` immediately. The root location exposes the file to Antigravity's 12,000-character injection cap, which will silently truncate it as the suite grows.
 15. **[INJECTION 2026-05-08 — manifest safety]** Never overwrite `WORKFLOW_MANIFEST.md` with a full-file `write_to_file` call if it already exists. Always use `replace_file_content` or `multi_replace_file_content` to perform targeted updates. This ensures that even if the manifest grows extremely large, only the relevant segments are touched, preventing the "blind overwrite" risk where an agent rewrites a file based on an incomplete read. Attempting to "rewrite the whole file to be safe" is the primary cause of manifest truncation. Targeted edits are the only sovereign-grade method for index maintenance.
+16. **[INJECTION 2026-05-15 — Stage 1a escalation, /nodelete]** If `/receipt-check` returns `RECEIPT INFRASTRUCTURE NOT INITIALIZED` for ≥ 2 consecutive sessions on the same project, a helpdesk ticket MUST be auto-filed in Phase 3 before proceeding to Phase 4. This rule exists because STRICT RULE 10 allows the secretary to continue past sub-workflow failures — without this escalation gate, the receipt infrastructure gap can persist indefinitely without any alert.
+17. **[INJECTION 2026-05-15 — ANOMALY_LOG atomic-append, /nodelete]** All writes to ANOMALY_LOG.md MUST use shell-level redirection (`cat >>`) via `run_command`. Never use `write_to_file` with `Overwrite: true` for ANOMALY_LOG.md. The first write (file creation) may use `write_to_file` without Overwrite; all subsequent appends must use `cat >>`. This mirrors the atomic-append mandate from `/retrospective/core.md` STRICT RULE 9, which was created after the identical failure mode destroyed PROCESS_LEARNINGS.md entries in a live session.
 
 ---
 
@@ -361,3 +439,9 @@ Output files:
 2. **2026-05-07**: `[INJECTED — /focus-plan audit, /nodelete]` Two gaps resolved. (a) STRICT RULE 11 added: Phase 2 is a mandatory SKIP for workflow-suite-only sessions — /secretary must not run /receipt-check against global_workflows itself. (b) Integration diagram updated: /document added as a workflow that feeds the receipt chain via DOCS_RECEIPTS.md (Divergence #4). Change Log entry added.
 3. **2026-05-08**: `[REWRITE v2 — Helpdesk ticket 20260507_secretary_workflow.md, /focus-plan + /quality]` Three critical issues resolved from live run evidence. (a) WORKFLOW_MANIFEST.md path corrected: moved from global_workflows/ root (Antigravity trigger zone, 12,000-char cap risk) to global_workflows/manifest/ subdirectory. All three path references updated. manifest/ directory created. STRICT RULE 2 and RULE 14 updated. GLOSSARY: manifest/ directory term added. (b) Phase 2 added: /document now triggered as an active phase for project sessions, updating DevJournal.md, Architecture.md, Chronology.md, and other project-level docs. STRICT RULE 12 added (mandatory for project sessions). HANDOFF.md template updated with "Documentation Updated" section. Phase 7 receipt updated with /document status field. /document dependency note added (currently Structured grade). (c) Execution fidelity hardened: HOW TO BEGIN rewritten with explicit warning that producing the three artifact files does NOT constitute /secretary completion. STRICT RULE 13 added: all six phases must be confirmed before receipt is emitted. Phase numbering shifted: old Phase 2→5 became Phase 3→6; /document inserted as new Phase 2; /retrospective moved to Phase 6; receipt moved to Phase 7. Sub-workflow confirmation requirement added to Phase 6. Preamble table updated: /document added as third triggered sub-workflow.
 4. **2026-05-08**: `[INJECTED — manifest update safety, /focus-plan + /nodelete]` Resolved reported risk of index truncation. Phase 1 updated to mandate targeted edits (`replace_file_content`) instead of full rewrites. STRICT RULE 15 added to codify mechanical update safety. This aligns with the append-safety hardening in `/retrospective`.
+5. **2026-05-15**: `[INJECTED — /harden-workflow --ticket 20260512_secretary_workflow.md + /nodelete]` Five addenda from HIGH/MEDIUM open ticket resolved:
+   (A) HANDOFF pre-flight anomaly scan: grep-based scan of prior HANDOFF.md before overwrite. Any unlogged anomaly language must be appended to ANOMALY_LOG.md before the overwrite proceeds. Eliminates CONTRA-A silent history loss.
+   (B) Suite Health Score re-read gate: `tail -n 30` of WORKFLOW_MANIFEST.md injected into Phase 7 immediately before emitting the score field. Eliminates the Phase 1 cache staleness window when hardening occurs mid-session.
+   (C) WORKFLOW_MANIFEST.md existence fail-safe: shell `ls` commands with exit-code-driven branch selection replace inference-based branching in Phase 1. Eliminates blind write_to_file overwrite risk.
+   (D) ANOMALY_LOG.md atomic-append mandate: `cat >>` via `run_command` now required for all ANOMALY_LOG.md writes. `write_to_file Overwrite:true` explicitly prohibited. STRICT RULE 17 added. Mirrors retrospective/core.md STRICT RULE 9 pattern.
+   (E) Machine-readable /retrospective confirmation: `tail -n 10` of PROCESS_LEARNINGS.md with date-match check replaces prose-based confirmation. Non-matching date logged as FAILED in receipt.

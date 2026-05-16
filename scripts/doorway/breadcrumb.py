@@ -53,11 +53,48 @@ class BreadcrumbManager:
         Logs a breadcrumb update request to the context log.
         The entry is marked [PENDING AGENT SUMMARIZATION] until an agent
         rewrites it with real content and calls apply_approved().
+
+        Structural inventory (file names, counts, subdirectories) is enumerated
+        here and written into the log entry so the LLM agent reading the log
+        during /sentinel Phase 1.5 has the raw facts it needs to compose the
+        compact agentic summary without requiring an additional filesystem scan.
+
+        [HARDENED 2026-05-15 — Bug #2 fix: structural inventory for agent context,
+        /harden-workflow --ticket 20260514_sentinel_workflow.md + /nodelete]
         """
+        _IGNORE_NAMES = {
+            ".git", ".venv", "__pycache__", "node_modules", "build",
+            "dist", ".pytest_cache", ".doorway", ".ipynb_checkpoints",
+        }
+
+        files: list[str] = []
+        subdirs: list[str] = []
+        dir_path = self.workspace / folder_path
+        try:
+            for item in sorted(dir_path.iterdir()):
+                if item.name.startswith(".") or item.name in _IGNORE_NAMES:
+                    continue
+                if item.is_file():
+                    files.append(item.name)
+                elif item.is_dir():
+                    subdirs.append(item.name + "/")
+        except OSError:
+            pass  # Directory unreadable — agent will get empty inventory.
+
+        file_count = len(files)
+        _MAX_SAMPLE = 20
+        if file_count > _MAX_SAMPLE:
+            file_sample = ", ".join(files[:_MAX_SAMPLE]) + f" ... +{file_count - _MAX_SAMPLE} more"
+        else:
+            file_sample = ", ".join(files) if files else "none"
+        subdir_list = ", ".join(subdirs) if subdirs else "none"
+
         log_entry = (
             f"Folder: {folder_path}\n"
             f"Proposed breadcrumb: [PENDING AGENT SUMMARIZATION]\n"
-            f"Reason: {reason}\n\n"
+            f"Reason: {reason}\n"
+            f"Files ({file_count}): {file_sample}\n"
+            f"Subdirs: {subdir_list}\n\n"
         )
         # Atomic append: read existing log, append, atomic_write full content.
         # Avoids the non-atomic open("a") pattern (CWE-362).

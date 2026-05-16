@@ -3,6 +3,18 @@ description: Documentation / DevJournal Workflow -- Universal Autonomous Updater
 tags: [global, documentation, devjournal, autonomous, no-print]
 ---
 
+## GLOSSARY
+
+| Term | Definition |
+|------|------------|
+| **Journal file** | The canonical append-only DevJournal or Chronology file for the current workspace. Discovered in Phase 0. Path stored as `<JOURNAL_FILE>`. |
+| **Workspace root** | The parent directory of `<JOURNAL_FILE>`. Used as the base path for receipt infrastructure. |
+| **LAST_ENTRY_DATE** | The date of the most recent dated header (format: `## YYYY-MM-DD`) found in `<JOURNAL_FILE>`. Used to compute the delta for the new entry. |
+| **Architectural anchor** | Any of: `concept.md`, `Architecture.md`, `README.md`, `governance/*.md`. Ingested silently in Phase 0. |
+| **Append-only** | The journal file is NEVER overwritten. All writes use atomic append (`cat >>` or equivalent). Existing entries are permanently preserved. |
+| **DOCS_RECEIPTS.md** | The Layer 2 receipt file for documentation activity. Located at `{workspace_root}/.workflow_state/receipts/DOCS_RECEIPTS.md`. Written via `cat >>` after every successful journal update. |
+| **Status line** | The single chat output after writing the entry: `Journal updated: <JOURNAL_FILE> — Entry: YYYY-MM-DD — <Title>`. This is the ONLY chat output during normal operation. |
+
 # DevJournal Workflow -- Universal Autonomous Documentation Updater
 
 ## Identity
@@ -62,6 +74,28 @@ Before ingesting or writing anything, anchor the workspace. All steps in this ph
    - If you created a new journal file, add: "(new journal created)"
    - If the user explicitly asks to see the entry, then and only then print it to chat.
 
+   **[STAGE 1a — DOCS_RECEIPTS.md writer — INJECTED 2026-05-15, /nodelete]**
+
+   After writing to <JOURNAL_FILE> and reporting the one-line status, persist a documentation
+   receipt using atomic append. Workspace root is the parent directory of <JOURNAL_FILE>.
+
+   ```bash
+   _WORKSPACE_ROOT="$(dirname <JOURNAL_FILE>)"
+   mkdir -p "${_WORKSPACE_ROOT}/.workflow_state/receipts"
+   cat >> "${_WORKSPACE_ROOT}/.workflow_state/receipts/DOCS_RECEIPTS.md" << 'RECEIPT_EOF'
+## $(date +%Y-%m-%d) — /document — $(basename <JOURNAL_FILE>)
+- Phase/Stage: Journal Update
+- Grade/Status: DOCUMENTED
+- Files: <JOURNAL_FILE>
+- Commit: $(git -C "${_WORKSPACE_ROOT}" rev-parse --short HEAD 2>/dev/null || echo "N/A")
+---
+RECEIPT_EOF
+   ```
+
+   If the `cat >>` command fails: silently continue. Do not surface a receipt write failure
+   to the user — the journal entry is the primary deliverable.
+
+
 --------------------------------------------
 3. JOURNAL ENTRY TEMPLATE
 --------------------------------------------
@@ -99,15 +133,69 @@ Before ingesting or writing anything, anchor the workspace. All steps in this ph
    - After writing the journal entry, append a short "Documentation Changes Summary" to <JOURNAL_FILE>
      listing what files were modified or created this session.
    - Never overwrite existing journal entries. Append only. The journal is an append-only log.
-   - If structural changes are detected since <LAST_ENTRY_DATE> (new files, deleted files, renamed modules),
+   - If structural changes are detected since `<LAST_ENTRY_DATE>` (new files, deleted files, renamed modules),
      note them explicitly under the Architecture Updates section.
+
+--------------------------------------------
+STRICT RULES (never violate)
+--------------------------------------------
+**[INJECTED 2026-05-15 — /harden-workflow --ticket 20260515_document_workflow_hardening.md + /nodelete]**
+
+1. Never overwrite existing journal entries. All writes to `<JOURNAL_FILE>` are append-only. This rule exists to prevent catastrophic history loss and is not negotiable.
+2. Do not print the full journal entry to chat unless the user explicitly requests it. The status line is the only chat output.
+3. Never fabricate context. If progress or changes cannot be determined from the workspace, ask ONE question only. Do not hallucinate accomplishments.
+4. Phase 0 discovery is mandatory on every invocation. Never skip it based on a remembered path from a previous session.
+5. DOCS_RECEIPTS.md write is mandatory after every successful journal update. Use `cat >>` — never `write_to_file` with `Overwrite: true`. A failed receipt write does not block the journal write — continue silently.
+6. If `<JOURNAL_FILE>` does not exist: create it at `<workspace_root>/DevJournal.md`. Never halt because the file is missing.
+7. If `<CONCEPT_DOC>` or `<ARCH_DOC>` do not exist: proceed without them. Anchor on whatever documentation is available. Do not halt because an optional file is missing.
+8. The journal entry template (Phase 3) must be followed exactly in section structure. Individual sections may be brief if nothing happened, but they must all be present.
+9. This workflow does NOT modify source code, workflow protocols, or configuration files. It is documentation-only. If a task would require modifying code, decline and ask the user to invoke the appropriate workflow.
+10. /document is triggered by /secretary Phase 2 for project sessions. When invoked by /secretary, the session scope from /secretary Phase 0 must be used as the context for Phase 1 of this workflow — do not prompt the user for scope that /secretary has already established.
+
+--------------------------------------------
+INTEGRATION WITH OTHER WORKFLOWS
+--------------------------------------------
+**[INJECTED 2026-05-15 — /harden-workflow --ticket 20260515_document_workflow_hardening.md + /nodelete]**
+
+This workflow operates at the documentation layer of the Sovereign Pipeline:
+
+  /secretary     → TRIGGERS this workflow in Phase 2 for all project sessions. /secretary passes session scope from its Phase 0 as context.
+  /execute-build → Major phase completions should trigger /document via /secretary at session close.
+  /iterate-test  → Stage validation results can be journaled via /document at session close.
+  /harden        → Hardening sessions should be documented via /document for audit trail continuity.
+  /receipt-check → /document writes to DOCS_RECEIPTS.md after every invocation, enabling /receipt-check to confirm documentation coverage.
+  /triage        → /triage recommends /document when more than 3 days since last journal entry or when a phase is complete with no journal update.
+
+Output files:
+  `<workspace_root>/DevJournal.md` (or discovered <JOURNAL_FILE>)   — primary deliverable
+  `<workspace_root>/.workflow_state/receipts/DOCS_RECEIPTS.md`       — receipt (via cat >>)
+
+Grade: **Structured** (monolithic). Pointer/Payload migration deferred — file is 6,766 bytes as of 2026-05-15.
 
 --------------------------------------------
 HOW TO BEGIN
 --------------------------------------------
-When activated, execute Phase 0 silently (no chat output during discovery or ingestion).
-After Phase 0:
-  - If progress/changes are determinable from the workspace: proceed directly to writing the entry.
-  - If clarification is needed: ask the user ONE question only, then write the entry.
-Write the completed entry to <JOURNAL_FILE> (append). Report status to chat. Do not print the entry.
+When activated, execute all phases in sequence:
+  Phase 0:  Workspace discovery — locate journal, ingest anchors. Silent throughout.
+  Phase 1:  Context & Progress Integration — determine what changed since LAST_ENTRY_DATE.
+  Phase 2:  Output Routing — append to JOURNAL_FILE, write DOCS_RECEIPTS.md, report one-line status.
+  Phase 3:  Use journal entry template exactly.
+  Phase 4:  Apply additional rules — traceability, change summary, append-only enforcement.
+
+Confirmation gate: After writing the journal entry, confirm the DOCS_RECEIPTS.md write was attempted. If the directory did not exist, note its creation. If the write succeeded: silent. If the write failed: note silently in the status line as "(receipt: FAILED)".
+
+Do NOT print Phase 0 activity to chat. Do NOT print the journal entry to chat. Output only the one-line status report.
+
 You are now live. Begin Phase 0.
+
+--------------------------------------------
+### Change Log
+--------------------------------------------
+1. **[ORIGINAL]**: Created as a monolithic DevJournal documentation workflow. Phase 0 discovery, journal append, template enforcement, HOW TO BEGIN.
+2. **2026-05-15**: `[INJECTED — Stage 1a, /nodelete]` DOCS_RECEIPTS.md atomic-append block injected into Phase 2 Output Routing. Receipt infrastructure wired for /receipt-check integration.
+3. **2026-05-15**: `[HARDENED — /harden-workflow --ticket 20260515_document_workflow_hardening.md + /nodelete]` Full structural hardening pass:
+   - GLOSSARY added (8 terms: journal file, workspace root, LAST_ENTRY_DATE, architectural anchor, append-only, DOCS_RECEIPTS.md, status line).
+   - STRICT RULES added (10 rules): append-only enforcement, no-print rule, no-fabrication, mandatory Phase 0, DOCS_RECEIPTS cat>> mandate, missing file grace handling, template structure enforcement, code-modification prohibition, /secretary integration protocol.
+   - INTEGRATION section added: full dependency map (/secretary, /execute-build, /iterate-test, /harden, /receipt-check, /triage) with output file listing and current grade note.
+   - HOW TO BEGIN expanded with phase sequence, confirmation gate for receipt write, and explicit no-print rules.
+   - Grade: **Structured** (monolithic). Pointer/Payload migration deferred pending byte count growth.

@@ -16,6 +16,12 @@ Refactored from .blueprints/governance/thedoorway/integrity_manager.py:
   - read_text() replaced with safe_read() with template size cap (CWE-400).
   - mkdir() + touch() in ensure_substrate replaced with safe_mkdir() (CWE-732).
   - assert_within() added to heal() and create_readme() (CWE-22).
+
+[HARDENED 2026-05-15 — /harden-workflow --ticket 20260514_sentinel_workflow.md, /nodelete]
+  - _expand_template() added: replaces [DIRECTORY_LIST_PLACEHOLDER] with real
+    enumerated directory listing from the target workspace, and expands
+    {workspace} and {workspace_name} tokens. heal() now calls this before
+    writing any template to disk, eliminating the verbatim-template clone bug.
 """
 
 from pathlib import Path
@@ -109,6 +115,8 @@ class IntegrityManager:
                     continue
 
         if template_content is not None:
+            # Expand workspace-specific tokens before writing (Bug #1 fix).
+            template_content = self._expand_template(template_content)
             try:
                 target_path.parent.mkdir(parents=True, exist_ok=True)
                 atomic_write(target_path, template_content)  # CWE-362 / CWE-732
@@ -123,6 +131,55 @@ class IntegrityManager:
                 f"[ERROR] Cannot heal {target_path.name}: "
                 "no template found in primary or backup location."
             )
+
+    # ------------------------------------------------------------------
+    # Template token expansion
+    # ------------------------------------------------------------------
+
+    def _expand_template(self, content: str) -> str:
+        """
+        Expands workspace-generic tokens in a template string before it is
+        written to disk.
+
+        Tokens handled:
+          [DIRECTORY_LIST_PLACEHOLDER]  — replaced with a formatted markdown
+              list of the workspace's top-level directories (excluding hidden
+              dirs and common artifact dirs). Each entry reads:
+              '- `dirname/`: [awaiting FOLDER_OWNERSHIP.md]'
+          {workspace}       — absolute path to the workspace root
+          {workspace_name}  — basename of the workspace root directory
+
+        [HARDENED 2026-05-15 — Bug #1 fix, /harden-workflow --ticket
+        20260514_sentinel_workflow.md + /nodelete]
+        """
+        _IGNORE = {
+            ".git", ".venv", "__pycache__", "node_modules", "build",
+            "dist", ".pytest_cache", ".doorway", ".ipynb_checkpoints",
+        }
+
+        if "[DIRECTORY_LIST_PLACEHOLDER]" in content:
+            try:
+                dirs = sorted(
+                    p for p in self.workspace.iterdir()
+                    if p.is_dir()
+                    and p.name not in _IGNORE
+                    and not p.name.startswith(".")
+                )
+                if dirs:
+                    listing = "\n".join(
+                        f"- `{d.name}/`: [awaiting FOLDER_OWNERSHIP.md]"
+                        for d in dirs
+                    )
+                else:
+                    listing = "- *(no top-level directories detected)*"
+            except OSError:
+                listing = "- *(directory enumeration failed — re-run doorway after permissions are set)*"
+
+            content = content.replace("[DIRECTORY_LIST_PLACEHOLDER]", listing)
+
+        content = content.replace("{workspace}", str(self.workspace))
+        content = content.replace("{workspace_name}", self.workspace.name)
+        return content
 
     # ------------------------------------------------------------------
     # README self-healing

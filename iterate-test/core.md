@@ -306,6 +306,25 @@ Declare the stage "Sovereign-Validated" and emit the Validation Receipt:
 +────────────────────────────────────────────────────────+
 ```
 
+**[STAGE 1a — VALIDATION_RECEIPTS.md writer — INJECTED 2026-05-15, /nodelete]**
+
+After emitting the receipt to chat, persist it to disk using atomic append.
+Workspace root is the parent directory of `<INTENT_DOC>` (anchored in Phase 0).
+
+```bash
+mkdir -p "$(dirname <INTENT_DOC>)/.workflow_state/receipts"
+cat >> "$(dirname <INTENT_DOC>)/.workflow_state/receipts/VALIDATION_RECEIPTS.md" << 'RECEIPT_EOF'
+## $(date +%Y-%m-%d) — /iterate-test — <STAGE_ID>
+- Phase/Stage: <STAGE_ID>
+- Grade/Status: SOVEREIGN-VALIDATED
+- Files: <files under test — from Phase 0 workspace discovery>
+- Commit: $(git -C "$(dirname <INTENT_DOC>)" rev-parse --short HEAD 2>/dev/null || echo "N/A")
+---
+RECEIPT_EOF
+```
+
+If the `cat >>` command fails: print `[VALIDATION-RECEIPT] WARNING: could not write to VALIDATION_RECEIPTS.md — {error}` and continue. Do not halt for a receipt write failure.
+
 Ask the user: move to the next stage, or continue hardening this one?
 
 ---

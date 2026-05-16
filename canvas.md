@@ -50,3 +50,23 @@ You are a world-class software architect, reverse-engineering expert, and Obsidi
 - Use unique string IDs for all nodes and edges.
 
 Generate the complete canonical canvas for the current codebase now.
+
+────────────────────────────────────────────
+INTEGRATION WITH OTHER WORKFLOWS
+────────────────────────────────────────────
+**[INJECTED 2026-05-15 — /harden-workflow --ticket 20260512_canvas-deepcode_workflow.md + /nodelete]**
+
+This workflow is a standalone visualization utility. It integrates at the documentation and communication layer:
+
+  /deepcode     → Use /deepcode first to surface architectural risks. Then use /canvas to visualize the architecture after improvements are confirmed.
+  /secretary    → Canvas generation during a session can be noted in HANDOFF.md as a deliverable.
+  /triage       → /triage now routes to /canvas when user requests codebase visualization or Obsidian map.
+  /document     → Canvas files can be referenced in DevJournal as architectural documentation artifacts.
+
+/triage triggers:
+  - "visualize the codebase" / "generate a canvas" / "Obsidian map" → this workflow
+  - Major architecture phase complete with no visual documentation → P3 suggested
+
+### Change Log
+1. **[ORIGINAL]**: Created as a standalone Obsidian Canvas generation workflow. Pure prompt injection, no structural sections.
+2. **2026-05-15**: `[INJECTED — /harden-workflow --ticket 20260512_canvas-deepcode_workflow.md + /nodelete]` INTEGRATION section added. /triage routing wired (trigger block added to triage/core.md in same pass). Workflow is now suite-discoverable. Full /harden-workflow structural pass (GLOSSARY, STRICT RULES, HOW TO BEGIN) deferred — canvas.md is 3,130 bytes, below threshold requiring P/P conversion.

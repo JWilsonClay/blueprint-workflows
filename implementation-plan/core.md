@@ -77,6 +77,22 @@ Present options. Wait for explicit user selection before proceeding.
 Once an option is selected, generate the plan using `write_to_file`.
 
 ### Part 1 — Universal Structural (Mandatory)
+
+**[ADDENDUM — Sovereign Intent Anchor — INJECTED 2026-05-15, /harden-workflow --ticket 20260514_implementation-plan_workflow.md + /nodelete]**
+
+The FIRST heading in every generated implementation plan MUST be:
+
+```markdown
+## [INTENT] User Objective
+
+> [Restate the user's high-level goal in their specific terminology — not your technical reframing of it.
+>  Include the "why" (the motivation) not just the "what" (the task).
+>  This is the anchor. All future /focus-plan runs compare the substrate against this statement.
+>  Marked /nodelete: this section may never be removed, only updated by explicit user instruction.]
+```
+
+This section is the **Ghost Logic countermeasure**: it ensures that even if the technical tasks drift from the mission, the mission itself is explicitly stated at the top of the plan and cannot be obscured by implementation detail. A plan that works technically but fails the user's intent is Ghost Logic. This anchor prevents it.
+
 - Confirmed User Intent & Concept
 - Scope & Boundaries
 - Success Criteria (measurable)
@@ -210,6 +226,7 @@ After plan execution, the user may invoke `/implementation-plan --audit`.  This 
 8. The Adversarial Post-Execution Audit (Phase 5) is **separate** and must be invoked manually via the `--audit` flag.
 9. The audit must use comparative scoring and strong adversarial framing — do not use fixed numeric targets.
 10. The `--audit` flag must ALWAYS execute the Submittal & Persistence Protocol, saving the global payload and appending the local pointer. Ephemeral (screen-only) audits are invalid.
+11. **[INJECTION 2026-05-15 — Intent Anchor, /nodelete]** Every generated implementation plan MUST begin with a `## [INTENT] User Objective` section as the first heading. This section restates the user's goal in their terminology, not the agent's technical framing. It is /nodelete and serves as the Ghost Logic countermeasure for all subsequent /focus-plan verification runs. A plan without a `## [INTENT]` anchor is structurally incomplete.
 
 ---
 
@@ -252,6 +269,7 @@ INTEGRATION WITH OTHER WORKFLOWS
    All changes follow /nodelete discipline.
 4. **2026-05-13**: `[HARDENED — /harden-workflow + /quality + /focus-plan]` Resolved Submittal & Persistence gap in `--audit` flag. Added explicit instructions to save the audit report to a global payload (`global_workflows/implementation-plan/audits/YYYYMMDD-HHMM-[workspace].md`) and append a local pointer to the workspace's `walkthrough.md`. Prevents ephemeral audit loss and ensures cross-workspace visibility without polluting local project files.
    Grade remains **SOVEREIGN**. Standard Version: 2.
+5. **2026-05-15**: `[INJECTED — /harden-workflow --ticket 20260514_implementation-plan_workflow.md + /nodelete]` Sovereign Intent Anchor added. Part 1 template expanded: `## [INTENT] User Objective` is now the mandatory first heading of every generated plan, with Ghost Logic countermeasure framing. STRICT RULE 11 added codifying the mandate. Resolves Context Erosion failure mode where agents prioritize "Proposed Changes" over the user's stated intent/why.
 
 **Hardening Certificate — /implementation-plan (Final Refinement)**
 

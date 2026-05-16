@@ -68,3 +68,29 @@ For each file:
 - If the workspace changes, re-run discovery.
 
 **Begin execution now** by completing Phase 1 (Discovery & Inventory) and listing all files to be reviewed.
+
+────────────────────────────────────────────
+INTEGRATION WITH OTHER WORKFLOWS
+────────────────────────────────────────────
+**[INJECTED 2026-05-15 — /harden-workflow --ticket 20260512_canvas-deepcode_workflow.md + /nodelete]**
+
+This workflow is a read-only analysis tool that feeds into the active hardening and refactoring pipeline:
+
+  /harden       → /deepcode findings that identify security or robustness gaps can be triaged immediately into /harden for remediation.
+  /soc          → /deepcode findings that identify god-files or separation of concerns violations route directly to /soc.
+  /refactor     → /deepcode findings on architectural anti-patterns or structural debt route to /refactor.
+  /canvas       → After a /deepcode run that identifies major architectural clarity issues, use /canvas to produce a visualization before and after improvements.
+  /secretary    → /deepcode runs during a session should be noted in HANDOFF.md under "Documentation Updated" or "Coverage Activities."
+  /triage       → /triage now routes to /deepcode when significant LOC has been added since the last review, when a major phase just completed, or when the user requests a quality audit.
+
+/triage triggers:
+  - More than 200 LOC added since last deepcode run → P2
+  - New feature branch or major phase just completed → P2
+  - No deepcode run documented in journal at all → P3
+  - intent includes "code review" / "review all scripts" / "quality audit" → P2 (intent-driven)
+
+**Output**: Findings from this workflow should be logged to the DevJournal (via /document) and, if they surface CRITICAL findings, a helpdesk ticket should be filed for tracking.
+
+### Change Log
+1. **[ORIGINAL]**: Created as a standalone deep code review workflow. Principal engineer persona. Three-phase structure: Discovery, Per-File Review, Project-Wide Validation.
+2. **2026-05-15**: `[INJECTED — /harden-workflow --ticket 20260512_canvas-deepcode_workflow.md + /nodelete]` INTEGRATION section added. /triage routing wired (trigger block and intent-driven row added to triage/core.md in same pass). Workflow is now suite-discoverable. Full /harden-workflow structural pass (GLOSSARY, STRICT RULES, HOW TO BEGIN) deferred — deepcode.md is 5,046 bytes; structural expansion will increase size toward P/P migration threshold.
