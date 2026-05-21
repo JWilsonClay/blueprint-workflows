@@ -156,6 +156,52 @@ Implement after the current suite stabilizes (post-Stage 1a completion and at le
 
 ---
 
+## ITEM 6 — Claude Code Migration: Destructive Cleanup
+**Status**: PENDING USER CONFIRMATION
+**Origin**: Claude Code port session, 2026-05-21
+
+All 29 command files ported and symlinked. The following destructive operations were staged and presented to the user but not yet executed:
+
+**Step 1 — Delete 17 source directories** (each contains only core.md or role.md — fully ported):
+```
+depreciate/ divergence/ gitclean/ harden/ harden-workflow/ investigate/ iterate-test/
+personality/ provenance/ receipt-check/ redteam/ refactor/ retrospective/ role/
+secretary/ sentinel/ soc/
+```
+
+**Step 2 — Partial cleanup** (preserve directory; delete only core.md):
+- `helpdesk-tickets/core.md` — live ticket files remain (1 open: 20260515_soc_caller_scan_script.md)
+- `implementation-plan/core.md` — `audits/` subdirectory must be preserved
+
+**Step 3 — Delete 25 root pointer/standalone files** (all replaced by claude-commands/ single files):
+```
+canvas.md deepcode.md depreciate.md divergence.md document.md gitclean.md harden.md
+harden-workflow.md helpdesk-tickets.md implementation-plan.md investigate.md iterate-test.md
+limitations.md nodelete.md nodeleteshort.md personality.md provenance.md receipt-check.md
+redteam.md refactor.md retrospective.md secretary.md sentinel.md soc.md testpackage.md
+```
+
+**Next action**: User confirms → agent executes all three steps in sequence. No design decisions needed; purely mechanical.
+
+---
+
+## ITEM 7 — CLAUDE.md Identity Section Modularization
+**Status**: NEEDS DESIGN DECISION
+**Origin**: User note surfaced during Claude Code port session, 2026-05-21
+
+User's exact note: *"if this file is in every prompt in every workspace, then this isn't necessarily the correct role. this role is specifically ONLY for the workflows workspace, which, again, would not be in every prompt in every workspace. If true, this would need to be brought under consideration and modularized out of this global file."*
+
+The "Senior Architect of Workflows" identity section in `~/.claude/CLAUDE.md` is workspace-specific to blueprint-workflows, but CLAUDE.md is a global file loaded in every Claude Code session across all workspaces.
+
+**Options to discuss:**
+1. Remove the Identity section from `~/.claude/CLAUDE.md` entirely; keep it only in `~/blueprint-workflows/CLAUDE.md` (project-level) and `~/blueprint-workflows/claude-commands/role.md`
+2. Keep a minimal identity stub globally; full identity only in blueprint-workflows project CLAUDE.md
+3. Leave as-is (accept that the architect identity bleeds into non-blueprint sessions)
+
+**Next action**: One design conversation. No code until the approach is chosen.
+
+---
+
 ## ARCHIVE / COMPLETED
 *(Items move here when built or formally retired)*
 
