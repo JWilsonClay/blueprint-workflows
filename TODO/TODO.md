@@ -157,8 +157,16 @@ Implement after the current suite stabilizes (post-Stage 1a completion and at le
 ---
 
 ## ITEM 6 — Claude Code Migration: Destructive Cleanup
-**Status**: PENDING USER CONFIRMATION
-**Origin**: Claude Code port session, 2026-05-21
+**Status**: ✅ COMPLETE — Executed 2026-05-21
+
+**[RESOLUTION — 2026-05-21, /nodelete]**
+All three steps executed in sequence following safety verification (confirmed each directory contained only `core.md` or `role.md` before deletion):
+- Step 1: 17 legacy payload directories deleted
+- Step 2: `helpdesk-tickets/core.md` and `implementation-plan/core.md` deleted; ticket files and `audits/` subdirectory preserved
+- Step 3: 25 root pointer/standalone `.md` files deleted
+Workspace root now contains only `CLAUDE.md` and structural directories (`claude-commands/`, `helpdesk-tickets/`, `implementation-plan/`, `manifest/`, `process_learnings/`, `scripts/`, `TODO/`).
+
+**Prior content preserved below:**
 
 All 29 command files ported and symlinked. The following destructive operations were staged and presented to the user but not yet executed:
 
@@ -181,24 +189,32 @@ limitations.md nodelete.md nodeleteshort.md personality.md provenance.md receipt
 redteam.md refactor.md retrospective.md secretary.md sentinel.md soc.md testpackage.md
 ```
 
-**Next action**: User confirms → agent executes all three steps in sequence. No design decisions needed; purely mechanical.
+**Next action**: ✅ EXECUTED.
 
 ---
 
 ## ITEM 7 — CLAUDE.md Identity Section Modularization
-**Status**: NEEDS DESIGN DECISION
-**Origin**: User note surfaced during Claude Code port session, 2026-05-21
+**Status**: ✅ COMPLETE — Resolved 2026-05-21
+
+**[RESOLUTION — 2026-05-21, /nodelete]**
+Option 1 chosen (with refinement): Identity section removed from `~/.claude/CLAUDE.md` and replaced with a universal agent identity (nature-of-the-tool, world-class quality floor, dissent mandate, workspace-role adapter pattern). The "Senior Architect of Workflows" role lives exclusively in:
+- `~/blueprint-workflows/CLAUDE.md` (workspace-scoped, auto-loaded when blueprint-workflows is open)
+- `~/blueprint-workflows/claude-commands/role.md` (invokable via `/role` in Claude Code, `@[role]` in Antigravity)
+
+The global file now carries a role-agnostic identity that applies in all workspaces, with an explicit adapter note that workspace-specific roles overlay without replacing it.
+
+**Prior content preserved below:**
 
 User's exact note: *"if this file is in every prompt in every workspace, then this isn't necessarily the correct role. this role is specifically ONLY for the workflows workspace, which, again, would not be in every prompt in every workspace. If true, this would need to be brought under consideration and modularized out of this global file."*
 
 The "Senior Architect of Workflows" identity section in `~/.claude/CLAUDE.md` is workspace-specific to blueprint-workflows, but CLAUDE.md is a global file loaded in every Claude Code session across all workspaces.
 
-**Options to discuss:**
-1. Remove the Identity section from `~/.claude/CLAUDE.md` entirely; keep it only in `~/blueprint-workflows/CLAUDE.md` (project-level) and `~/blueprint-workflows/claude-commands/role.md`
+**Options discussed:**
+1. Remove the Identity section from `~/.claude/CLAUDE.md` entirely; keep it only in `~/blueprint-workflows/CLAUDE.md` (project-level) and `~/blueprint-workflows/claude-commands/role.md` — **✅ CHOSEN (with universal identity written in its place)**
 2. Keep a minimal identity stub globally; full identity only in blueprint-workflows project CLAUDE.md
 3. Leave as-is (accept that the architect identity bleeds into non-blueprint sessions)
 
-**Next action**: One design conversation. No code until the approach is chosen.
+**Next action**: ✅ EXECUTED.
 
 ---
 
@@ -214,3 +230,5 @@ The "Senior Architect of Workflows" identity section in `~/.claude/CLAUDE.md` is
 | ITEM 2 /handoff (Divergence #4) | ✅ Absorbed into /secretary Phase 3 — HANDOFF.md output | 2026-05-07 |
 | ITEM 3 /continuous-verify (Divergence #7) | ✅ Built — `continuous-verify/core.md` + injected into /execute-build Step 5g | 2026-05-07 |
 | ITEM 1 /sentinel (Divergence #2) | ✅ Built — `sentinel.md` + `sentinel/core.md` (Sovereign, Std. v1). Doorway Protocol extracted to `scripts/doorway/` (Diamond-hardened). | 2026-05-10 |
+| ITEM 6 Claude Code Destructive Cleanup | ✅ All 3 steps executed — 17 dirs deleted, 2 partial cleanups, 25 root pointers deleted. Workspace fully clean. | 2026-05-21 |
+| ITEM 7 CLAUDE.md Identity Modularization | ✅ Universal role written for global frame; architect identity scoped to blueprint-workflows only via workspace CLAUDE.md + /role | 2026-05-21 |
