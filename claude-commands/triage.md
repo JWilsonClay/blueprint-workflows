@@ -106,6 +106,13 @@ While reading journal, commit messages, and helpdesk-tickets/, watch for evidenc
 - Helpdesk tickets with OPEN status → flag for `/helpdesk-tickets` trigger evaluation
 - Store any pattern evidence as `<FAILURE_SIGNALS>` for use in Phase 1 trigger evaluation.
 
+**[INJECTED 2026-05-23] 0h. Multi-Agent Workstream State**
+Check for multi-agent workstream infrastructure:
+- Does `WORKSTREAM_STATUS.md` exist? If yes, read it — note status of each workstream (A, B, C) and last updated timestamps.
+- Does `DECISIONS.md` exist? If yes, check for any entries tagged `**Escalation:** PENDING`.
+- Does `implementation-plan.md` contain workstream definitions? (Look for "Workstream A", "Workstream B", "Workstream C" sections with task lists.)
+- Store findings as `<WORKSTREAM_STATE>` for use in Phase 1 trigger evaluation.
+
 ---
 
 ## PHASE 1 — TRIGGER EVALUATION
@@ -278,6 +285,37 @@ Evaluate the collected state against the **Trigger Matrix** below. For each work
 | New hardening standard established this session and existing workflows don't yet meet it | P2 | → P1 if intent is "clean up" or "standardize" |
 | More than 30 days since last suite-wide `/harden-workflow` audit | P3 | |
 
+**`/implementation-plan`** **[INJECTED 2026-05-23]**
+| Trigger | Priority | Intent Modifier |
+|---------|----------|-----------------|
+| No `implementation-plan.md` in project root AND `concept.md` exists AND intent includes "plan" or "implement" | P1 (intent-driven) | |
+| `implementation-plan.md` exists but is stale (last modified > 14 days) AND active development ongoing | P3 | |
+| Intent includes "plan", "strategy", or "design the approach" | P2 (intent-driven) | |
+
+**`/implementation-plan --workstreams`** **[INJECTED 2026-05-23]**
+| Trigger | Priority | Intent Modifier |
+|---------|----------|-----------------|
+| `concept.md` exists but `implementation-plan.md` has no workstream definitions (no Workstream A/B/C sections) | P2 | → P1 if intent is "start workstreams" or "design workstreams" |
+| `<WORKSTREAM_STATE>` shows all three workstreams COMPLETE AND PM audit done (audit pointer present in implementation-plan.md) — next iteration needed | P2 | |
+| Intent includes "design workstreams" or "plan workstreams" or "new iteration" | P1 (intent-driven) | |
+| Architect Directive pasted by user with no corresponding workstream definitions in implementation-plan.md | P0 | |
+
+**`/workstream`** **[INJECTED 2026-05-23]**
+| Trigger | Priority | Intent Modifier |
+|---------|----------|-----------------|
+| `implementation-plan.md` has workstream definitions AND `<WORKSTREAM_STATE>` shows NOT STARTED for one or more workstreams | P1 | → P0 if intent is "execute" or "start building" |
+| `<WORKSTREAM_STATE>` shows BLOCKED for any workstream with no PENDING escalation in DECISIONS.md | P1 | |
+| `<WORKSTREAM_STATE>` shows IN PROGRESS but last updated > 3 days ago for any workstream | P2 | |
+| Intent includes "execute workstreams" or "start workstreams" with workstream definitions present | P0 (intent-driven) | |
+
+**`/implementation-plan --audit --workstreams`** **[INJECTED 2026-05-23]**
+| Trigger | Priority | Intent Modifier |
+|---------|----------|-----------------|
+| `<WORKSTREAM_STATE>` shows all three workstreams COMPLETE | P1 | → P0 if intent is "audit" or "review work" |
+| `<WORKSTREAM_STATE>` shows two or more workstreams COMPLETE, one IN PROGRESS for 3+ days | P2 | |
+| `<WORKSTREAM_STATE>` shows PENDING escalations in DECISIONS.md with all workstreams COMPLETE | P0 | |
+| Intent includes "audit workstreams" or "review all work" or "PM review" | P1 (intent-driven) | |
+
 **`/focus-plan` (pre-build gate)**
 | Trigger | Priority | Intent Modifier |
 |---------|----------|-----------------|
@@ -389,3 +427,4 @@ Typical invocation triggers:
 3. **2026-05-15**: `[INJECTED — /harden-workflow --ticket 20260512_continuous-verify_workflow.md + /nodelete]` Advisory routing gap resolved. Two user-facing advisory trigger rows added to the `/continuous-verify` Trigger Matrix block. These rows fire when a user asks about plan alignment or validation — they surface /continuous-verify's existence and route appropriately to /execute-build (if in use) or /focus-plan (if not). /continuous-verify remains a Step 5g sub-gate inside /execute-build, not a standalone user-invocable workflow.
 4. **2026-05-15**: `[INJECTED — /harden-workflow --ticket 20260512_canvas-deepcode_workflow.md + /nodelete]` Suite orphan wiring: `/canvas` Trigger Matrix block added (was completely absent). `/deepcode` block updated with intent-driven trigger row. Both workflows are now discoverable via /triage. Closes canvas-deepcode routing gap.
 5. **2026-05-21**: `[PORTED — blueprint-workflows / Claude Code migration]` Merged pointer (`triage.md`) and payload (`triage/core.md`) into single file. Pointer/Payload architecture retired. Phase 0f updated to use `$ARGUMENTS` for Claude Code slash command intent passing. HOW TO BEGIN updated to reference `$ARGUMENTS`. Invocation examples updated to Claude Code syntax (removed `—` separator). `/harden-workflow` Trigger Matrix updated: "monolithic exceeds 10,000 bytes / truncation" trigger replaced with Claude Code equivalent (broken symlink → P0; command file over 50KB → P3). Old Antigravity file-size truncation concern retired. All protocol content preserved verbatim. Old pointer and payload deleted; git history preserves full lineage.
+6. **2026-05-23**: `[INJECTED — Multi-Agent Workstream Orchestration triggers, /nodelete]` Four new Trigger Matrix blocks added: `/implementation-plan` (base command — was absent from matrix entirely), `/implementation-plan --workstreams` (workstream design triggers), `/workstream` (workstream execution triggers), `/implementation-plan --audit --workstreams` (workstream audit triggers). Phase 0h added: Multi-Agent Workstream State collection step — reads `WORKSTREAM_STATUS.md`, `DECISIONS.md`, and checks `implementation-plan.md` for workstream definitions, stores as `<WORKSTREAM_STATE>`. All existing content preserved per /nodelete. Standard Version: 3.
