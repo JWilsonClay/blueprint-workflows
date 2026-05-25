@@ -105,6 +105,22 @@ If `~/blueprint-workflows/manifest/` does not exist: create it now before procee
 
 Scan `~/blueprint-workflows/claude-commands/` to build or update the complete suite index.
 
+**[INJECTED 2026-05-25 — Linter integration, /nodelete]**
+
+**1.0. Run the suite linter** before scanning individual files:
+
+```bash
+python3 ~/blueprint-workflows/scripts/suite/lint_workflows.py \
+  --workspace ~/blueprint-workflows --quiet
+```
+
+Capture the CRITICAL and WARNING counts. Include them in the Secretary Receipt (Phase 7) under "Suite Health Score" as:
+`Linter: [N] CRITICAL, [N] WARNING, [N] clean`
+
+If CRITICAL > 0: note in the Secretary Receipt as a P0 finding. Do not halt /secretary for linter findings — log them and continue.
+
+**1.1. Scan command files:**
+
 ```bash
 ls ~/blueprint-workflows/claude-commands/*.md | sort
 ```

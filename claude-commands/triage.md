@@ -313,6 +313,8 @@ Evaluate the collected state against the **Trigger Matrix** below. For each work
 | A symlink in `~/.claude/commands/` is broken (points to non-existent target) | P0 | |
 | New hardening standard established this session and existing workflows don't yet meet it | P2 | → P1 if intent is "clean up" or "standardize" |
 | More than 30 days since last suite-wide `/harden-workflow` audit | P3 | |
+| `dependency_graph.json` in `manifest/` is older than 14 days (stale governance data) | P2 | → P1 if intent includes "governance" or "lint" |
+| Run `lint_workflows.py --quiet` — if CRITICAL > 0, recommend immediate `/harden-workflow` on affected workflows | P0 | |
 
 **`/quality` (audit trigger)** **[INJECTED 2026-05-25]**
 | Trigger | Priority | Intent Modifier |

@@ -3,9 +3,9 @@ description: "Sovereign Workflow Hardening Protocol — Audits and elevates work
 type: meta
 grade: Sovereign
 version: 3
-content_hash: "sha256:bd6c7473c2df168c"
+content_hash: "sha256:824e230ba8e272ca"
 last_hardened: "2026-05-25"
-strict_rule_count: 18
+strict_rule_count: 20
 phase_count: 13
 context_retention: high
 flags:
@@ -259,6 +259,13 @@ Use the **Sovereign Scaffold Generator** below to create the new command file. D
 *The scaffold guarantees that every new workflow is born at Sovereign grade. Legacy grade is architecturally impossible for any workflow created after this standard.*
 
 When creating a new command file from scratch, write the following template verbatim and then fill in the `[PLACEHOLDER]` sections. Do not skip or abbreviate any section — an incomplete scaffold defeats the purpose.
+
+**[INJECTED 2026-05-25 — Linter Format Standard, /nodelete]**
+
+**Mandatory heading formats** (the linter validates these — non-standard formats are invisible to governance tooling):
+- Phase headings: `## PHASE N — [Title]` (uppercase PHASE, `##` level, em-dash separator). Not `STEP`, not `# Phase`, not bare text.
+- STRICT RULES entries: `N. **[Rule text]**` or `N. [Rule text]` (numbered, at line start). The linter counts rules within the `## STRICT RULES` section only.
+- These two formats are the only structural constraints. All other content, naming, organization, and prose style is unrestricted.
 
 ```markdown
 ---
@@ -560,6 +567,24 @@ Read the command file and confirm the following sections exist:
 - [ ] A structured output template (receipt, report, or certificate)
 - [ ] Change Log
 
+**7d. Linter Validation Gate**
+
+**[INJECTED 2026-05-25 — Linter integration, /nodelete]**
+
+Run the suite linter against the target workflow file:
+
+```bash
+python3 ~/blueprint-workflows/scripts/suite/lint_workflows.py \
+  --workspace ~/blueprint-workflows --file [name].md --quiet
+```
+
+Check the output:
+- If **CRITICAL findings exist**: HALT. The workflow cannot receive Sovereign grade with CRITICAL linter findings. Fix the findings before proceeding to Phase 8.
+- If **WARNING findings only**: note them in the Hardening Certificate under "Deferred Items." WARNINGs do not block certification but must be documented.
+- If **CLEAN (zero findings)**: proceed to Phase 8. Note "Linter: CLEAN" in the certificate.
+
+The linter validates: frontmatter completeness (v1 schema), structural sections (GLOSSARY, STRICT RULES, HOW TO BEGIN, INTEGRATION, Change Log), content hash integrity, symlink health, cross-reference resolution, STRICT RULE numbering, and phase count accuracy. A Sovereign-grade workflow must pass all checks.
+
 ---
 
 ## PHASE 8 — GRADE CERTIFICATION
@@ -687,6 +712,8 @@ This phase fulfills the biology/immunology transplant: the suite now has herd im
 16. **[INJECTED 2026-05-11 — Divergence #1]** Always generate the Hardening Intelligence Payload in Phase 8b. Bidirectional symbiosis is now a core responsibility.
 17. **[INJECTED 2026-05-11 — Divergence #2]** When invoked with `--immunity`, run the full Ecosystem Immunity Layer (Phase 10) silently in the background. Seed calls to this layer into /continuous-verify, /receipt-check, /focus-plan, and /triage at natural checkpoints. All injections must follow /nodelete.
 18. **[INJECTED 2026-05-24 — Ticket archival, /nodelete]** In ticket mode, Step TM-5 (archive stale closed tickets) is mandatory at the end of every session. Closed tickets older than 7 days are moved to `helpdesk-tickets/archive/` — never deleted. This is housekeeping, not destruction. The archive directory preserves full ticket content and `CLOSED_` prefix for historical reference.
+19. **[INJECTED 2026-05-25 — Linter gate, /nodelete]** Phase 7d (Linter Validation Gate) is mandatory before Phase 8 certification. Run `lint_workflows.py --file [name].md --quiet` and check the output. CRITICAL findings block Sovereign grade. WARNING findings must be documented in the certificate's Deferred Items. A workflow certified Sovereign with unresolved CRITICAL linter findings is grade fraud.
+20. **[INJECTED 2026-05-25 — Format standard, /nodelete]** Phase headings MUST use `## PHASE N — [Title]` format. STRICT RULES entries MUST use `N. ` numbering at line start. These are the only heading formats the suite linter recognizes. Non-standard formats (STEP, Step, # Phase) make the workflow invisible to governance tooling.
 
 ---
 
@@ -793,3 +820,4 @@ This turns the hardening process into a living evolutionary system that accelera
 7. **2026-05-11**: `[INJECTED — Divergence #2, /nodelete + /quality + /focus-plan]` Ecosystem Immunity Layer (new Phase 10 + autonomous `--immunity` sub-workflow) injected. Proactive antibody generation, seeding into /continuous-verify and other heartbeat workflows, and STRICT RULE 17 added. All prior content preserved. Grade remains Sovereign with evolutionary extensions. Standard Version: 2.
 8. **2026-05-21**: `[PORTED — Claude Code migration]` Pointer/Payload architecture retired. Merged into single command file at `~/blueprint-workflows/claude-commands/harden-workflow.md`. Standard Version incremented to 3. GLOSSARY: Pointer file, Payload file, Injection cap entries marked RETIRED with historical preservation per /nodelete; Command file term added; Sovereign grade criteria updated for Claude Code. Sovereign Standard grades table updated to remove P/P criterion, replace with single merged command file criterion. THE POINTER/PAYLOAD DECISION section: marked RETIRED, historical content preserved per /nodelete. Phase 0b INTAKE MANIFEST: updated to single command file architecture; Orphaned Payload Detection retired (Antigravity-specific). Phase 0c: `view_file` → Read tool. Phase 1 Assessment Card: Architecture section replaced with File Location section. Phase 2: renamed from "Structural Hardening (Pointer/Payload Conversion)" to "Structural Hardening"; P/P conversion content retired; Sovereign Scaffold Generator updated to Claude Code single-file format. Phase 3: pointer file template replaced with single command file frontmatter standard. Phase 4d: `global_workflows/` → `~/blueprint-workflows/claude-commands/`. Phase 5b: `/triage/core.md` → `~/blueprint-workflows/claude-commands/triage.md`. Phase 7: `view_file` → Read tool; pointer routing test updated to command file test. Phase 7c: `core.md` → single command file. Phase 8: Hardening Certificate template updated (no P/P fields; symlink field added). SUITE-WIDE AUDIT MODE: `list_dir` → Bash `ls`; `view_file` → Read tool; `global_workflows/claude-commands/` path; Suite Audit Table reference data marked STALE. STRICT RULES: 1, 4, 8, 9, 11, 13, 14 updated for Claude Code. HOW TO BEGIN: `view_file` → Read tool. TICKET MODE PROTOCOL: `ls` and `mv` paths updated to `~/blueprint-workflows/helpdesk-tickets/`. INTEGRATION: `global_workflows` → blueprint-workflows paths.
 9. **2026-05-24**: `[INJECTED — Ticket archival step, /nodelete]` Step TM-5 added to TICKET MODE PROTOCOL: after all tickets processed, scan for CLOSED_* files older than 7 days and move to `helpdesk-tickets/archive/`. Preserves full content and CLOSED_ prefix — move, not delete, per /nodelete. STRICT RULE 18 added (archival mandatory at end of every ticket-mode session). Standard Version: 3.
+9. **2026-05-25**: `[INJECTED — Linter integration + Format standard, /nodelete]` Three additions: (a) Format standard injected into Scaffold Generator — mandatory `## PHASE N` and `N. ` formats for linter recognition. (b) Phase 7d Linter Validation Gate — runs `lint_workflows.py` before certification; CRITICAL findings block Sovereign grade. (c) STRICT RULES 19-20 added (linter gate mandatory, format standard mandatory). Standard Version: 3.
