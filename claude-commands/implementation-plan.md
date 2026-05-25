@@ -1,5 +1,40 @@
 ---
 description: "Sovereign Implementation Plan Generator — Comprehensive Investigation + Dual-Part Planning Engine with Templates, Campaign Structure, Multi-Request Support, Adversarial Audit, and Multi-Agent Workstream Design/Audit (--workstreams, --audit --workstreams)"
+type: execution
+grade: Sovereign
+version: 3
+content_hash: "sha256:7ad3834db9859ff5"
+last_hardened: "2026-05-25"
+strict_rule_count: 23
+phase_count: 8
+context_retention: high
+flags:
+  - "--audit"
+  - "--workstreams"
+  - "--audit --workstreams"
+dependencies:
+  - "/focus-plan"
+  - "/quality"
+  - "/workstream"
+triggers:
+  - "/triage"
+  - "/secretary"
+produces:
+  - "implementation-plan.md"
+  - "WORKSTREAM_STATUS.md"
+  - "DECISIONS.md"
+  - ".workflow_state/PM_OVERSIGHT_REPORT_Iteration*.md"
+  - "~/blueprint-workflows/implementation-plan/audits/*.md"
+consumes:
+  - "concept.md"
+  - "WORKSTREAM_STATUS.md"
+  - "DECISIONS.md"
+  - "ITERATION_LEDGER.md"
+  - ".workflow_state/handoffs/WORKSTREAM_*.md"
+platform_requirements:
+  file_write: true
+  shell_exec: true
+  git_access: true
 ---
 
 # /implementation-plan — Sovereign Implementation Plan Generator

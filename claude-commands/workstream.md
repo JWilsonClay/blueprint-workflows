@@ -1,5 +1,40 @@
 ---
 description: "Multi-agent workstream orchestrator — activates role-specific execution (--claude/--gemini/--grok/--pm), reads shared project state, enforces scope boundaries and guardrails, and produces HITL-ready handoff blocks for coordinated parallel development across AI agents"
+type: execution
+grade: Sovereign
+version: 3
+content_hash: "sha256:924c4f90af4c2051"
+last_hardened: "2026-05-25"
+strict_rule_count: 24
+phase_count: 6
+context_retention: high
+flags:
+  - "--claude"
+  - "--gemini"
+  - "--grok"
+  - "--pm"
+dependencies:
+  - "/implementation-plan"
+  - "/helpdesk-tickets"
+  - "/retrospective"
+triggers:
+  - "/triage"
+  - "/implementation-plan --workstreams"
+produces:
+  - ".workflow_state/handoffs/WORKSTREAM_*.md"
+  - ".workflow_state/PM_OVERSIGHT_REPORT_Iteration*.md"
+  - "WORKSTREAM_STATUS.md"
+  - "DECISIONS.md"
+  - "ITERATION_LEDGER.md"
+consumes:
+  - "implementation-plan.md"
+  - "WORKSTREAM_STATUS.md"
+  - "DECISIONS.md"
+  - "concept.md"
+platform_requirements:
+  file_write: true
+  shell_exec: true
+  git_access: true
 ---
 
 # /workstream — Multi-Agent Workstream Orchestrator

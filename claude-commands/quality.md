@@ -1,5 +1,24 @@
 ---
-description: Quality Workflow -- Uncompromising Excellence Protocol for Every Response
+description: "Quality Workflow — Uncompromising Excellence Protocol with Quality Chain (Witness, Gradient, Chain Tag, Delegated Critique) for evidence-based quality verification across single and multi-agent sessions"
+type: behavioral-modifier
+grade: Sovereign
+version: 3
+content_hash: "sha256:793d2aad12ba3c0e"
+last_hardened: "2026-05-25"
+strict_rule_count: 14
+phase_count: 0
+context_retention: low
+flags: []
+dependencies: []
+triggers:
+  - "/triage"
+produces:
+  - ".workflow_state/quality_witness.log"
+consumes: []
+platform_requirements:
+  file_write: true
+  shell_exec: false
+  git_access: false
 ---
 
 ## GLOSSARY

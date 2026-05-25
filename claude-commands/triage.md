@@ -1,5 +1,33 @@
 ---
 description: "The Triage Desk — reads workspace state, recommends which workflows to run. Optional intent passed as argument after the command."
+type: meta
+grade: Sovereign
+version: 3
+content_hash: "sha256:33de377be9117883"
+last_hardened: "2026-05-25"
+strict_rule_count: 11
+phase_count: 3
+context_retention: medium
+flags: []
+dependencies:
+  - "/harden-workflow"
+  - "/workstream"
+  - "/implementation-plan"
+  - "/quality"
+triggers:
+  - "/sentinel"
+produces: []
+consumes:
+  - "tasks.md"
+  - "implementation-plan.md"
+  - "WORKSTREAM_STATUS.md"
+  - "DECISIONS.md"
+  - ".workflow_state/receipts/*"
+  - ".workflow_state/quality_witness.log"
+platform_requirements:
+  file_write: false
+  shell_exec: true
+  git_access: true
 ---
 
 ## GLOSSARY

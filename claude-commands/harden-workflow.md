@@ -1,5 +1,33 @@
 ---
-description: Sovereign Workflow Hardening Protocol — Audits and elevates workflow .md files to the highest hardening grade using established Sovereign Suite quality patterns
+description: "Sovereign Workflow Hardening Protocol — Audits and elevates workflow .md files to the highest hardening grade using established Sovereign Suite quality patterns"
+type: meta
+grade: Sovereign
+version: 3
+content_hash: "sha256:bd6c7473c2df168c"
+last_hardened: "2026-05-25"
+strict_rule_count: 18
+phase_count: 11
+context_retention: high
+flags:
+  - "--ticket"
+  - "--generator"
+  - "--immunity"
+dependencies:
+  - "/helpdesk-tickets"
+  - "/triage"
+triggers:
+  - "/triage"
+  - "/helpdesk-tickets"
+produces:
+  - "~/blueprint-workflows/claude-commands/*.md"
+  - "~/.claude/commands/*.md"
+consumes:
+  - "~/blueprint-workflows/claude-commands/*.md"
+  - "~/blueprint-workflows/helpdesk-tickets/*"
+platform_requirements:
+  file_write: true
+  shell_exec: true
+  git_access: false
 ---
 
 # /harden-workflow — Sovereign Workflow Hardening Protocol
