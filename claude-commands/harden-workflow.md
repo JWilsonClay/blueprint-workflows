@@ -121,6 +121,30 @@ Update the ticket's Status line to `REMEDIATED` and add a Verification link to t
 
 If there are multiple open tickets: process them in urgency order (CRITICAL → HIGH → MEDIUM → LOW). After each ticket's workflow is hardened and closed, advance to the next ticket. Emit one Hardening Certificate per workflow per STRICT RULE 7.
 
+*Step TM-5: Archive stale closed tickets.*
+
+**[INJECTED 2026-05-24 — Ticket hygiene, /nodelete]**
+
+After all open tickets have been processed (or if no open tickets exist), scan for closed tickets older than 7 days and archive them:
+
+```bash
+mkdir -p ~/blueprint-workflows/helpdesk-tickets/archive
+find ~/blueprint-workflows/helpdesk-tickets/ -maxdepth 1 -name 'CLOSED_*' -mtime +7 \
+  -exec mv {} ~/blueprint-workflows/helpdesk-tickets/archive/ \;
+```
+
+Report the result:
+```
+TICKET ARCHIVE:
+  Archived: [N] closed tickets older than 7 days → helpdesk-tickets/archive/
+  Remaining: [N] closed tickets (< 7 days old)
+  Open:      [N] tickets still active
+```
+
+If zero tickets are archived: `TICKET ARCHIVE: No stale closed tickets found. Directory clean.`
+
+This step runs at the END of every ticket-mode session — after all hardening and closures are complete. It is a housekeeping step, not a processing step. Archived tickets retain their full content and `CLOSED_` prefix — they are moved, not deleted, per /nodelete.
+
 **0b. For each target workflow: locate the command file.**
 
 For each target, confirm:
@@ -634,6 +658,7 @@ This phase fulfills the biology/immunology transplant: the suite now has herd im
 15. **[INJECTED 2026-05-08 — Ticket mode closure, /nodelete]** In ticket mode, the ticket closure (Phase 4 of `/helpdesk-tickets`) is MANDATORY after Phase 8. Never certify a hardening and leave the ticket open. The `CLOSED_` prefix rename is the machine-readable closure signal — updating a status field inside the file is not sufficient. If the rename fails (file not found, permission error), halt and surface the error to the user before ending the session.
 16. **[INJECTED 2026-05-11 — Divergence #1]** Always generate the Hardening Intelligence Payload in Phase 8b. Bidirectional symbiosis is now a core responsibility.
 17. **[INJECTED 2026-05-11 — Divergence #2]** When invoked with `--immunity`, run the full Ecosystem Immunity Layer (Phase 10) silently in the background. Seed calls to this layer into /continuous-verify, /receipt-check, /focus-plan, and /triage at natural checkpoints. All injections must follow /nodelete.
+18. **[INJECTED 2026-05-24 — Ticket archival, /nodelete]** In ticket mode, Step TM-5 (archive stale closed tickets) is mandatory at the end of every session. Closed tickets older than 7 days are moved to `helpdesk-tickets/archive/` — never deleted. This is housekeeping, not destruction. The archive directory preserves full ticket content and `CLOSED_` prefix for historical reference.
 
 ---
 
@@ -739,3 +764,4 @@ This turns the hardening process into a living evolutionary system that accelera
 6. **2026-05-11**: `[INJECTED — Divergence #1 & #3, /nodelete + /quality + /focus-plan]` Mutual Hardening Symbiosis (Phase 8b + Hardening Intelligence Payload) and Workflow Phylogeny & Genetic Archive section injected. Phase 8 extended, new Phase 9 added, STRICT RULE 16 added, certificate template enhanced, INTEGRATION and Change Log updated. All prior content preserved. Grade remains Sovereign with evolutionary extensions. Standard Version: 2.
 7. **2026-05-11**: `[INJECTED — Divergence #2, /nodelete + /quality + /focus-plan]` Ecosystem Immunity Layer (new Phase 10 + autonomous `--immunity` sub-workflow) injected. Proactive antibody generation, seeding into /continuous-verify and other heartbeat workflows, and STRICT RULE 17 added. All prior content preserved. Grade remains Sovereign with evolutionary extensions. Standard Version: 2.
 8. **2026-05-21**: `[PORTED — Claude Code migration]` Pointer/Payload architecture retired. Merged into single command file at `~/blueprint-workflows/claude-commands/harden-workflow.md`. Standard Version incremented to 3. GLOSSARY: Pointer file, Payload file, Injection cap entries marked RETIRED with historical preservation per /nodelete; Command file term added; Sovereign grade criteria updated for Claude Code. Sovereign Standard grades table updated to remove P/P criterion, replace with single merged command file criterion. THE POINTER/PAYLOAD DECISION section: marked RETIRED, historical content preserved per /nodelete. Phase 0b INTAKE MANIFEST: updated to single command file architecture; Orphaned Payload Detection retired (Antigravity-specific). Phase 0c: `view_file` → Read tool. Phase 1 Assessment Card: Architecture section replaced with File Location section. Phase 2: renamed from "Structural Hardening (Pointer/Payload Conversion)" to "Structural Hardening"; P/P conversion content retired; Sovereign Scaffold Generator updated to Claude Code single-file format. Phase 3: pointer file template replaced with single command file frontmatter standard. Phase 4d: `global_workflows/` → `~/blueprint-workflows/claude-commands/`. Phase 5b: `/triage/core.md` → `~/blueprint-workflows/claude-commands/triage.md`. Phase 7: `view_file` → Read tool; pointer routing test updated to command file test. Phase 7c: `core.md` → single command file. Phase 8: Hardening Certificate template updated (no P/P fields; symlink field added). SUITE-WIDE AUDIT MODE: `list_dir` → Bash `ls`; `view_file` → Read tool; `global_workflows/claude-commands/` path; Suite Audit Table reference data marked STALE. STRICT RULES: 1, 4, 8, 9, 11, 13, 14 updated for Claude Code. HOW TO BEGIN: `view_file` → Read tool. TICKET MODE PROTOCOL: `ls` and `mv` paths updated to `~/blueprint-workflows/helpdesk-tickets/`. INTEGRATION: `global_workflows` → blueprint-workflows paths.
+9. **2026-05-24**: `[INJECTED — Ticket archival step, /nodelete]` Step TM-5 added to TICKET MODE PROTOCOL: after all tickets processed, scan for CLOSED_* files older than 7 days and move to `helpdesk-tickets/archive/`. Preserves full content and CLOSED_ prefix — move, not delete, per /nodelete. STRICT RULE 18 added (archival mandatory at end of every ticket-mode session). Standard Version: 3.

@@ -30,6 +30,11 @@ This workflow is platform-agnostic in its core protocol. Claude Code invokes it 
 | **Guardrails** | Project-specific constraints that all agents must follow. Defined in `implementation-plan.md`. Examples: file size limits, mandatory logging patterns, feature freeze. |
 | **Conductor** | The agent persona activated by this workflow. The Conductor does not make strategic decisions — it reads the plan and drives execution within defined boundaries. |
 | **Concept Parity** | The alignment between `concept.md` (the project's stated intent) and the current codebase. All work should maintain or improve this parity. Deviations require escalation. |
+| **Pre-Flight Manifest** | **[INJECTED 2026-05-24 — Divergence #4]** Automated verification checks run before task execution begins. Confirms the workspace is in a clean, buildable state. Failures produce BLOCKED status, not execution on a broken foundation. |
+| **Iteration Ledger** | **[INJECTED 2026-05-24 — Divergence #3]** Append-only file (`ITERATION_LEDGER.md`) in the project root capturing one structured row per iteration. Enables longitudinal trend detection across iterations. Every 10th iteration triggers a checkpoint summary to the blueprint-workflows workspace. |
+| **Rotation** | **[INJECTED 2026-05-24 — Divergence #2]** Automatic workstream reassignment on every 4th and 8th iteration within each 8-iteration cycle. Agents shift to unfamiliar workstreams for implicit cross-agent code review. Managed autonomously by the PM — the user does not need to know or trigger it. |
+| **Diff Oracle** | **[INJECTED 2026-05-24 — Divergence #1]** Machine-generated ground truth from `git diff` that the PM uses to cross-reference agent self-reports during audit. Discrepancies between the diff and the handoff block indicate Hallucinated Success or Ghost Logic. |
+| **Platform Invocation Requirement** | **[INJECTED 2026-05-24 — /harden-workflow --ticket]** Every AI runtime participating in multi-agent workstreams MUST have one individual pointer/command file per workflow — discretely invocable at point of use, not bulk-loaded at session start. A runtime with only a bulk-load mechanism is architecturally disqualified from workstream execution because it cannot maintain workflow fidelity across a long session (Context Erosion via Front-Loading). |
 
 ---
 
@@ -191,7 +196,7 @@ Read the workstream section for your letter. Extract:
 ```
 ═══════════════════════════════════════════════════════
 ENGINEER BRIEF — Workstream [A/B/C]
-Agent: [Claude Code / Antigravity Gemini / Grok OpenCode]
+Executing Agent: [YOUR actual model/platform name — e.g., Claude Code, Grok OpenCode, Antigravity Gemini]
 Iteration: [N]
 Date: [YYYY-MM-DD] Time: [HH:MM]
 ═══════════════════════════════════════════════════════
@@ -302,6 +307,52 @@ The PM oversight audit MUST complete before the PM begins any implementation wor
 
 ---
 
+## PHASE 2.5 — PRE-FLIGHT MANIFEST (Engineer Roles Only)
+
+**[INJECTED 2026-05-24 — Divergence #4: Pre-Flight Manifest, /nodelete]**
+
+Before executing any task, verify the workspace is in a state where execution is safe. Run these checks silently — output only the manifest, not the process.
+
+**2.5a. Git State Check.**
+```bash
+git status --short
+```
+- Is the working tree clean? If uncommitted changes exist from a prior agent, note them.
+- Are there untracked files that look like prior workstream artifacts?
+
+**2.5b. Build State Check.**
+Run the project's build/compile command (from `CLAUDE.md` or `concept.md`). Does it pass?
+- If the build fails: are the failures pre-existing or introduced by your changes? (You haven't changed anything yet, so all failures are pre-existing.)
+
+**2.5c. Guardrail Baseline.**
+```bash
+find . -name "*.ts" -o -name "*.tsx" -o -name "*.py" -o -name "*.rs" | xargs wc -l | sort -rn | head -20
+```
+Record any files already exceeding the project's file size limit. These are pre-existing violations, not your responsibility — but you must not make them worse.
+
+**2.5d. Produce the Pre-Flight Manifest.**
+
+```
+PRE-FLIGHT MANIFEST — Workstream [A/B/C]
+Date: [YYYY-MM-DD HH:MM]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Git working tree:    [CLEAN / DIRTY — N uncommitted files]
+Build status:        [PASS / FAIL — N errors]
+Pre-existing violations: [NONE / list files exceeding limits]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DECISION: [PROCEED / BLOCKED]
+```
+
+**If BLOCKED:** Any of these conditions triggers BLOCKED status:
+- Build fails with CRITICAL errors that prevent your workstream's tasks from executing
+- Uncommitted changes exist in files YOU own (another agent left dirty state in your scope)
+
+When BLOCKED: set your status to BLOCKED in `WORKSTREAM_STATUS.md`, write a minimal Handoff Block with the Pre-Flight Manifest as evidence, and terminate. Do not attempt to fix pre-existing problems — they are not your workstream. The PM will triage.
+
+**If PROCEED:** Continue to Phase 3. The Pre-Flight Manifest is included in your Handoff Block under NOTES FOR PM so the PM can distinguish pre-existing issues from issues you introduced.
+
+---
+
 ## PHASE 3 — EXECUTION GUARDRAILS
 
 These guardrails apply to ALL engineer roles during task execution. The PM enforces them during oversight review.
@@ -344,11 +395,23 @@ Read and enforce the guardrails defined in `implementation-plan.md`. These are p
 
 Every session MUST end with this phase. No exceptions. No "I'll do it next time."
 
+**4.0. Ensure output directories exist.**
+
+**[INJECTED 2026-05-24 — /harden-workflow --ticket 20260524_implementation-plan_workflow.md, /nodelete]**
+
+Before writing ANY file in this phase, create the required directory tree. Execute via Bash (or equivalent shell command on your platform):
+
+```bash
+mkdir -p .workflow_state/handoffs
+```
+
+This is a mandatory first step — not optional, not "if needed." The Write tool cannot create parent directories. Skipping this step causes silent write failures that have broken PM report delivery across multiple iterations. Execute it every time, even if you believe the directory already exists — `mkdir -p` is idempotent.
+
 ### ENGINEER HANDOFF (--claude, --gemini, --grok)
 
 **4a. Update `WORKSTREAM_STATUS.md`.**
 
-Replace your workstream's section with current state using this exact format:
+**REPLACE** your workstream's section — do NOT append a second copy. Read the file first, find your workstream's section header (`## Workstream [A/B/C]`), and overwrite everything from that header to the next `---` separator with the current state. If you append instead of replacing, the file will contain duplicate and contradictory entries. Use the exact format:
 
 ```
 ## Workstream [A/B/C] ([Agent Name])
@@ -367,14 +430,22 @@ Replace your workstream's section with current state using this exact format:
 **Risks Introduced:** [NONE / description]
 ```
 
-**4b. Produce the Engineer Handoff Block.**
+**4b. Write the Engineer Handoff Block to file.**
 
-This is the output the user copies to the PM terminal. It must be completely self-contained.
+**[MODIFIED 2026-05-24 — /harden-workflow --ticket 20260524_workstream_workflow.md, /nodelete]**
+
+Write the Handoff Block to a persistent file using the Write tool (or equivalent file-write mechanism on your platform). The file path is:
+
+`.workflow_state/handoffs/WORKSTREAM_[A|B|C]_handoff.md`
+
+Create the `.workflow_state/handoffs/` directory if it does not exist. This file is overwritten each session (it is a snapshot, not a log — the log is WORKSTREAM_STATUS.md).
+
+After writing the file, also display the block in the terminal for immediate visibility. The file is the canonical artifact; the terminal display is a convenience.
 
 ```
 ═══════════════════════════════════════════════════════
 WORKSTREAM [A/B/C] — SESSION HANDOFF
-Agent: [Claude Code / Antigravity Gemini / Grok OpenCode]
+Executing Agent: [YOUR actual model/platform name — e.g., Claude Code, Grok OpenCode, Antigravity Gemini]
 Date: [YYYY-MM-DD] Time: [HH:MM]
 Iteration: [N]
 ═══════════════════════════════════════════════════════
@@ -422,9 +493,15 @@ Add or update the PM Oversight section:
 **Recommendations for Next Iteration:** [list]
 ```
 
-**4d. Produce the PM Oversight Report.**
+**4d. Write the PM Oversight Report to file.**
 
-This is the output the user carries to Grok Web (Architect) for review, and the basis for the next iteration's planning.
+**[MODIFIED 2026-05-24 — /harden-workflow --ticket 20260524_implementation-plan_workflow.md, /nodelete]**
+
+Write the PM Oversight Report to a persistent file using the Write tool (or equivalent):
+
+`.workflow_state/PM_OVERSIGHT_REPORT_Iteration[N].md`
+
+Create the `.workflow_state/` directory if it does not exist. This file is the canonical artifact the user carries to Grok Web (Architect). Also display the report in the terminal for immediate visibility.
 
 ```
 ═══════════════════════════════════════════════════════
@@ -477,6 +554,35 @@ ITEMS FOR ARCHITECT REVIEW:
   - [or: NONE — no architect-level decisions needed]
 ═══════════════════════════════════════════════════════
 ```
+
+**4e. Update the Iteration Ledger (PM only).**
+
+**[INJECTED 2026-05-24 — Divergence #3: Iteration Ledger, /nodelete]**
+
+After writing the PM Oversight Report, append one row to `ITERATION_LEDGER.md` in the project root. Create the file with headers if it does not exist.
+
+```
+| Iter | Date | A Scope | B Scope | C Scope | A Done | B Done | C Done | A Score | B Score | C Score | Integ | Escalations | Guardrail Violations | Rotation | PM Assessment |
+```
+
+Each row captures one iteration's key metrics in a single scannable line. This file is the system's longitudinal memory — it enables trend detection across iterations that per-iteration reports cannot provide.
+
+**10th-Iteration Checkpoint:** When the iteration number is a multiple of 10 (10, 20, 30...), the PM must also write a checkpoint summary to:
+
+`~/blueprint-workflows/manifest/WORKSTREAM_CHECKPOINT_LOG.md`
+
+Format (append one entry):
+```
+## [Project Name] — Iteration [N] Checkpoint ([YYYY-MM-DD])
+Iterations completed: [N]
+Quality trend: [improving / stable / declining — cite score trajectory from ledger]
+Recurring blockers: [list or NONE]
+Rotation iterations completed: [count]
+Agent performance notes: [one line per agent — trend, not snapshot]
+Recommendation: [continue current process / adjust — specifics]
+```
+
+This checkpoint is NOT a helpdesk ticket and NOT an adversarial audit. It is a data signal to the Senior Architect of Workflows, accessible from the blueprint-workflows workspace, that the multi-agent system has reached a review milestone. The Architect can ingest it on their own schedule and investigate if trends warrant attention.
 
 ---
 
@@ -791,6 +897,17 @@ ITERATION CYCLE — Step by Step
 11. **Concept parity is a guardrail.** If `concept.md` exists, all work must maintain parity with the stated project intent. Deviations from concept require escalation.
 12. **Scaffold Mode is a hard stop.** In Scaffold Mode, generate templates and HALT. Never proceed to execution with empty templates. A template is not a plan.
 13. **Append-only discipline.** `DECISIONS.md` and `WORKSTREAM_STATUS.md` are append-only for entries from other agents. You may update your own workstream section. You may never delete or modify another agent's entries.
+14. **[INJECTED 2026-05-24 — /harden-workflow --ticket, /nodelete]** **Complete all tasks or document why not.** You are expected to complete ALL assigned tasks in your workstream before producing the Handoff Block. If you cannot complete a task, set your status to BLOCKED with a specific reason for each incomplete task. Returning to the user without completing tasks and without BLOCKED documentation is a compliance violation. Do not stop early due to output length concerns — the work is more important than brevity.
+15. **[INJECTED 2026-05-24 — /harden-workflow --ticket, /nodelete]** **Commit before handoff.** Before producing the Handoff Block, commit all changes to version control with a descriptive message. Uncommitted work is invisible to other agents and the PM. If you cannot commit (no git access, permission issue), document this in the Handoff Block under NOTES FOR PM.
+16. **[INJECTED 2026-05-24 — /harden-workflow --ticket, /nodelete]** **Handoff Blocks and PM Reports go to files.** Engineer Handoff Blocks must be written to `.workflow_state/handoffs/WORKSTREAM_[A|B|C]_handoff.md`. PM Oversight Reports must be written to `.workflow_state/PM_OVERSIGHT_REPORT_Iteration[N].md`. Terminal display is supplementary. The file is the canonical artifact.
+17. **[INJECTED 2026-05-24 — /harden-workflow --ticket, /nodelete]** **Replace, don't append, your own status.** When updating WORKSTREAM_STATUS.md (Phase 4a), REPLACE your workstream's section. Do not append a second copy. Duplicate entries with contradictory state are a data integrity violation.
+18. **[INJECTED 2026-05-24 — /harden-workflow --ticket, /nodelete]** **Update task checkboxes.** When you complete a task, mark it complete (`[x]`) in `implementation-plan.md` as well as reporting it in WORKSTREAM_STATUS.md. The implementation plan is the source of truth for task state — if it still shows `[ ]` for completed work, the plan and the status file have drifted.
+19. **[INJECTED 2026-05-24 — /harden-workflow --ticket, /nodelete]** **Escalations must be logged.** If you reference an escalation in your Handoff Block or PM Oversight Report, the corresponding entry MUST exist in `DECISIONS.md` using the format in APPENDIX B. Referencing an escalation that was never formally logged is a documentation integrity violation.
+20. **[INJECTED 2026-05-24 — Divergence #4, /nodelete]** **Pre-Flight is mandatory.** Engineer roles MUST execute Phase 2.5 (Pre-Flight Manifest) before beginning any task execution. If the pre-flight produces BLOCKED status, terminate the session with a BLOCKED handoff block. Do not attempt to fix pre-existing problems that are not in your workstream scope.
+21. **[INJECTED 2026-05-24 — Divergence #3, /nodelete]** **Iteration Ledger is mandatory for the PM.** After every PM Oversight Report, the PM MUST append one row to `ITERATION_LEDGER.md`. On every 10th iteration, the PM MUST also write a checkpoint summary to `~/blueprint-workflows/manifest/WORKSTREAM_CHECKPOINT_LOG.md`. Omitting the ledger entry makes the iteration invisible to longitudinal trend analysis.
+22. **[INJECTED 2026-05-24 — /harden-workflow --ticket, /nodelete]** **mkdir before write.** Before any file write targeting `.workflow_state/`, execute `mkdir -p .workflow_state/handoffs` via Bash. The Write tool cannot create parent directories. This step is mandatory every time — `mkdir -p` is idempotent and costs nothing. Omitting it causes silent write failures that have broken report delivery across multiple iterations.
+23. **[INJECTED 2026-05-25 — /nodelete]** **Sign every handoff with your real identity.** The `Executing Agent:` field in the Handoff Block and Engineer Brief must contain YOUR actual model/platform name — not the workstream's default agent. If Claude Code is executing Workstream B (normally Gemini's), sign as "Claude Code" not "Antigravity Gemini." This is how the PM detects platform unavailability and cross-platform execution without needing advance notice. Unsigned or incorrectly signed handoffs are a documentation integrity violation.
+24. **[INJECTED 2026-05-24 — /harden-workflow --ticket, /nodelete]** **Platform Invocation Requirement.** Every AI runtime participating in workstream execution MUST have individual per-workflow pointer files — one file per workflow, discretely invocable at point of use. A runtime with only a bulk-load mechanism (all workflows loaded at session start) is disqualified from workstream assignment due to Context Erosion via Front-Loading. The PM MUST verify platform compliance before assigning workstreams. Non-compliant platforms produce Hallucinated Success — correct-looking handoff blocks with zero actual changes.
 
 ---
 
@@ -828,11 +945,29 @@ Typical /triage triggers for this workflow:
   - Previous iteration's PM Oversight Report recommends new workstreams
 
 Cross-platform invocation:
-  - Claude Code: /workstream --claude (slash command via symlink)
-  - Grok OpenCode: reads ~/blueprint-workflows/claude-commands/workstream.md (filesystem pointer)
-  - Antigravity Gemini: reads ~/blueprint-workflows/claude-commands/workstream.md (filesystem pointer)
+  - Claude Code: /workstream --claude (slash command via symlink at ~/.claude/commands/)
+  - Grok OpenCode: /workstream (pointer file at ~/.opencode/commands/workstream.md)
+  - Antigravity Gemini: /workstream (pointer file at ~/.gemini/antigravity/global_workflows/workstream.md)
+
+**[INJECTED 2026-05-24 — Platform Onboarding Requirement, /nodelete]**
+
+Platform Invocation Requirement (PM must verify before assigning workstreams):
+
+Every AI runtime in the multi-agent system MUST have **one individual pointer/command file per workflow** in its native commands directory. A runtime that bulk-loads all workflows at session start is architecturally disqualified from workstream execution — bulk-loading causes Context Erosion via Front-Loading, where workflow instructions drift out of active context during long sessions, producing Hallucinated Success (correct-looking outputs with no actual work).
+
+| Platform | Commands Directory | Mechanism | Status |
+|----------|-------------------|-----------|--------|
+| Claude Code | `~/.claude/commands/<name>.md` | Symlinks to canonical files | Compliant |
+| Grok OpenCode | `~/.opencode/commands/<name>.md` | Pointer files with `@` path syntax | Compliant (remediated 2026-05-24) |
+| Antigravity Gemini | `~/.gemini/antigravity/global_workflows/<name>.md` | Pointer files | Compliant |
+
+Before assigning any agent to a workstream, the PM should confirm the agent's platform has individual per-workflow pointer files. If not: file a helpdesk ticket and do not assign that agent until remediated.
 
 ---
 
 ### Change Log
 1. **2026-05-23**: `[CREATED]` Built via Sovereign Scaffold Generator (/harden-workflow --generator). Origin: user directive to create a multi-agent workstream orchestration workflow supporting four roles (--claude, --gemini, --grok, --pm) with HITL coordination, structured handoff blocks, append-only decision logging, binary escalation protocol, and scaffold-mode file generation. Designed as a platform-agnostic protocol readable by Claude Code, Grok OpenCode, and Antigravity Gemini. Standard Version: 3.
+2. **2026-05-24**: `[HARDENED — /harden-workflow --ticket, /nodelete]` Post-Iteration-1 remediation. Tickets: 20260524_workstream_workflow.md + 20260524_workstream_agent_completion.md. Seven findings from /investigate on completed Iteration 1. Phase 4a: explicit REPLACE instruction added (agents were appending duplicate status entries). Phase 4b: Handoff Blocks now write to `.workflow_state/handoffs/WORKSTREAM_[A|B|C]_handoff.md` (were terminal-only). Phase 4d: PM Oversight Report now writes to `.workflow_state/PM_OVERSIGHT_REPORT_Iteration[N].md` (was terminal-only). STRICT RULES 14-19 added: task completion requirement (no premature termination), commit-before-handoff, file output mandate, replace-not-append enforcement, task checkbox update ownership, escalation logging enforcement. Standard Version: 3.
+3. **2026-05-24**: `[INJECTED — /divergence pass, 5 divergences approved + /harden-workflow, /nodelete]` Five divergence-approved additions injected. (a) GLOSSARY: 4 new terms (Pre-Flight Manifest, Iteration Ledger, Rotation, Diff Oracle). (b) Phase 2.5 (Pre-Flight Manifest): automated pre-execution checks (git state, build status, guardrail baseline) with BLOCKED halt condition — agents terminate cleanly if workspace is broken, issue reported upward. (c) Phase 4e (Iteration Ledger): PM appends one structured row to `ITERATION_LEDGER.md` per iteration; every 10th iteration writes checkpoint summary to `~/blueprint-workflows/manifest/WORKSTREAM_CHECKPOINT_LOG.md` for Architect visibility. (d) STRICT RULES 20-21 added (pre-flight mandatory, ledger mandatory). Divergences #1 (Diff Oracle), #2 (Rotation), and #5 (Dependency Graph) injected into `/implementation-plan` (separate file, same session). Standard Version: 3.
+4. **2026-05-24**: `[HARDENED — /harden-workflow --ticket 20260524_implementation-plan_workflow.md (directory creation), /nodelete]` .workflow_state/ directory not guaranteed to exist before Write tool calls — caused silent report write failures across Iterations 2-4. Fix: mandatory `mkdir -p .workflow_state/handoffs` step injected as Phase 4.0, executed before any file write in Phase 4. STRICT RULE 22 added (mkdir before write). Same fix applied to `/implementation-plan` Phase 7e. Standard Version: 3.
+5. **2026-05-24**: `[HARDENED — /harden-workflow --ticket 20260524_workstream_opencode_pointer_workflow.md, /nodelete]` Context Erosion via Front-Loading remediation. Root cause: Grok OpenCode had a single bulk-load pointer file that front-loaded all 30+ workflows at session start, causing workflow instructions to drift out of active context during execution. Produced two full iteration failures (Iterations 2-3). Fix: created 31 individual per-workflow pointer files at `~/.opencode/commands/<name>.md` using OpenCode's native `@` path syntax. Replaced bulk-load `workflow-pointer.md` with retirement notice. GLOSSARY: Platform Invocation Requirement term added. INTEGRATION: Cross-platform invocation table updated with specific directory paths; Platform Onboarding Requirement section injected — PM must verify per-workflow pointer files exist before assigning any agent to a workstream. STRICT RULE 22 added (platform compliance mandatory). Standard Version: 3.

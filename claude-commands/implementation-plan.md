@@ -232,13 +232,44 @@ This phase is invoked by the Project Manager (Grok OpenCode) to design parallel 
 
 Invocation: `/implementation-plan --workstreams`
 
-### 6a. Intake — Read Architect Directive
+### 6a. Intake — Read Architect Directive + Determine Iteration
+
+**[INJECTED 2026-05-25 — Forced Context Refresh for PM, /nodelete]**
+
+**MANDATORY CONTEXT REFRESH — execute before anything else in this phase.**
+
+You are about to design workstreams. Before you do, re-read the critical sections of the workflows you are designing FOR. Run these commands now and read the output:
+
+```bash
+grep -A 50 "PHASE 2.5 — PRE-FLIGHT" ~/blueprint-workflows/claude-commands/workstream.md
+grep -A 40 "PHASE 4 — STATUS UPDATE" ~/blueprint-workflows/claude-commands/workstream.md
+grep -A 25 "STRICT RULES" ~/blueprint-workflows/claude-commands/workstream.md | head -30
+```
+
+This refreshes your understanding of what engineers must do (Pre-Flight checks, handoff format, STRICT RULES) so the implementation plan you write is consistent with the workflow agents will execute. If you skip this, the plan and the workflow will drift, causing agent failures.
 
 - Read the Architect Directive (pasted by user from Grok Web) if provided
 - Read `concept.md` in the project root — HALT if missing:
   `WORKSTREAM DESIGN HALT: concept.md not found in project root. Cannot design workstreams without the project's intent document.`
 - Read existing `WORKSTREAM_STATUS.md` and `DECISIONS.md` if present (continuation context from prior iterations)
+- Read `ITERATION_LEDGER.md` if present — determine the current iteration number (row count + 1). If absent, this is Iteration 1.
 - Read `.workflow_state/issues/OPEN.md` or `issues/OPEN.md` if present (active issue context)
+
+**[INJECTED 2026-05-24 — Divergence #2: Rotation Engine, /nodelete]**
+
+**Rotation Check:** After determining the iteration number, apply the rotation formula:
+
+| Condition | Assignment |
+|-----------|-----------|
+| Iteration mod 8 == 4 (iterations 4, 12, 20, 28...) | **+1 Rotation:** Claude→B, Gemini→C, Grok→A |
+| Iteration mod 8 == 0 (iterations 8, 16, 24, 32...) | **+2 Rotation:** Claude→C, Gemini→A, Grok→B |
+| All other iterations | **Standard:** Claude→A, Gemini→B, Grok→C |
+
+This rotation is **autonomous** — do not ask the user, do not flag it as unusual. Simply assign workstreams according to the formula. The rotation forces each agent to work in unfamiliar domains periodically, providing implicit cross-agent code review. The user does not need to know a rotation is active.
+
+The Architect (Grok Web) should independently verify the rotation is correct by checking the iteration number against the formula when reviewing the PM Oversight Report.
+
+Note the active rotation (or standard assignment) in the Intake summary:
 
 Produce:
 ```
@@ -292,6 +323,20 @@ For each workstream, define:
 - [ ] Acceptance criteria are verifiable, not subjective ("tests pass" not "code is clean")
 - [ ] Guardrails from concept.md are reflected in the plan
 
+**[INJECTED 2026-05-24 — Divergence #5: Dependency Graph, /nodelete]**
+
+**6c.2. Dependency Boundary Scan.**
+
+After designing workstream file ownership, trace one level of imports/dependencies for each workstream's owned files. Flag any file that is owned by one workstream but imported by another workstream's owned files. These are **interface boundaries** — points where two workstreams touch through dependency even though they don't touch through ownership.
+
+For each interface boundary found, add a note to the affected workstream's section:
+```
+**Interface Boundaries:** [file] is owned by you but imported by Workstream [X]. 
+Do not change its export signature without escalation.
+```
+
+This prevents integration breakage that file ownership alone cannot catch. Two agents can respect perfect ownership boundaries and still break each other's code through import chains.
+
 ### 6d. HITL Gate — Workstream Approval
 
 Present the three workstreams to the user in summary form:
@@ -330,13 +375,44 @@ Upon approval, write the full `implementation-plan.md` to the project root using
 1. **`## [INTENT] User Objective`** — First heading, per STRICT RULE 11. States the user's goal from the Architect Directive or concept.md.
 2. **Iteration number and date**
 3. **Roles table** — All five participants (Architect, PM, three engineers)
-4. **Guardrails section** — Project-specific constraints from concept.md
-5. **Workstream A** — Scope, Exclusions, Tasks (with acceptance criteria), File Ownership
-6. **Workstream B** — Same structure
-7. **Workstream C** — Same structure
-8. **Escalation Rules** — The three binary triggers (cross-workstream file conflict, CRITICAL issue, architectural change)
-9. **Communication Cadence** — Engineers → PM (per session), PM → Architect (per iteration)
-10. **Reporting Format** — The structured status template engineers must follow
+4. **`## Pre-Execution Mandate (ALL AGENTS)`** — **[INJECTED 2026-05-25 — Forced Context Refresh for Engineers, /nodelete]** This section MUST appear in every generated implementation plan, immediately after the Roles table. It is a hard gate — agents who skip it receive a FAIL verdict. Content:
+
+```markdown
+## Pre-Execution Mandate (ALL AGENTS — non-negotiable)
+
+Before executing Task 1, you MUST run these commands and read the output.
+Skipping this step is a pre-flight failure and your session will be graded FAIL.
+
+### Step 1: Refresh workflow context
+Run these commands now. Read the output. Do not skip.
+
+  grep -A 55 "PHASE 2.5 — PRE-FLIGHT" ~/blueprint-workflows/claude-commands/workstream.md
+  grep -A 30 "PHASE 4 — STATUS UPDATE" ~/blueprint-workflows/claude-commands/workstream.md
+  grep -A 40 "STRICT RULES" ~/blueprint-workflows/claude-commands/workstream.md
+
+### Step 2: Confirm understanding
+After reading, confirm to yourself (not to the user):
+- Pre-Flight checks: git status, build status, file size baseline
+- Handoff format: write to .workflow_state/handoffs/WORKSTREAM_[A|B|C]_handoff.md
+- mkdir -p .workflow_state/handoffs before any file write
+- REPLACE your WORKSTREAM_STATUS.md section, do not append
+- Mark completed tasks [x] in implementation-plan.md
+- Commit all changes before producing the handoff block
+
+### Step 3: Execute Pre-Flight (Phase 2.5)
+Run the Pre-Flight Manifest checks. If BLOCKED, terminate immediately
+with a BLOCKED handoff. Do not attempt to fix pre-existing issues.
+
+Only after Steps 1-3 are complete may you proceed to Task 1.
+```
+
+5. **Guardrails section** — Project-specific constraints from concept.md
+6. **Workstream A** — Scope, Exclusions, Tasks (with acceptance criteria), File Ownership
+7. **Workstream B** — Same structure
+8. **Workstream C** — Same structure
+9. **Escalation Rules** — The three binary triggers (cross-workstream file conflict, CRITICAL issue, architectural change)
+10. **Communication Cadence** — Engineers → PM (per session), PM → Architect (per iteration)
+11. **Reporting Format** — The structured status template engineers must follow
 
 Also scaffold `WORKSTREAM_STATUS.md` and `DECISIONS.md` if they do not already exist (use the templates defined in `/workstream` APPENDIX A).
 
@@ -364,7 +440,7 @@ Invocation: `/implementation-plan --audit --workstreams`
 
 This is a SEPARATE invocation from the standard `--audit` (Phase 5). The standard audit evaluates a single plan's execution quality. The workstream audit evaluates three parallel workstreams against their defined acceptance criteria and checks for cross-workstream conflicts.
 
-### 7a. Intake — Read All State
+### 7a. Intake — Read All State + Generate Diff Oracle
 
 Read all shared state files from disk:
 
@@ -373,7 +449,40 @@ Read all shared state files from disk:
 - `DECISIONS.md` — all decisions and escalations
 - `concept.md` — project intent (parity reference)
 - `.workflow_state/issues/OPEN.md` or `issues/OPEN.md` — active issues (if present)
+- `.workflow_state/handoffs/WORKSTREAM_*.md` — engineer handoff block files (if present)
 - Any Handoff Blocks pasted directly by the user
+
+**[INJECTED 2026-05-24 — Divergence #1: Diff Oracle, /nodelete]**
+
+**7a.5. Generate the Diff Oracle.**
+
+Before reviewing any agent self-reports, generate machine-readable ground truth independent of what agents claim they did:
+
+```bash
+git status --short                    # Uncommitted changes (should be zero if agents committed)
+git diff --stat HEAD~N..HEAD          # Changes in the iteration's commits (adjust N for commit count)
+git log --oneline --since="[iteration start date]"  # All commits in this iteration
+find . -name "*.ts" -o -name "*.tsx" -o -name "*.py" -o -name "*.rs" | xargs wc -l | sort -rn | head -20  # Current file sizes
+```
+
+Produce a **Diff Oracle Manifest**:
+```
+DIFF ORACLE — Iteration [N]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Uncommitted files:    [count — should be 0]
+Files changed (git):  [list from git diff --stat]
+Files over limit:     [list with line counts]
+Commits this iteration: [count]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+Cross-reference this manifest against each agent's Handoff Block in Phase 7b:
+- **Files in git diff but NOT in Handoff Block** → Ghost Logic (unreported changes)
+- **Files in Handoff Block but NOT in git diff** → Hallucinated Success (claimed but absent changes)
+- **Files over the guardrail limit** → Guardrail violation (mechanical, not self-reported)
+- **Uncommitted files** → STRICT RULE 15 violation (commit before handoff)
+
+The Diff Oracle is the PM's independent data source. It breaks the self-reporting loop.
 
 HALT if `implementation-plan.md` is missing or has no workstream definitions:
 `WORKSTREAM AUDIT HALT: No workstream definitions found in implementation-plan.md. Cannot audit without defined acceptance criteria.`
@@ -412,72 +521,103 @@ Check for systemic issues across all three workstreams:
 
 ### 7d. Adversarial Quality Evaluation
 
-**[INJECTED 2026-05-23 — Adversarial layer for workstream audit, /nodelete]**
+**[SIMPLIFIED 2026-05-25 — Replaced custom scoring with proven Phase 5 methodology, /nodelete]**
 
-After the compliance checks (7b) and conflict analysis (7c), switch into adversarial mode. You are now a **ruthless, world-class principal engineer** evaluating the actual quality of the work product — not just whether boxes were checked.
+~~Previous versions built a custom scoring system (calibration guidance → remove calibration → evidence mandates → difficulty weighting). Each fix addressed a symptom. The disease was building a different system instead of reusing the one that works. The `/implementation-plan --audit` (Phase 5) adversarial methodology is proven across 10+ audits and trusted by the user. Phase 7d now applies that same methodology per-workstream.~~
 
-**Calibration philosophy:** A passing score indicates a failed audit. The audit is calibrated so that genuinely good work scores 55-65. Above 75 means the audit was too lenient — re-examine your assessment. This is not punishment; it is the standard that prevents Hallucinated Success. The goal is honest quality pressure that drives improvement, not validation that enables complacency.
+**MANDATORY CONTEXT REFRESH — execute before scoring.**
 
-**For each workstream (A, B, C), evaluate:**
+Your context has been consumed by compliance checks and conflict analysis. Before you evaluate quality, re-read the adversarial methodology:
 
-1. **Implementation Quality** — Is the code well-structured? Does it follow the project's patterns? Would a senior engineer approve this in code review, or just tolerate it?
-2. **Technical Debt Introduction** — Did this workstream leave the codebase better or worse? Did it create shortcuts, workarounds, or patterns that future iterations will need to clean up?
-3. **Verification Rigor** — Did the agent verify their work, or did they report completion based on "it compiles"? Check for Mock Trap and Sound Effect Execution patterns.
-4. **Concept Parity Depth** — The compliance check (7b) flags drift. This step asks: even where parity is maintained, is the implementation faithful to the *spirit* of concept.md, or just the letter?
+```bash
+grep -A 30 "Audit Methodology" ~/blueprint-workflows/claude-commands/implementation-plan.md
+```
 
-**Per-workstream scoring:**
+Read the output now. Then proceed.
+
+**For each workstream (A, B, C), apply the Phase 5 adversarial methodology independently:**
+
+You are a **ruthless, world-class principal engineer** who has reviewed thousands of implementations. You have extremely high standards and default to skepticism.
+
+For each workstream:
+- You must find and clearly articulate **at least 2 specific, genuine weaknesses** with **concrete citations** (file paths, line numbers, specific code patterns)
+- You must explain *why* each weakness matters in real-world terms
+- You must compare the work against what a **top 10% senior staff engineer** would have produced
+- Each weakness MUST reduce the comparative score between 7-15 points
+- Check guardrail compliance numerically (`wc -l`, `git diff --stat`) — do not trust self-reports
+
+**Per-workstream output format (mirrors Phase 5):**
 
 ```
-Workstream [A/B/C] Quality Score: XX/100
+ADVERSARIAL AUDIT — Workstream [A/B/C]
+Agent: [executing agent name]
+Auditor: PM (Adversarial Mode)
 
-Category Breakdown:
-  Implementation Quality:     XX/100
-  Technical Debt Impact:      XX/100  (higher = less debt introduced)
-  Verification Rigor:         XX/100
-  Concept Parity Depth:       XX/100
+Comparative Score: XX/100
+(Score reflects how this work compares to what a top 10% senior 
+staff engineer would deliver for the same scope)
 
-Weaknesses (minimum 2 per workstream, cited with evidence):
-  1. [Specific weakness]: [file/change citation] — [why this matters]
-  2. [Specific weakness]: [file/change citation] — [why this matters]
+Category Scores:
+- Fidelity to Plan Intent: XX/100
+- Technical Quality & Robustness: XX/100
+- Clarity & Maintainability: XX/100
+- Risk Management: XX/100
+- Verification Rigor: XX/100
+
+Strengths:
+- [Specific, cited examples]
+
+Critical Weaknesses (Minimum 2 Required):
+- [Specific weakness]: [file/line citation] — [real-world impact] — Score deduction: [N] points
+- [Specific weakness]: [file/line citation] — [real-world impact] — Score deduction: [N] points
 
 Honest Assessment:
-  [One paragraph. No hedging. What would a senior staff engineer
-   say about this work in a candid 1:1? Be direct.]
+  [One direct, evidence-based paragraph. No hedging. Be brutally realistic.
+   What would a senior staff engineer say about this work in a candid 1:1?]
+
+Recommendations:
+- [Actionable improvements for next iteration]
 ```
 
-**Scoring guide:**
-- **80-100**: The audit failed. You were too lenient. Re-examine.
-- **65-79**: Suspiciously clean. Verify each score is evidence-backed.
-- **55-65**: Strong work with real weaknesses found. This is where good work lands.
-- **40-54**: Meaningful quality issues. Work is functional but needs improvement.
-- **Below 40**: Significant problems. Work may need revision before next iteration.
+**Important:** Do not artificially force a low score. Let the evidence drive the assessment. The goal is realism, not punishment. The VALUE of this audit is in the cited weaknesses and honest assessment — the score is secondary to the rationale.
 
-**Combined Integration Quality Score:**
-
-After scoring individual workstreams, assess how well the three workstreams compose:
+**After all three workstream audits, produce one integration assessment:**
 
 ```
-Integration Quality Score: XX/100
-
-  Architectural Coherence:  [Do the three workstreams feel like one project or three separate efforts?]
-  Interface Compatibility:  [Will the outputs merge cleanly?]
-  Pattern Consistency:      [Did all agents follow the same conventions?]
-  
-  Integration Weaknesses:
-    1. [Specific integration concern with evidence]
+INTEGRATION ASSESSMENT — Iteration [N]
+  Architectural Coherence: [Do the three workstreams compose into one project or three separate efforts?]
+  Interface Compatibility: [Will the outputs merge cleanly? Evidence from Diff Oracle.]
+  Cross-Workstream Risks:  [Specific integration concerns with file citations]
 ```
 
-Multi-agent coordination inherently introduces integration friction. A combined score of 60 with clean integration is genuinely strong.
+### 7e. Write PM Oversight Report to file
 
-### 7e. Produce PM Oversight Report
+**[MODIFIED 2026-05-24 — /harden-workflow --ticket, /nodelete]**
 
-Generate the PM Oversight Report. The report MUST include all of the following sections — both the compliance verdicts from 7b-7c AND the adversarial quality scores from 7d:
+**First**, ensure the output directory exists. Execute via Bash (or equivalent):
+```bash
+mkdir -p .workflow_state
+```
+This is mandatory — not optional, not "if needed." The Write tool cannot create parent directories. Skipping this causes silent write failures. Execute every time — `mkdir -p` is idempotent.
+
+**Then**, write the PM Oversight Report to:
+`.workflow_state/PM_OVERSIGHT_REPORT_Iteration[N].md`
+
+Also display the report in the terminal for immediate visibility. The file is the canonical artifact the user carries to Grok Web.
+
+The report MUST include all of the following sections — both the compliance verdicts from 7b-7c AND the adversarial quality scores from 7d:
 
 ```
 ═══════════════════════════════════════════════════════
 PM OVERSIGHT REPORT — Iteration [N]
 Date: [YYYY-MM-DD] Time: [HH:MM]
 ═══════════════════════════════════════════════════════
+
+DIFF ORACLE (from 7a.5):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Uncommitted files:    [count]
+Self-report discrepancies: [list or NONE]
+Guardrail violations (mechanical): [list or NONE]
 
 COMPLIANCE LAYER (from 7b-7c):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -510,26 +650,31 @@ ESCALATIONS RESOLVED THIS CYCLE:
 ESCALATIONS STILL PENDING:
   - [entry #]: [summary — requires architect input]
 
-ADVERSARIAL QUALITY LAYER (from 7d):
+ADVERSARIAL QUALITY LAYER (from 7d — Phase 5 methodology):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-WORKSTREAM A (Claude Code):       Quality Score: XX/100
-  Weaknesses: [cited list]
+WORKSTREAM A ([executing agent]):
+  Comparative Score: XX/100
+  Strengths: [cited]
+  Critical Weaknesses (min 2): [cited with score deductions]
   Honest Assessment: [one paragraph, no hedging]
 
-WORKSTREAM B (Antigravity Gemini): Quality Score: XX/100
-  Weaknesses: [cited list]
+WORKSTREAM B ([executing agent]):
+  Comparative Score: XX/100
+  Strengths: [cited]
+  Critical Weaknesses (min 2): [cited with score deductions]
   Honest Assessment: [one paragraph, no hedging]
 
-WORKSTREAM C (Grok OpenCode):      Quality Score: XX/100
-  Weaknesses: [cited list]
+WORKSTREAM C ([executing agent]):
+  Comparative Score: XX/100
+  Strengths: [cited]
+  Critical Weaknesses (min 2): [cited with score deductions]
   Honest Assessment: [one paragraph, no hedging]
 
-Integration Quality Score: XX/100
-  [architectural coherence, interface compatibility, pattern consistency]
-
-Score Calibration Check:
-  [Any score above 75 → re-examine. Good work lands at 55-65.]
+INTEGRATION ASSESSMENT:
+  Architectural Coherence: [evidence]
+  Interface Compatibility: [evidence]
+  Cross-Workstream Risks:  [evidence or NONE]
 
 SEGREGATED FEEDBACK:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -600,7 +745,13 @@ WORKSTREAM AUDIT COMPLETE — Iteration [N]
 14. **[INJECTED 2026-05-23 — Workstream Design, /nodelete]** File ownership boundaries defined in `--workstreams` mode are enforcement boundaries, not suggestions. No file may be assigned to more than one workstream. The `--audit --workstreams` mode MUST check file changes against these boundaries and flag violations.
 15. **[INJECTED 2026-05-23 — Workstream Audit, /nodelete]** `--audit --workstreams` mode MUST produce segregated feedback sections — one per agent — in the PM Oversight Report. Each section must be self-contained and paste-ready. Aggregated-only feedback that requires the user to interpret and extract per-agent items is a violation.
 16. **[INJECTED 2026-05-23 — Workstream Audit, /nodelete]** `--audit --workstreams` MUST execute the Submittal & Persistence Protocol (Phase 7f). The workstream audit file uses the suffix `-workstreams` in the filename to distinguish it from standard adversarial audits.
-17. **[INJECTED 2026-05-23 — Adversarial Calibration, /nodelete]** In `--audit --workstreams` Phase 7d, any per-workstream quality score above 75 requires the PM to re-examine and justify the score with additional evidence. A passing grade (above 75) is indicative of a failed audit — the adversarial evaluation was too lenient. Good work lands at 55-65. This calibration is a feature, not a bug.
+17. **[MODIFIED 2026-05-24 — Calibration gaming fix, /nodelete]** ~~Original: scoring calibration visible to agent.~~ **Replaced:** In `--audit --workstreams` Phase 7d, every quality score MUST be accompanied by cited evidence (file paths, line counts, specific observations). Scores without evidence citations are invalid and will be rejected by the Architect. The PM must verify guardrail compliance numerically (run `wc -l`, check git status) rather than trusting agent self-reports. Scoring calibration guidance has been moved to the Architect's review document — the scoring agent must not know what score range is "expected."
+18. **[INJECTED 2026-05-24 — Divergence #1, /nodelete]** The Diff Oracle (Phase 7a.5) is mandatory for every `--audit --workstreams` invocation. The PM MUST generate machine-readable ground truth from git before reviewing any agent self-reports. Cross-referencing the Diff Oracle against Handoff Blocks is not optional — it is the mechanism that prevents Hallucinated Success.
+19. **[INJECTED 2026-05-24 — Divergence #2, /nodelete]** Workstream rotation is autonomous and deterministic. The PM MUST check the iteration number against the rotation formula in Phase 6a when designing workstreams. Rotation is not a flag, not optional, not user-triggered. If iteration mod 8 == 4: +1 rotation. If iteration mod 8 == 0: +2 rotation. Skipping a scheduled rotation is a compliance violation.
+20. **[INJECTED 2026-05-24 — Divergence #5, /nodelete]** Dependency boundary scan (Phase 6c.2) is mandatory when designing workstreams. File ownership alone is insufficient for scope isolation — import chains create invisible coupling. Interface boundaries must be documented in the implementation plan.
+21. **[INJECTED 2026-05-25 — Forced Context Refresh, /nodelete]** Every implementation plan generated by `--workstreams` mode MUST include the `## Pre-Execution Mandate (ALL AGENTS)` section immediately after the Roles table. This section contains targeted `grep` commands that force agents to re-read critical workflow sections before executing tasks. Omitting this section from the generated plan is a structural defect — agents will lose context during long sessions and produce inconsistent output.
+22. **[INJECTED 2026-05-25 — Forced Context Refresh, /nodelete]** The PM MUST execute the mandatory context refresh in Phase 6a (re-read workstream Pre-Flight, Phase 4, and STRICT RULES) before designing workstreams, AND the mandatory context refresh in Phase 7d (re-read adversarial methodology) before scoring workstreams. Context Erosion during long PM sessions caused scoring to drift in Iterations 6-9.
+23. **[SIMPLIFIED 2026-05-25 — Phase 5 methodology replaces custom scoring, /nodelete]** ~~Previous: Task Difficulty Weighting with score caps.~~ **Replaced:** Phase 7d now applies the proven `/implementation-plan --audit` (Phase 5) adversarial methodology per-workstream. Same ruthless engineer persona, same minimum weakness count with score deductions, same comparative scoring against top-10% benchmark, same honest assessment format. The value is in the cited weaknesses and rationale, not the number. Do not artificially force low scores — let evidence drive the assessment.
 
 ---
 
@@ -670,6 +821,11 @@ Multi-agent iteration cycle position:
 6. **2026-05-21**: `[PORTED — Claude Code migration]` Pointer/Payload architecture retired. Merged into single command file at `~/blueprint-workflows/claude-commands/implementation-plan.md`. Phase 4: `write_to_file` → Write tool. Phase 5 Audit Submittal: `write_to_file` → Write tool; audit storage path updated from `/home/jwils/.gemini/antigravity/global_workflows/implementation-plan/audits/` → `~/blueprint-workflows/implementation-plan/audits/`; `run_command` → Bash tool for local pointer append. STRICT RULE 5: `write_to_file` → Write tool.
 7. **2026-05-23**: `[INJECTED — Multi-Agent Workstream Orchestration, /nodelete + /quality]` Two new phases and two new flags added to support the multi-agent workstream iteration cycle. Phase 6 (`--workstreams`): PM designs three parallel workstreams (A/Claude, B/Gemini, C/Grok) from concept.md parity analysis with file ownership boundaries, cross-validation checks, HITL approval gate, and scaffolding of shared state files. Phase 7 (`--audit --workstreams`): PM audits completed workstreams with per-agent verdicts, acceptance criteria verification, scope compliance checking, cross-workstream conflict analysis, and segregated paste-ready feedback sections in the PM Oversight Report. GLOSSARY: 5 new terms (Workstream Design, Workstream Audit, Architect Directive, PM Oversight Report, File Ownership). STRICT RULES 12-16 added. HOW TO BEGIN: two new modes documented. INTEGRATION: `/workstream` cross-reference and iteration cycle position map added. All existing content preserved per /nodelete. Standard Version: 3.
 8. **2026-05-23**: `[INJECTED — Adversarial Quality Layer for Workstream Audit, /nodelete]` Phase 7 re-structured: old 7d (PM Oversight Report) → 7e, old 7e (Persist) → 7f. New 7d injected: Adversarial Quality Evaluation inheriting Phase 5's methodology (adversarial persona, comparative scoring, mandatory weaknesses, honest assessment) calibrated for multi-agent workstream context. Per-workstream quality scoring (XX/100) with calibration philosophy: good work scores 55-65, above 75 = audit too lenient. Minimum 2 cited weaknesses per workstream. Combined Integration Quality Score added. PM Oversight Report template updated with dual-layer structure (Compliance Layer + Adversarial Quality Layer + Segregated Feedback + Strategic Summary). STRICT RULE 17 added (adversarial calibration enforcement). HOW TO BEGIN workstream audit mode updated to 6 steps. Standard Version: 3.
+9. **2026-05-24**: `[HARDENED — /harden-workflow --ticket 20260524_implementation-plan_workflow.md, /nodelete]` Post-Iteration-1 remediation. Adversarial scoring calibration gaming fix: removed all calibration guidance from Phase 7d (scoring agent must not know expected score ranges). Replaced with evidence-citation mandate — every score must cite file paths, line counts, specific observations. Scoring guide replaced with scoring rules requiring numerical verification (wc -l, git status) rather than trusting agent self-reports. Calibration guidance moved to Architect-only document (grok_web_architect.log Section 6). STRICT RULE 17 rewritten: evidence-citation requirement replaces score-range calibration. Phase 7e: PM Oversight Report now writes to `.workflow_state/PM_OVERSIGHT_REPORT_Iteration[N].md` by default (was terminal-only). PM Oversight Report template: "Score Calibration Check" replaced with "Evidence Integrity Check." Standard Version: 3.
+10. **2026-05-24**: `[HARDENED — /harden-workflow --ticket 20260524_implementation-plan_workflow.md (directory creation), /nodelete]` Phase 7e: mandatory `mkdir -p .workflow_state` step added before Write tool call for PM Oversight Report. Root cause: Write tool cannot create parent directories; PM's report writes failed silently across Iterations 2-4 when `.workflow_state/` didn't exist. Fix is idempotent and unconditional — runs every time regardless of directory state. Standard Version: 3.
+11. **2026-05-25**: `[INJECTED — Forced Context Refresh, /harden-workflow + /quality, /nodelete]` Post-10-iteration investigation finding: agents lose workflow context during long sessions (Context Erosion), causing inconsistent failures across all three agents and inflated adversarial scores (90+ on trivial tasks). Three fixes: (a) Phase 6a: mandatory PM context refresh — PM re-reads workstream Pre-Flight, Phase 4, and STRICT RULES via targeted grep before designing workstreams. (b) Phase 6e: `## Pre-Execution Mandate` section now MANDATORY in every generated implementation plan — engineers must run targeted grep to re-read workflow sections before Task 1, with FAIL consequence for skipping. Includes Pre-Flight execution as Step 3. (c) Phase 7d: mandatory PM context refresh before scoring + Task Difficulty Weighting table — trivial tasks capped at 70, moderate at 85, substantial at 95. Prevents compliance-as-quality scoring collapse observed in Iterations 6-9 (documentation tasks scoring 95). STRICT RULES 21-23 added. Standard Version: 3.
+12. **2026-05-25**: `[SIMPLIFIED — Phase 7d adversarial scoring replaced with Phase 5 methodology, /harden-workflow + /quality, /nodelete]` Custom scoring system stripped (calibration guidance, evidence mandates, difficulty weighting caps — all removed). Replaced with the proven `/implementation-plan --audit` (Phase 5) adversarial methodology applied per-workstream: ruthless engineer persona, minimum 2 weaknesses per workstream with 7-15 point deductions, comparative scoring against top-10% benchmark, honest assessment paragraph. Value is in the cited findings and rationale, not the number. Context refresh trigger retained (mandatory grep before scoring). PM Oversight Report template updated to match Phase 5 output format (Comparative Score + Category Scores + Strengths + Critical Weaknesses + Honest Assessment per workstream). STRICT RULE 23 rewritten (Phase 5 methodology replaces difficulty weighting). Standard Version: 3.
+13. **2026-05-24**: `[INJECTED — /divergence pass, 3 divergences + /harden-workflow, /nodelete]` Three divergence-approved additions injected. (a) Phase 6a: Rotation Engine — autonomous workstream rotation on iterations mod 8 == 4 (+1) and mod 8 == 0 (+2). Deterministic formula, no user trigger, PM and Architect both verify. Iteration number derived from ITERATION_LEDGER.md. (b) Phase 6c.2: Dependency Boundary Scan — traces one level of imports for owned files, flags interface boundaries where two workstreams touch through dependency despite separate ownership. (c) Phase 7a.5: Diff Oracle — machine-generated ground truth from git diff/status/wc-l run BEFORE reviewing agent self-reports. Cross-references against Handoff Blocks to detect Ghost Logic and Hallucinated Success. PM Oversight Report template updated with Diff Oracle section. STRICT RULES 18-20 added (Diff Oracle mandatory, rotation mandatory, dependency scan mandatory). Standard Version: 3.
 
 **Hardening Certificate — /implementation-plan (Final Refinement)**
 
