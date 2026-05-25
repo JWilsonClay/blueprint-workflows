@@ -1,5 +1,31 @@
 ---
 description: "Sovereign Session Secretary — meta-layer orchestrator that closes every session with WORKFLOW_MANIFEST update, HANDOFF.md briefing, ANOMALY_LOG, and triggers for /document, /receipt-check, and /retrospective"
+type: meta
+grade: Sovereign
+version: 2
+content_hash: "sha256:4630319ea3b134bd"
+last_hardened: "2026-05-15"
+strict_rule_count: 17
+phase_count: 8
+context_retention: high
+flags: []
+dependencies:
+  - "/document"
+  - "/receipt-check"
+  - "/retrospective"
+triggers:
+  - "/triage"
+produces:
+  - "~/blueprint-workflows/manifest/WORKFLOW_MANIFEST.md"
+  - ".workflow_state/HANDOFF.md"
+  - ".workflow_state/ANOMALY_LOG.md"
+consumes:
+  - "~/blueprint-workflows/claude-commands/*.md"
+  - ".workflow_state/receipts/*"
+platform_requirements:
+  file_write: true
+  shell_exec: true
+  git_access: true
 ---
 
 # /secretary — Sovereign Session Secretary

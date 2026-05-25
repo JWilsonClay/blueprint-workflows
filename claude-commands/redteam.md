@@ -1,5 +1,27 @@
 ---
 description: "Sovereign Adversarial Audit Protocol — zero-trust forensic audit with 5 adversarial personas across 6 phases, producing evidence-cited findings with named failure pattern detection"
+type: audit
+grade: Sovereign
+version: 2
+content_hash: "sha256:4114e77ffd3b57f8"
+last_hardened: "2026-05-08"
+strict_rule_count: 11
+phase_count: 8
+context_retention: high
+flags: []
+dependencies:
+  - "/harden"
+  - "/iterate-test"
+triggers:
+  - "/triage"
+produces: []
+consumes:
+  - "tasks.md"
+  - "implementation-plan.md"
+platform_requirements:
+  file_write: false
+  shell_exec: true
+  git_access: true
 ---
 
 # /redteam — Sovereign Adversarial Audit Protocol

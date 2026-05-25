@@ -1,5 +1,28 @@
 ---
-description: A recursive verification loop to synchronize Intent, Plan, and Substrate before proceeding with execution.
+description: "A recursive verification loop to synchronize Intent, Plan, and Substrate before proceeding with execution. The blocking pre-gate before /execute-build."
+type: audit
+grade: Sovereign
+version: 2
+content_hash: "sha256:7e0248dda6119172"
+last_hardened: "2026-05-08"
+strict_rule_count: 13
+phase_count: 4
+context_retention: medium
+flags: []
+dependencies:
+  - "/implementation-plan"
+triggers:
+  - "/triage"
+  - "/execute-build"
+produces: []
+consumes:
+  - "implementation-plan.md"
+  - "tasks.md"
+  - "concept.md"
+platform_requirements:
+  file_write: false
+  shell_exec: true
+  git_access: true
 ---
 
 ## GLOSSARY

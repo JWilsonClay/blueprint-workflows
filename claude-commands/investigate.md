@@ -1,5 +1,28 @@
 ---
-description: Sovereign Crime Scene Investigator — Read-only forensic investigation
+description: "Sovereign Crime Scene Investigator — read-only forensic investigation producing evidence-cited findings with structured deviation reports and named failure pattern detection"
+type: audit
+grade: Sovereign
+version: 2
+content_hash: "sha256:f46e29a536f7fc39"
+last_hardened: "2026-05-12"
+strict_rule_count: 12
+phase_count: 5
+context_retention: medium
+flags: []
+dependencies: []
+triggers:
+  - "/triage"
+  - "/helpdesk-tickets"
+produces: []
+consumes:
+  - "implementation-plan.md"
+  - "tasks.md"
+  - "concept.md"
+  - ".workflow_state/*"
+platform_requirements:
+  file_write: false
+  shell_exec: true
+  git_access: true
 ---
 
 # /investigate — Sovereign Crime Scene Investigator
