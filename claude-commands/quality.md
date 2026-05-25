@@ -20,6 +20,10 @@ description: Quality Workflow -- Uncompromising Excellence Protocol for Every Re
 | **Hallucinated Success** | A Step 5 self-critique that finds zero weaknesses. A critique that finds nothing is almost certainly incomplete. If Step 5 produces no findings, that is itself a finding — the critique failed. Re-execute Step 5 with full rigor. |
 | **Context Erosion** | Quality standards drifting downward over a long session. The agent applies Step 5 less rigorously on the 10th response than the 1st. Countermeasure: re-read STRICT RULES before each Step 5 execution in extended sessions. |
 | **Behavioral modifier** | A workflow that changes how the agent operates across all interactions in a session, rather than producing a discrete output. /quality is a behavioral modifier — it frames every other workflow and response. |
+| **Quality Witness** | **[INJECTED 2026-05-25 — Divergence #1]** A one-line structured receipt appended to `.workflow_state/quality_witness.log` after each quality-checked output. Documents task type, quality level, critique findings, and executing agent. Not displayed to user — read by /triage and /receipt-check for audit triggers. |
+| **Quality Level** | **[INJECTED 2026-05-25 — Divergence #2]** One of three graduated application levels (Standard, Elevated, Maximum) auto-selected in Step 1 based on task classification. Replaces the binary on/off model. |
+| **Quality Chain Tag** | **[INJECTED 2026-05-25 — Divergence #3]** A one-line metadata fingerprint embedded in outputs that cross agent boundaries (handoff blocks, PM reports). Enables the receiving agent to verify quality protocol application without trusting the producing agent's claim. |
+| **Delegated Critique** | **[INJECTED 2026-05-25 — Divergence #4]** In multi-agent contexts, Step 5 can be executed by a DIFFERENT agent than the one that produced the output. The PM runs /quality Step 5 on engineer output as part of the workstream audit. |
 
 ---
 
@@ -52,6 +56,20 @@ Follow this exact 7-step workflow for EVERY query or task. Never skip or abbrevi
    - **Planning/Design** (structure, foresight, and risk awareness are primary)
 
    This classification determines which quality criteria receive the most weight in Step 5.
+
+   **[INJECTED 2026-05-25 — Divergence #2: Quality Gradient, /nodelete]**
+
+   **Quality Level Classification:** After determining task type, auto-select the quality level:
+
+   | Level | Trigger | Protocol Adjustment |
+   |-------|---------|-------------------|
+   | **Standard** | Default for all output. Straightforward tasks, single-file edits, documentation, config changes. | Steps 1, 4, 5, 7. Skip deep research (Step 2) and multi-perspective analysis (Step 3) if the task doesn't warrant them. 1 refinement pass minimum. |
+   | **Elevated** | Task classified as Execution/Implementation or Planning/Design. Multi-file changes, refactors, new features. | Full 7-step protocol. 2 refinement passes minimum. |
+   | **Maximum** | User explicitly says "with /quality" OR task involves architectural decisions, multi-agent coordination, adversarial evaluation, security changes, or cross-system migration. | Full 7-step protocol. 3 refinement passes minimum. Mandatory dissent check: before delivering, ask "what would a critic say is wrong with this?" and address it. |
+
+   The user no longer needs to invoke "with /quality" to escalate — the gradient auto-detects when Maximum rigor is warranted. "With /quality" explicitly forces Maximum regardless of task classification.
+
+   Store the selected level as `<QUALITY_LEVEL>` — it appears in the Quality Witness (Step 7) and Quality Chain Tag.
 
    **Assumption Surfacing**: If anything is genuinely ambiguous, state your assumed interpretation in one sentence at the very beginning of your output — not as a question, but as a declaration the user can redirect if wrong. Do not turn ambiguity into a questionnaire. One sentence, then proceed.
 
@@ -136,6 +154,10 @@ Follow this exact 7-step workflow for EVERY query or task. Never skip or abbrevi
 
    If any showstopper is found: fix it immediately before proceeding to Step 6.
 
+   **[INJECTED 2026-05-25 — Divergence #4: Delegated Critique, /nodelete]**
+
+   **Multi-agent delegation:** In workstream contexts, Step 5 CAN be executed by a different agent than the one that produced the output. If you are the PM running `/implementation-plan --audit --workstreams`, you may apply this Step 5 critique methodology to each engineer's deliverables as part of your adversarial quality evaluation. The producing agent still runs its own Step 5 (self-critique), but the PM's external Step 5 catches what self-critique misses — same methodology, different evaluator, genuinely adversarial.
+
    **[INJECTION — 2026-05-11] Failure Pattern Check:**
    Before concluding Step 5, explicitly check for these named failure patterns in the draft:
 
@@ -181,6 +203,26 @@ Follow this exact 7-step workflow for EVERY query or task. Never skip or abbrevi
 
    Do not apologize for length. Do not add closing pleasantries that dilute the final impression. End on substance.
 
+   **[INJECTED 2026-05-25 — Divergence #3: Quality Chain Tag, /nodelete]**
+
+   **Cross-agent quality tag:** If this output will cross an agent boundary (handoff block, PM report, architect directive, or any structured output the user carries between agents), embed a quality chain tag at the end of the structured block:
+
+   ```
+   [QUALITY: type=<task_type> | level=<Standard/Elevated/Maximum> | critique_findings=<N> | agent=<your model name>]
+   ```
+
+   This tag is metadata, not prose. It tells the receiving agent what quality standard was applied and what the self-critique found. If the tag is ABSENT from a cross-agent output, the receiving agent should note that quality protocol application is UNVERIFIED.
+
+   **[INJECTED 2026-05-25 — Divergence #1: Quality Witness, /nodelete]**
+
+   **Quality witness (silent, append-only):** After delivering the output, silently append one line to `.workflow_state/quality_witness.log` if the file's parent directory exists (do NOT create the directory — it is created by /workstream or other workflows):
+
+   ```
+   [YYYY-MM-DD HH:MM] | type=<task_type> | level=<quality_level> | findings=<N from Step 5> | agent=<your model name> | target=<brief 10-word description>
+   ```
+
+   If `.workflow_state/` does not exist: skip silently. The witness is a diagnostic signal, not a blocking requirement. It accumulates over sessions and is read by /triage to trigger quality audits when entries accumulate without review. /triage fires a P3 recommendation when quality_witness.log has 25+ unreviewed entries.
+
    **[INJECTION — 2026-05-11] /nodelete Discipline on Quality-Checked Outputs:**
    If this workflow's outputs are logged, versioned, or appended to a governance document: append only. A prior quality-checked draft is never overwritten by a newer one — both are preserved, with the newer version appended and dated. Prior outputs are historical record. The most recent is current. This discipline prevents silent loss of prior quality-checked work.
 
@@ -199,6 +241,9 @@ Follow this exact 7-step workflow for EVERY query or task. Never skip or abbrevi
 9. **[INJECTED — 2026-05-11]** If Context Erosion is detected (Step 5 executed less rigorously than at session start), re-read STRICT RULES in full before proceeding. Quality does not decay with session length.
 10. **[INJECTED — 2026-05-11]** If Depth Trap is detected (response grows longer without growing more valuable), compress. Insight density is the measure, not word count.
 11. **[INJECTED — 2026-05-11]** Quality-checked outputs that constitute records are append-only if logged. Never overwrite a prior quality-checked draft.
+12. **[INJECTED 2026-05-25 — Divergence #2, /nodelete]** Quality Level is auto-classified in Step 1 for every task. "Standard" is the minimum — never skip Step 5 (self-critique) regardless of level. "With /quality" from the user always forces Maximum.
+13. **[INJECTED 2026-05-25 — Divergence #3, /nodelete]** Every cross-agent output (handoff blocks, PM reports, architect directives) MUST include a Quality Chain Tag. An output that crosses agent boundaries without a quality tag is quality-unverified from the receiver's perspective.
+14. **[INJECTED 2026-05-25 — Divergence #1, /nodelete]** The Quality Witness append to `.workflow_state/quality_witness.log` is mandatory when the directory exists. Failure to append does not block output delivery — it is a silent diagnostic. But deliberately skipping it when the directory exists is a compliance violation.
 
 ---
 
@@ -227,6 +272,18 @@ This is a session-level behavioral modifier. It does not produce a discrete outp
 
 /quality is not called by other workflows — it is activated at session start and applies inside every workflow that runs. Any workflow output produced while /quality is active is subject to the 7-step protocol and the world-class expert test.
 
+**[INJECTED 2026-05-25 — Multi-agent quality chain, /nodelete]**
+
+Cross-workflow quality integration:
+  /workstream   → Engineer handoff blocks include Quality Chain Tag (Step 7). PM can run Delegated Critique (Step 5) on engineer output.
+  /implementation-plan --audit --workstreams → PM's Phase 7d adversarial evaluation can formally apply /quality Step 5 methodology to each workstream's deliverables.
+  /triage       → Monitors `.workflow_state/quality_witness.log` for accumulated unreviewed entries (25+ → P3 audit recommendation).
+  /receipt-check → Quality Witness log is a quality-dimension data source alongside HARDEN_GRADES and DOCS_RECEIPTS.
+
+Output files:
+  `.workflow_state/quality_witness.log` — append-only diagnostic log (one line per quality-checked output)
+  Quality Chain Tag embedded in cross-agent structured outputs (handoff blocks, PM reports)
+
 Activation in Claude Code:
   - Type `/quality` in any Claude Code session
   - Claude reads this file and the protocol activates immediately for the session
@@ -237,3 +294,4 @@ Activation in Claude Code:
 ### Change Log
 1. **2026-05-11**: `[CREATED / HARDENED — /harden-workflow, Standard Version 2]` Payload existed as a monolithic, non-Sovereign file with strong 7-step content but missing all five required Sovereign structural shells. Hardening run added: GLOSSARY (14 terms), HOW TO BEGIN block, STRICT RULES block (11 rules, consolidating distributed rules from step prose), INTEGRATION block, Change Log. Failure pattern hooks injected into Step 5 (Hallucinated Success, Depth Trap, Context Erosion table). /nodelete discipline injected into Step 7. STRICT RULES 9–11 injected. No original content removed. Grade achieved: **Diamond**.
 2. **2026-05-21**: `[PORTED — blueprint-workflows / Claude Code migration]` Merged pointer (`quality.md`) and payload (`quality/core.md`) into single file. Pointer/Payload architecture retired — Claude Code carries no injection cap. Provider-list in opening paragraph trimmed (no longer naming specific providers). INTEGRATION activation pattern updated from Antigravity upload model to Claude Code `/quality` slash command. All protocol content preserved verbatim. Old pointer and payload deleted per user direction; git history preserves full lineage.
+3. **2026-05-25**: `[INJECTED — /divergence pass, 4 divergences + /harden-workflow, /nodelete]` Four divergence-approved additions transforming /quality from a trust-based behavioral modifier into an evidence-based quality chain. (a) GLOSSARY: 4 new terms (Quality Witness, Quality Level, Quality Chain Tag, Delegated Critique). (b) Divergence #2 (Quality Gradient): Step 1 now auto-classifies quality level — Standard (skip deep research/analysis for straightforward tasks), Elevated (full protocol for implementation/planning), Maximum (3 passes + dissent check, auto-triggered or user-invoked with "with /quality"). (c) Divergence #4 (Adversarial Quality Twin): Step 5 delegated critique note — PM can execute /quality Step 5 on engineer output in multi-agent contexts. (d) Divergence #3 (Quality Chain Tag): Step 7 embeds `[QUALITY: type|level|findings|agent]` metadata in cross-agent outputs. (e) Divergence #1 (Quality Witness): Step 7 silently appends one diagnostic line to `.workflow_state/quality_witness.log` per output — accumulates for /triage audit trigger. STRICT RULES 12-14 added. INTEGRATION updated with multi-agent quality chain connections (/workstream, /implementation-plan --audit, /triage, /receipt-check). Standard Version: 3.
