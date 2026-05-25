@@ -1,3 +1,7 @@
+---
+description: "Sovereign Lateral Thinking & Adjacent Possibility Engine — surfaces genuinely orthogonal ideas from outside the current frame using Six Divergence Vectors and a Novelty x Relevance correlation gate"
+---
+
 # /divergence — Sovereign Lateral Thinking & Adjacent Possibility Engine
 
 *"Not what we're building — what we haven't thought to build yet, but should."*

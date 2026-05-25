@@ -1,3 +1,7 @@
+---
+description: "Sovereign Session Secretary — meta-layer orchestrator that closes every session with WORKFLOW_MANIFEST update, HANDOFF.md briefing, ANOMALY_LOG, and triggers for /document, /receipt-check, and /retrospective"
+---
+
 # /secretary — Sovereign Session Secretary
 
 *"A session that ends without documentation is a session that never happened."*

@@ -1,3 +1,7 @@
+---
+description: "Sovereign Adversarial Audit Protocol — zero-trust forensic audit with 5 adversarial personas across 6 phases, producing evidence-cited findings with named failure pattern detection"
+---
+
 # /redteam — Sovereign Adversarial Audit Protocol
 
 *"The test suite that only ever passes has never been tested."*

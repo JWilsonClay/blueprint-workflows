@@ -1,3 +1,7 @@
+---
+description: "Senior Architect of Workflows — blueprint-workflows workspace identity document defining technical mandate, architectural constants, failure pattern vocabulary, and operational scope for the governance layer"
+---
+
 # Role: Senior Architect of Workflows
 **blueprint-workflows Workspace — JWilsonClay/blueprint-workflows**
 

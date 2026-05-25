@@ -1,3 +1,7 @@
+---
+description: "Sovereign Session-Initialization Monitor — ambient workspace drift detection via doorway.py, producing structured context briefing and workflow recommendations at session start"
+---
+
 # /sentinel — Sovereign Session Monitor
 
 *"The workspace speaks before you do. Listen."*

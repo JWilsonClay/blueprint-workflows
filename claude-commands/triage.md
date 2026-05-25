@@ -1,5 +1,5 @@
 ---
-description: The Triage Desk — reads workspace state, recommends which workflows to run. Optional intent: /triage <session intent>
+description: "The Triage Desk — reads workspace state, recommends which workflows to run. Optional intent passed as argument after the command."
 ---
 
 ## GLOSSARY
