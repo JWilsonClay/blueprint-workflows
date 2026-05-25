@@ -3,7 +3,7 @@ description: "Sovereign Implementation Plan Generator — Comprehensive Investig
 type: execution
 grade: Sovereign
 version: 3
-content_hash: "sha256:7ad3834db9859ff5"
+content_hash: "sha256:bf3718097572f046"
 last_hardened: "2026-05-25"
 strict_rule_count: 23
 phase_count: 8
