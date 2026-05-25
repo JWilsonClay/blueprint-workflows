@@ -53,8 +53,17 @@ def extract_workflow_refs(body):
     return set(re.findall(r'/([a-z][a-z0-9-]+)', body))
 
 
+def _extract_strict_rules_section(body):
+    match = re.search(r'##\s+STRICT RULES[^\n]*\n(.*?)(?=\n---\s*$|\n##\s[^#]|\n────)', body, re.DOTALL | re.MULTILINE)
+    if match:
+        return match.group(1)
+    match = re.search(r'##\s+STRICT RULES[^\n]*\n(.*)', body, re.DOTALL)
+    return match.group(1) if match else ""
+
+
 def count_strict_rules(body):
-    return len(re.findall(r'^\d+\.\s+\*\*', body, re.MULTILINE))
+    section = _extract_strict_rules_section(body)
+    return len(re.findall(r'^\d+\.\s+', section, re.MULTILINE))
 
 
 def count_phases(body):
@@ -134,7 +143,8 @@ def check_structure(body, workflow_name, fm, report):
             report.add("WARNING", workflow_name, "phases",
                         f"Expected {expected} phases, found {actual_phases}")
 
-    rule_numbers = [int(m) for m in re.findall(r'^(\d+)\.\s+\*\*', body, re.MULTILINE)]
+    rules_section = _extract_strict_rules_section(body)
+    rule_numbers = [int(m) for m in re.findall(r'^(\d+)\.\s+', rules_section, re.MULTILINE)]
     for i in range(1, len(rule_numbers)):
         if rule_numbers[i] != rule_numbers[i - 1] + 1:
             report.add("WARNING", workflow_name, "strict_rules",

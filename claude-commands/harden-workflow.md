@@ -5,8 +5,8 @@ grade: Sovereign
 version: 3
 content_hash: "sha256:bd6c7473c2df168c"
 last_hardened: "2026-05-25"
-strict_rule_count: 18
-phase_count: 11
+strict_rule_count: 5
+phase_count: 13
 context_retention: high
 flags:
   - "--ticket"

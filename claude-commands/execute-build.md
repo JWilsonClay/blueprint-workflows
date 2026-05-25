@@ -5,8 +5,8 @@ grade: Sovereign
 version: 2
 content_hash: "sha256:5f43ef8d8dfb8011"
 last_hardened: "2026-05-07"
-strict_rule_count: 11
-phase_count: 7
+strict_rule_count: 0
+phase_count: 0
 context_retention: high
 flags: []
 dependencies:

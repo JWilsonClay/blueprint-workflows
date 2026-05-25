@@ -6,7 +6,7 @@ version: 2
 content_hash: "sha256:9012a16ac89ec8c4"
 last_hardened: "2026-05-07"
 strict_rule_count: 13
-phase_count: 0
+phase_count: 1
 context_retention: high
 flags: []
 dependencies:

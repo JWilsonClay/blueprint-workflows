@@ -5,8 +5,8 @@ grade: Hardened
 version: 2
 content_hash: "sha256:8335ff1dd452f952"
 last_hardened: "2026-05-07"
-strict_rule_count: 4
-phase_count: 5
+strict_rule_count: 0
+phase_count: 0
 context_retention: high
 flags: []
 dependencies:
