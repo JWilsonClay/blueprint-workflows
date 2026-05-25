@@ -1,5 +1,27 @@
 ---
-description: Continuous Plan Verification Gate — sub-gate embedded inside /execute-build Step 5g. Not user-invokable. Checks phase acceptance criteria and forward contracts against the full implementation plan after each phase build.
+description: "Continuous Plan Verification Gate — sub-gate embedded inside /execute-build Step 5g. Not user-invokable. Checks phase acceptance criteria and forward contracts against the full implementation plan after each phase build."
+type: audit
+grade: Sovereign
+version: 2
+content_hash: "sha256:15b1f453da956de6"
+last_hardened: "2026-05-15"
+strict_rule_count: 3
+phase_count: 0
+context_retention: medium
+flags: []
+dependencies:
+  - "/execute-build"
+  - "/focus-plan"
+triggers:
+  - "/execute-build"
+produces: []
+consumes:
+  - "implementation-plan.md"
+  - "tasks.md"
+platform_requirements:
+  file_write: false
+  shell_exec: true
+  git_access: false
 ---
 
 # /continuous-verify — Continuous Plan Verification Gate

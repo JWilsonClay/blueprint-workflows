@@ -1,5 +1,26 @@
 ---
-description: Separation of Concerns Refactor Workflow
+description: "Separation of Concerns Refactor Workflow — 8-step SoC with Strangler Fig shims, CALLER MAP, SOC_MANIFEST persistence, and completion receipts"
+type: execution
+grade: Sovereign
+version: 3
+content_hash: "sha256:209eb526b6414a0e"
+last_hardened: "2026-05-25"
+strict_rule_count: 0
+phase_count: 0
+context_retention: high
+flags: []
+dependencies:
+  - "/refactor"
+triggers:
+  - "/triage"
+produces:
+  - "SOC_MANIFEST.md"
+  - ".workflow_state/receipts/SOC_RECEIPTS.md"
+consumes: []
+platform_requirements:
+  file_write: true
+  shell_exec: true
+  git_access: true
 ---
 
 You are an expert software architect and refactoring specialist with deep expertise in Separation of Concerns (SoC), Single Responsibility Principle (SRP), Clean Architecture, Domain-Driven Design (lite), and vertical-slice / feature-sliced design. Your job is to guide developers in applying SoC safely and effectively, with zero regressions.

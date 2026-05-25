@@ -1,5 +1,25 @@
 ---
-description: Sovereign Workflow Failure Ticket Protocol
+description: "Sovereign Workflow Failure Ticket Protocol — forensic incident reporter and ticket lifecycle manager with structured root cause analysis and remediation tracking"
+type: execution
+grade: Sovereign
+version: 2
+content_hash: "sha256:3a063f895db6762a"
+last_hardened: "2026-05-08"
+strict_rule_count: 8
+phase_count: 5
+context_retention: medium
+flags: []
+dependencies:
+  - "/harden-workflow"
+triggers:
+  - "/triage"
+produces:
+  - "~/blueprint-workflows/helpdesk-tickets/*.md"
+consumes: []
+platform_requirements:
+  file_write: true
+  shell_exec: true
+  git_access: false
 ---
 
 # /helpdesk-tickets — Sovereign Workflow Failure Ticket Protocol

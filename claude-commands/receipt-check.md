@@ -1,5 +1,26 @@
 ---
-description: Receipt Coverage Map — Project Quality Observability Baseline
+description: "Receipt Coverage Map — Project Quality Observability Baseline. Reads BUILD, VALIDATION, HARDEN, and DOCS receipt files to produce a coverage gap analysis."
+type: audit
+grade: Hardened
+version: 2
+content_hash: "sha256:42d23a173e5ad473"
+last_hardened: "2026-05-07"
+strict_rule_count: 8
+phase_count: 5
+context_retention: low
+flags: []
+dependencies: []
+triggers:
+  - "/triage"
+  - "/secretary"
+produces: []
+consumes:
+  - ".workflow_state/receipts/*"
+  - "tasks.md"
+platform_requirements:
+  file_write: false
+  shell_exec: true
+  git_access: true
 ---
 
 # /receipt-check — Receipt Coverage Map

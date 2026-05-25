@@ -1,5 +1,23 @@
 ---
 description: "Sovereign Session-Initialization Monitor — ambient workspace drift detection via doorway.py, producing structured context briefing and workflow recommendations at session start"
+type: meta
+grade: Sovereign
+version: 2
+content_hash: "sha256:7c80015e2550e5c3"
+last_hardened: "2026-05-15"
+strict_rule_count: 8
+phase_count: 5
+context_retention: medium
+flags: []
+dependencies:
+  - "/triage"
+triggers: []
+produces: []
+consumes: []
+platform_requirements:
+  file_write: false
+  shell_exec: true
+  git_access: true
 ---
 
 # /sentinel — Sovereign Session Monitor

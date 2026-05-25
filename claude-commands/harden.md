@@ -1,5 +1,24 @@
 ---
-description: Hardening and securing selected script files -- Universal Security Hardening Workflow
+description: "Hardening and securing selected script files — Universal Security Hardening Workflow with 19-item checklist and Diamond/Gold/Silver/Bronze grading"
+type: audit
+grade: Hardened
+version: 2
+content_hash: "sha256:6b053669d36e6d1d"
+last_hardened: "2026-05-07"
+strict_rule_count: 4
+phase_count: 0
+context_retention: medium
+flags: []
+dependencies: []
+triggers:
+  - "/triage"
+produces:
+  - ".workflow_state/receipts/HARDEN_GRADES.md"
+consumes: []
+platform_requirements:
+  file_write: true
+  shell_exec: true
+  git_access: true
 ---
 
 ## GLOSSARY

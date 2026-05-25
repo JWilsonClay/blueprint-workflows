@@ -1,5 +1,25 @@
 ---
-description: Sovereign Refactor Protocol — Five-phase migration with shim layer, deterministic scripts, and diff review nodes
+description: "Sovereign Refactor Protocol — Five-phase migration with shim layer, deterministic scripts, and diff review nodes"
+type: execution
+grade: Hardened
+version: 2
+content_hash: "sha256:8335ff1dd452f952"
+last_hardened: "2026-05-07"
+strict_rule_count: 4
+phase_count: 5
+context_retention: high
+flags: []
+dependencies:
+  - "/soc"
+triggers:
+  - "/triage"
+produces: []
+consumes:
+  - "REFACTOR_MANIFEST.yaml"
+platform_requirements:
+  file_write: true
+  shell_exec: true
+  git_access: true
 ---
 
 # 🏗️ /refactor — Sovereign Refactor Protocol: Master Index

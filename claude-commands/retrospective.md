@@ -1,5 +1,27 @@
 ---
-description: Process Learning Retrospective — Session analysis and PROCESS_LEARNINGS.md writer
+description: "Process Learning Retrospective — Session analysis and PROCESS_LEARNINGS.md writer with pattern identification and workflow improvement suggestions"
+type: documentation
+grade: Hardened
+version: 2
+content_hash: "sha256:54927144185da834"
+last_hardened: "2026-05-07"
+strict_rule_count: 9
+phase_count: 6
+context_retention: medium
+flags: []
+dependencies: []
+triggers:
+  - "/triage"
+  - "/secretary"
+produces:
+  - "~/blueprint-workflows/process_learnings/PROCESS_LEARNINGS.md"
+consumes:
+  - ".workflow_state/receipts/*"
+  - "tasks.md"
+platform_requirements:
+  file_write: true
+  shell_exec: true
+  git_access: true
 ---
 
 # /retrospective — Process Learning Retrospective

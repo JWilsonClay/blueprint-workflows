@@ -1,5 +1,22 @@
 ---
-description: No Delete
+description: "No Delete — the universal preservation discipline. Inject and append; delete only what directly contradicts."
+type: behavioral-modifier
+grade: Sovereign
+version: 2
+content_hash: "sha256:7c444b719e2176b9"
+last_hardened: "2026-05-07"
+strict_rule_count: 5
+phase_count: 0
+context_retention: low
+flags: []
+dependencies: []
+triggers: []
+produces: []
+consumes: []
+platform_requirements:
+  file_write: false
+  shell_exec: false
+  git_access: false
 ---
 
 # No Delete Workflow - Persistent Knowledge & Planning System Prompt

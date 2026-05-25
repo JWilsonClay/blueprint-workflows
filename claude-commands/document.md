@@ -1,5 +1,28 @@
 ---
-description: Documentation / DevJournal Workflow -- Universal Autonomous Updater
+description: "Documentation / DevJournal Workflow — Universal Autonomous Updater that discovers, reads, and appends to project journal files with structured entries and receipt tracking"
+type: documentation
+grade: Sovereign
+version: 2
+content_hash: "sha256:1d6a130cd621b2e9"
+last_hardened: "2026-05-15"
+strict_rule_count: 10
+phase_count: 4
+context_retention: low
+flags: []
+dependencies: []
+triggers:
+  - "/triage"
+  - "/secretary"
+produces:
+  - "DevJournal.md"
+  - ".workflow_state/receipts/DOCS_RECEIPTS.md"
+consumes:
+  - "concept.md"
+  - "DevJournal.md"
+platform_requirements:
+  file_write: true
+  shell_exec: true
+  git_access: true
 tags: [global, documentation, devjournal, autonomous, no-print]
 ---
 

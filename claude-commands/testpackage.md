@@ -1,5 +1,23 @@
 ---
-description: Post Modularization Test Package Workflow Prompt
+description: "Post Modularization Test Package Workflow — QA verification suite for decomposed modules"
+type: audit
+grade: Hardened
+version: 2
+content_hash: "sha256:e6d915f1cc624e1c"
+last_hardened: "2026-05-07"
+strict_rule_count: 12
+phase_count: 0
+context_retention: medium
+flags: []
+dependencies:
+  - "/soc"
+triggers: []
+produces: []
+consumes: []
+platform_requirements:
+  file_write: false
+  shell_exec: true
+  git_access: true
 ---
 
 You are an expert QA automation engineer. Execute this complete, best-practice workflow to build a production-ready "Post Modularization Test Package" for newly refactored or extracted modules:

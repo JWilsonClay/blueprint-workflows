@@ -1,5 +1,23 @@
 ---
-description: Decision Archaeology — Reconstruct the decision lineage of any file or concept
+description: "Decision Archaeology — reconstruct the decision lineage of any file, concept, or architectural choice with evidence-cited provenance chains"
+type: audit
+grade: Hardened
+version: 2
+content_hash: "sha256:b9c126afccb97b00"
+last_hardened: "2026-05-07"
+strict_rule_count: 2
+phase_count: 0
+context_retention: medium
+flags: []
+dependencies: []
+triggers:
+  - "/triage"
+produces: []
+consumes: []
+platform_requirements:
+  file_write: false
+  shell_exec: true
+  git_access: true
 ---
 
 # /provenance — Decision Archaeology

@@ -1,5 +1,23 @@
 ---
-description: Sovereign Substrate Contradiction Quarantine & Safe Replacement Protocol
+description: "Sovereign Substrate Contradiction Quarantine & Safe Replacement Protocol — systematic deletion under /nodelete discipline with contradiction evidence and replacement verification"
+type: execution
+grade: Hardened
+version: 2
+content_hash: "sha256:8b74f4351b359632"
+last_hardened: "2026-05-11"
+strict_rule_count: 5
+phase_count: 0
+context_retention: medium
+flags: []
+dependencies:
+  - "/nodelete"
+triggers: []
+produces: []
+consumes: []
+platform_requirements:
+  file_write: true
+  shell_exec: false
+  git_access: true
 ---
 
 # /depreciate — Sovereign Substrate Contradiction Quarantine Protocol

@@ -1,5 +1,26 @@
 ---
 description: "Sovereign Lateral Thinking & Adjacent Possibility Engine — surfaces genuinely orthogonal ideas from outside the current frame using Six Divergence Vectors and a Novelty x Relevance correlation gate"
+type: audit
+grade: Sovereign
+version: 2
+content_hash: "sha256:ed94a5f38f7c17a7"
+last_hardened: "2026-05-07"
+strict_rule_count: 10
+phase_count: 5
+context_retention: high
+flags: []
+dependencies: []
+triggers:
+  - "/triage"
+produces: []
+consumes:
+  - "implementation-plan.md"
+  - "tasks.md"
+  - "concept.md"
+platform_requirements:
+  file_write: false
+  shell_exec: false
+  git_access: false
 ---
 
 # /divergence — Sovereign Lateral Thinking & Adjacent Possibility Engine

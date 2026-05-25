@@ -1,5 +1,22 @@
 ---
 description: "Senior Architect of Workflows — blueprint-workflows workspace identity document defining technical mandate, architectural constants, failure pattern vocabulary, and operational scope for the governance layer"
+type: documentation
+grade: Hardened
+version: 2
+content_hash: "sha256:b5f02d64cc70a27a"
+last_hardened: "2026-05-21"
+strict_rule_count: 0
+phase_count: 0
+context_retention: low
+flags: []
+dependencies: []
+triggers: []
+produces: []
+consumes: []
+platform_requirements:
+  file_write: false
+  shell_exec: false
+  git_access: false
 ---
 
 # Role: Senior Architect of Workflows

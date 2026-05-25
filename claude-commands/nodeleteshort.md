@@ -1,5 +1,22 @@
 ---
-description: No Delete
+description: "No Delete (short version) — compact behavioral directive for the /nodelete preservation discipline"
+type: behavioral-modifier
+grade: Hardened
+version: 2
+content_hash: "sha256:c7b0f82f38abebfe"
+last_hardened: "2026-05-07"
+strict_rule_count: 0
+phase_count: 0
+context_retention: low
+flags: []
+dependencies: []
+triggers: []
+produces: []
+consumes: []
+platform_requirements:
+  file_write: false
+  shell_exec: false
+  git_access: false
 ---
 
 # No Delete Workflow

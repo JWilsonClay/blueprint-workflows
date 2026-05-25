@@ -1,5 +1,25 @@
 ---
-description: Generate a Canvas file Workflow
+description: "Generate Obsidian Canvas files — visual architecture maps and workflow relationship diagrams"
+type: documentation
+grade: Hardened
+version: 2
+content_hash: "sha256:075ea5560def1faf"
+last_hardened: "2026-05-15"
+strict_rule_count: 5
+phase_count: 0
+context_retention: low
+flags: []
+dependencies: []
+triggers:
+  - "/triage"
+produces: []
+consumes:
+  - "concept.md"
+  - "implementation-plan.md"
+platform_requirements:
+  file_write: true
+  shell_exec: false
+  git_access: false
 ---
 
 You are a world-class software architect, reverse-engineering expert, and Obsidian Canvas power user. Your task is to generate a **comprehensive, production-quality Obsidian Canvas file** that visually and textually documents **exactly how the current codebase functions today**.

@@ -1,5 +1,26 @@
 ---
-description: Iterative Stage Tester (Sovereign Fidelity Loop)
+description: "Iterative Stage Tester (Sovereign Fidelity Loop) — Mock Trap prevention with Intelligence Bridge Declaration, stage fidelity verification, and validation receipts"
+type: audit
+grade: Hardened
+version: 2
+content_hash: "sha256:9012a16ac89ec8c4"
+last_hardened: "2026-05-07"
+strict_rule_count: 13
+phase_count: 0
+context_retention: high
+flags: []
+dependencies:
+  - "/execute-build"
+triggers:
+  - "/triage"
+produces:
+  - ".workflow_state/receipts/VALIDATION_RECEIPTS.md"
+consumes:
+  - "tasks.md"
+platform_requirements:
+  file_write: true
+  shell_exec: true
+  git_access: true
 ---
 
 # /iterate-test — Iterative Stage Tester (Sovereign Fidelity Loop)

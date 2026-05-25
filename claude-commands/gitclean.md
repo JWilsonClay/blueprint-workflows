@@ -1,5 +1,23 @@
 ---
-description: Git History Scrub & Index Cleanup
+description: "Git History Scrub & Index Cleanup — interactive rebase, BFG scrub, index repair, and force-push with safety gates"
+type: execution
+grade: Hardened
+version: 2
+content_hash: "sha256:f7f20a88f99a78d2"
+last_hardened: "2026-05-07"
+strict_rule_count: 11
+phase_count: 0
+context_retention: medium
+flags: []
+dependencies: []
+triggers:
+  - "/triage"
+produces: []
+consumes: []
+platform_requirements:
+  file_write: false
+  shell_exec: true
+  git_access: true
 ---
 
 # /gitclean — Git History Scrub & Index Cleanup
