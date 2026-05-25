@@ -75,6 +75,19 @@ STEP 0 -- PREPARATION & SAFETY NET
   - Test fixtures and mocks that import the module
   Store this as the CALLER MAP. It is referenced at every subsequent step.
 
+**[INJECTED 2026-05-25 — Automated CALLER MAP via verify.py, /nodelete]**
+
+**Optional automation:** Instead of manual IDE discovery, you may generate the CALLER MAP using the Verification Substrate script:
+
+```bash
+python ~/blueprint-workflows/scripts/workstream/verify.py \
+  --workspace /path/to/project \
+  --mode callers \
+  --file path/to/god_file.py
+```
+
+This scans for direct imports, barrel exports, framework registries, dynamic imports, and test fixtures referencing the target file. Output is structured markdown matching the CALLER MAP format in SOC_MANIFEST.md. If the script is not available, fall back to manual discovery (the steps above).
+
 **[ADDENDA A + B + F3 — SOC_MANIFEST.md Persistence — INJECTED 2026-05-15, /harden-workflow --ticket 20260512_soc_workflow.md + /nodelete]**
 
 Immediately after recording the baseline hash and building the CALLER MAP, persist both to `SOC_MANIFEST.md` at the workspace root. This file is the cross-session memory for the entire refactor — without it, `$BASELINE` and the CALLER MAP evaporate at session end, making multi-session SoC refactors unsafe.
@@ -345,3 +358,4 @@ git commit -m "chore: soc complete for <module-name> -- receipt filed"
    (E/F6) Step 8 SoC Completion Receipt: added after Step 7 with structured receipt format and `cat >>` persist to `.workflow_state/receipts/SOC_RECEIPTS.md`. Closes the /receipt-check integration gap.
    Divergence D4 (soc_caller_scan.py automation script) deferred to separate ticket — requires new Python code outside workflow scope.
 4. **2026-05-21**: `[PORTED — Claude Code migration]` Pointer/Payload architecture retired. Merged into single command file at `~/blueprint-workflows/claude-commands/soc.md`. No content changes.
+5. **2026-05-25**: `[INJECTED — Automated CALLER MAP via verify.py, /nodelete]` Step 0: optional `verify.py --mode callers --file <god_file>` invocation added for automated CALLER MAP generation. Resolves helpdesk ticket 20260515_soc_caller_scan_script.md (Divergence D4 deferral). The standalone `soc_caller_scan.py` was consolidated into the Verification Substrate (`scripts/workstream/verify.py`) to avoid building two separate import-tracing scripts. Standard Version: 3.
