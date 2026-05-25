@@ -16,6 +16,7 @@ dependencies:
   - "/quality"
 triggers:
   - "/sentinel"
+  - "/harden-workflow"
 produces: []
 consumes:
   - "tasks.md"

@@ -54,9 +54,9 @@ def extract_workflow_refs(body):
 
 
 def _extract_strict_rules_section(body):
-    match = re.search(r'##\s+STRICT RULES[^\n]*\n(.*?)(?=\n---\s*$|\n##\s[^#]|\n────)', body, re.DOTALL | re.MULTILINE)
-    if match:
-        return match.group(1)
+    matches = list(re.finditer(r'##\s+STRICT RULES[^\n]*\n(.*?)(?=\n---\s*$|\n##\s[^#]|\n────)', body, re.DOTALL | re.MULTILINE))
+    if matches:
+        return matches[-1].group(1)
     match = re.search(r'##\s+STRICT RULES[^\n]*\n(.*)', body, re.DOTALL)
     return match.group(1) if match else ""
 

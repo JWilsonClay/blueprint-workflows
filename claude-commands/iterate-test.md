@@ -3,16 +3,17 @@ description: "Iterative Stage Tester (Sovereign Fidelity Loop) — Mock Trap pre
 type: audit
 grade: Hardened
 version: 2
-content_hash: "sha256:9012a16ac89ec8c4"
+content_hash: "sha256:a99bd5ab92bc2e50"
 last_hardened: "2026-05-07"
 strict_rule_count: 13
-phase_count: 1
+phase_count: 7
 context_retention: high
 flags: []
 dependencies:
   - "/execute-build"
 triggers:
   - "/triage"
+  - "/redteam"
 produces:
   - ".workflow_state/receipts/VALIDATION_RECEIPTS.md"
 consumes:
@@ -108,7 +109,7 @@ This log is the provenance record. It is referenced in every re-contextualizatio
 
 ---
 
-## STEP 1 — RE-CONTEXTUALIZE OVERALL INTENT (runs on EVERY iteration, including the first)
+## PHASE 1 — RE-CONTEXTUALIZE OVERALL INTENT (runs on EVERY iteration, including the first)
 
 Autonomously re-read `<INTENT_DOC>` and the iteration log from Phase 0.
 
@@ -124,7 +125,7 @@ Record this summary in the iteration log under **"Iteration N — Intent Anchor.
 
 ---
 
-## STEP 2 — DEFINE STAGE GOAL
+## PHASE 2 — DEFINE STAGE GOAL
 
 Create a single-sentence, measurable goal for `<STAGE_ID>` based on the re-contextualized intent.
 
@@ -139,7 +140,7 @@ Record the goal and criteria in the iteration log. On subsequent iterations, com
 
 ---
 
-## STEP 3 — IDENTIFY CRITICAL FAIL POINTS
+## PHASE 3 — IDENTIFY CRITICAL FAIL POINTS
 
 Enumerate every possible failure mode, edge case, or violation relevant to this workspace. Examples (adapt to workspace):
 - Input contract violations (missing fields, wrong types, null/empty)
@@ -157,7 +158,7 @@ Number each fail point. These numbers are the test's evaluation axes.
 
 ---
 
-## STEP 4 — DESIGN & EXECUTE ISOLATED TEST
+## PHASE 4 — DESIGN & EXECUTE ISOLATED TEST
 
 Write a complete, runnable test script. Sub-steps **must** be followed in order. The Intelligence Bridge Declaration (4b) must be completed **before** writing any test code.
 
@@ -279,7 +280,7 @@ Execute the script. Return the full result block.
 
 ---
 
-## STEP 5 — REPAIR PHASE (only if any failure)
+## PHASE 5 — REPAIR PHASE (only if any failure)
 
 **5a. Failure Analysis.**
 
@@ -310,7 +311,7 @@ Ask internally: does this patch silently violate, narrow, or contradict anything
 
 ---
 
-## STEP 6 — SUCCESS GATE
+## PHASE 6 — SUCCESS GATE
 
 When all tests pass and every critical fail point is satisfied:
 

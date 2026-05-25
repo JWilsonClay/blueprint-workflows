@@ -19,6 +19,8 @@ dependencies:
 triggers:
   - "/triage"
   - "/secretary"
+  - "/workstream"
+  - "/focus-plan"
 produces:
   - "implementation-plan.md"
   - "WORKSTREAM_STATUS.md"

@@ -13,6 +13,7 @@ dependencies: []
 triggers:
   - "/triage"
   - "/secretary"
+  - "/workstream"
 produces:
   - "~/blueprint-workflows/process_learnings/PROCESS_LEARNINGS.md"
 consumes:

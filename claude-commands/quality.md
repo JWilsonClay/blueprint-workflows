@@ -12,6 +12,7 @@ flags: []
 dependencies: []
 triggers:
   - "/triage"
+  - "/implementation-plan"
 produces:
   - ".workflow_state/quality_witness.log"
 consumes: []

@@ -14,6 +14,8 @@ dependencies:
 triggers:
   - "/triage"
   - "/execute-build"
+  - "/implementation-plan"
+  - "/continuous-verify"
 produces: []
 consumes:
   - "implementation-plan.md"

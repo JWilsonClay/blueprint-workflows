@@ -20,6 +20,7 @@ dependencies:
 triggers:
   - "/triage"
   - "/implementation-plan --workstreams"
+  - "/implementation-plan"
 produces:
   - ".workflow_state/handoffs/WORKSTREAM_*.md"
   - ".workflow_state/PM_OVERSIGHT_REPORT_Iteration*.md"

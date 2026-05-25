@@ -3,16 +3,17 @@ description: "Sovereign Refactor Protocol — Five-phase migration with shim lay
 type: execution
 grade: Hardened
 version: 2
-content_hash: "sha256:8335ff1dd452f952"
+content_hash: "sha256:7fc1f4e3d6645719"
 last_hardened: "2026-05-07"
 strict_rule_count: 0
-phase_count: 0
+phase_count: 5
 context_retention: high
 flags: []
 dependencies:
   - "/soc"
 triggers:
   - "/triage"
+  - "/soc"
 produces: []
 consumes:
   - "REFACTOR_MANIFEST.yaml"
@@ -106,7 +107,7 @@ Every phase transition includes a mandatory **diff review** step that compares a
 - Google Large-Scale Change (LSC) Methodology
 - Python `six` library: backward-compatible migration shim pattern
 
-# 🏗️ /refactor-p0 — Phase 0: Cryogenic Snapshot
+## PHASE 0 — Cryogenic Snapshot
 
 > **PHASE CONTEXT**: This is the first phase of the Sovereign Refactor Protocol.
 > No previous phases have run. The codebase is in its original (pre-refactor) state.
@@ -270,7 +271,7 @@ python3 refactor_scout.py --project-root /path/to/project --language javascript
 
 **Next Phase**: Invoke `/refactor-p1`
 
-# 🏗️ /refactor-p1 — Phase 1: Shim Layer Creation
+## PHASE 1 — Shim Layer Creation
 
 > **PHASE CONTEXT**: Phase 0 is complete. The following artifacts exist:
 > - A `refactor/<project-name>` git branch (currently checked out).
@@ -457,7 +458,7 @@ git commit -m "refactor(p1): inject shim layer at all target paths"
 
 **Next Phase**: Invoke `/refactor-p2`
 
-# 🏗️ /refactor-p2 — Phase 2: Physical Migration
+## PHASE 2 — Physical Migration
 
 > **PHASE CONTEXT**: Phases 0 and 1 are complete. The following artifacts exist:
 > - A `refactor/<project-name>` git branch (currently checked out).
@@ -647,7 +648,7 @@ git commit -m "refactor(p2): git mv old/path → new/path"
 
 **Next Phase**: Invoke `/refactor-p3`
 
-# 🏗️ /refactor-p3 — Phase 3: Reference Surgery
+## PHASE 3 — Reference Surgery
 
 > **PHASE CONTEXT**: Phases 0, 1, and 2 are complete. The following is true:
 > - Every file lives at its TARGET path (per the Manifest).
@@ -849,7 +850,7 @@ had its imports surgically updated. At that point:
 
 **Next Phase**: Invoke `/refactor-p4`
 
-# 🏗️ /refactor-p4 — Phase 4: Shim Removal & Merge
+## PHASE 4 — Shim Removal & Merge
 
 > **PHASE CONTEXT**: Phases 0 through 3 are complete. The following is true:
 > - Every file lives at its TARGET path.

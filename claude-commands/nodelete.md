@@ -10,7 +10,8 @@ phase_count: 0
 context_retention: low
 flags: []
 dependencies: []
-triggers: []
+triggers:
+  - "/depreciate"
 produces: []
 consumes: []
 platform_requirements:

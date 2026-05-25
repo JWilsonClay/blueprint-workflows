@@ -3,10 +3,10 @@ description: "Sovereign Build Agent — implements each phase of tasks.md with s
 type: execution
 grade: Sovereign
 version: 2
-content_hash: "sha256:5f43ef8d8dfb8011"
+content_hash: "sha256:b274ecf7342b888c"
 last_hardened: "2026-05-07"
 strict_rule_count: 0
-phase_count: 0
+phase_count: 7
 context_retention: high
 flags: []
 dependencies:
@@ -16,6 +16,8 @@ dependencies:
 triggers:
   - "/triage"
   - "/focus-plan"
+  - "/continuous-verify"
+  - "/iterate-test"
 produces:
   - ".workflow_state/receipts/BUILD_RECEIPTS.md"
   - "tasks.md"
@@ -94,7 +96,7 @@ Before any build begins, anchor the workspace. This phase runs exactly once per 
     This log is the provenance record. It is referenced in every re-contextualization.
 
 ────────────────────────────────────────────
-STEP 1  — RE-CONTEXTUALIZE  (runs at the START of EVERY phase, including the first)
+## PHASE 1 — RE-CONTEXTUALIZE  (runs at the START of EVERY phase, including the first)
 ────────────────────────────────────────────
 Autonomously re-read <IMPL_PLAN> (if present), <INTENT_DOC>, and the Build Log from Phase 0.
 Do not rely on memory. Read the files directly.
@@ -113,7 +115,7 @@ Then perform the **Drift Check**:
 Record this in the Build Log under "Phase N — Intent Anchor."
 
 ────────────────────────────────────────────
-STEP 2  — DEFINE BUILD GOAL FOR THIS PHASE
+## PHASE 2 — DEFINE BUILD GOAL FOR THIS PHASE
 ────────────────────────────────────────────
 Read every task in <ACTIVE_PHASE> from <TASKS_FILE>.
 
@@ -130,7 +132,7 @@ Then list **Acceptance Criteria** for this phase — the specific, verifiable co
 If the tasks are underspecified (no acceptance criteria determinable from <TASKS_FILE> or <IMPL_PLAN>): HALT and ask the user to clarify before building. Building against vague criteria produces vague code.
 
 ────────────────────────────────────────────
-STEP 3  — IDENTIFY CRITICAL BUILD RISKS
+## PHASE 3 — IDENTIFY CRITICAL BUILD RISKS
 ────────────────────────────────────────────
 Before writing a single line of code, enumerate the ways this build phase can fail. Evaluate each:
 
@@ -145,7 +147,7 @@ Before writing a single line of code, enumerate the ways this build phase can fa
 Number each identified risk. These numbers are the Build Audit's evaluation axes.
 
 ────────────────────────────────────────────
-STEP 4  — IMPLEMENT THE PHASE (task by task)
+## PHASE 4 — IMPLEMENT THE PHASE (task by task)
 ────────────────────────────────────────────
 Execute the build. For each task in <ACTIVE_PHASE> in dependency order:
 
@@ -175,7 +177,7 @@ Execute the build. For each task in <ACTIVE_PHASE> in dependency order:
     - If a regression is detected: fix it before marking the task `[x]`
 
 ────────────────────────────────────────────
-STEP 5  — BUILD AUDIT  (the quality gate — run after all tasks in the phase are complete)
+## PHASE 5 — BUILD AUDIT (the quality gate — run after all tasks in the phase are complete)
 ────────────────────────────────────────────
 This is the most critical step. Do not mark a phase complete without passing this audit.
 
@@ -266,7 +268,7 @@ This is the most critical step. Do not mark a phase complete without passing thi
     and advance. The Build Audit (5a-5f) remains the quality gate in this case.
 
 ────────────────────────────────────────────
-STEP 6  — PHASE BUILD RECEIPT
+## PHASE 6 — PHASE BUILD RECEIPT
 ────────────────────────────────────────────
 When the Build Audit passes for every criterion:
 
@@ -311,7 +313,7 @@ Then: automatically re-read the Phase Map from `<TASKS_FILE>`.
   - If all phases are complete: proceed to STEP 7.
 
 ────────────────────────────────────────────
-STEP 7  — PROJECT BUILD COMPLETE
+## PHASE 7 — PROJECT BUILD COMPLETE
 ────────────────────────────────────────────
 When all phases in <TASKS_FILE> are marked complete:
 

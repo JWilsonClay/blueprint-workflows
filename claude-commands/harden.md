@@ -12,6 +12,8 @@ flags: []
 dependencies: []
 triggers:
   - "/triage"
+  - "/execute-build"
+  - "/redteam"
 produces:
   - ".workflow_state/receipts/HARDEN_GRADES.md"
 consumes: []

@@ -13,6 +13,8 @@ dependencies:
   - "/harden-workflow"
 triggers:
   - "/triage"
+  - "/harden-workflow"
+  - "/workstream"
 produces:
   - "~/blueprint-workflows/helpdesk-tickets/*.md"
 consumes: []

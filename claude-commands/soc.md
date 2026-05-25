@@ -3,16 +3,18 @@ description: "Separation of Concerns Refactor Workflow — 8-step SoC with Stran
 type: execution
 grade: Sovereign
 version: 3
-content_hash: "sha256:209eb526b6414a0e"
+content_hash: "sha256:62e62dcd7875322b"
 last_hardened: "2026-05-25"
 strict_rule_count: 0
-phase_count: 0
+phase_count: 9
 context_retention: high
 flags: []
 dependencies:
   - "/refactor"
 triggers:
   - "/triage"
+  - "/refactor"
+  - "/testpackage"
 produces:
   - "SOC_MANIFEST.md"
   - ".workflow_state/receipts/SOC_RECEIPTS.md"
@@ -80,7 +82,7 @@ Alternative for small or legacy projects: traditional layered architecture (pres
 **Exact Step-by-Step SoC Workflow**
 
 --------------------------------------------
-STEP 0 -- PREPARATION & SAFETY NET
+## PHASE 0 — PREPARATION & SAFETY NET
 --------------------------------------------
 - Commit the current state with a clear baseline message (see Prerequisites for 3-commit sequence if tests are absent).
 - Record the baseline commit hash: `BASELINE=$(git rev-parse HEAD)`
@@ -162,7 +164,7 @@ On every subsequent session resumption: re-read `SOC_MANIFEST.md` first. It is t
 
 
 --------------------------------------------
-STEP 1 -- INVENTORY
+## PHASE 1 — INVENTORY
 --------------------------------------------
 - List every distinct responsibility in the code.
 - Use temporary `# RESPONSIBILITY: <name>` comments or a Markdown checklist.
@@ -170,7 +172,7 @@ STEP 1 -- INVENTORY
 - Success criterion: complete, categorized list. Every line of code is claimed by exactly one responsibility.
 
 --------------------------------------------
-STEP 2 -- IDENTIFY & GROUP CONCERNS
+## PHASE 2 — IDENTIFY & GROUP CONCERNS
 --------------------------------------------
 - Group the responsibility list into logical, cohesive modules.
 - Apply: SoC + DDD-lite + "single reason to change" rule.
@@ -179,7 +181,7 @@ STEP 2 -- IDENTIFY & GROUP CONCERNS
 - Success criterion: every proposed module has one clear responsibility, high internal cohesion, and no circular dependencies.
 
 --------------------------------------------
-STEP 3 -- PRIORITIZE & INCREMENTAL EXTRACTION (one concern at a time)
+## PHASE 3 — PRIORITIZE & INCREMENTAL EXTRACTION (one concern at a time)
 --------------------------------------------
 - Order extractions: easiest/most independent first (leaf nodes in the dependency graph, then working inward).
 - For each extraction:
@@ -211,7 +213,7 @@ The shim is a contract: it guarantees zero-breakage during caller migration. A s
 
 
 --------------------------------------------
-STEP 4 -- DECOUPLE (remove tight coupling)
+## PHASE 4 — DECOUPLE (remove tight coupling)
 --------------------------------------------
 For each extracted module, eliminate direct dependencies back to the original god-file:
 - **Dependency Injection**: define an interface/protocol for the dependency; inject it via constructor or parameter.
@@ -228,7 +230,7 @@ After each decoupling action:
 Success criterion: the original file now only orchestrates — no implementation details remain. Each extracted module can be instantiated and tested in complete isolation.
 
 --------------------------------------------
-STEP 5 -- UPDATE CALLERS & WIRING (the highest-risk step)
+## PHASE 5 — UPDATE CALLERS & WIRING (the highest-risk step)
 --------------------------------------------
 Use the CALLER MAP from Step 0. For each caller category, migrate in this order:
 
@@ -265,7 +267,7 @@ Use the CALLER MAP from Step 0. For each caller category, migrate in this order:
 Success criterion: all callers updated, full test suite GREEN, no shims remaining in original file.
 
 --------------------------------------------
-STEP 6 -- CLEAN UP
+## PHASE 6 — CLEAN UP
 --------------------------------------------
 - Remove dead code, temporary `# RESPONSIBILITY:` comments.
 - Run linter and dead-code analyzer.
@@ -276,7 +278,7 @@ STEP 6 -- CLEAN UP
 - Success criterion: original file focused and readable, no dead code, linter passes.
 
 --------------------------------------------
-STEP 7 -- VALIDATE (full regression gate)
+## PHASE 7 — VALIDATE (full regression gate)
 --------------------------------------------
 - Run the complete test suite.
 - Run the linter and static analyzer.
@@ -319,7 +321,7 @@ After rollback: diagnose the failure before re-attempting. Do not re-apply the s
 Follow this workflow strictly and incrementally. Ask the user for clarification on any domain concept you don't fully understand. Always prioritize small, safe, reversible changes over big-bang rewrites.
 
 --------------------------------------------
-STEP 8 -- SOC COMPLETION RECEIPT
+## PHASE 8 — SOC COMPLETION RECEIPT
 --------------------------------------------
 **[ADDENDUM E/F6 — SoC Completion Receipt — INJECTED 2026-05-15, /harden-workflow --ticket 20260512_soc_workflow.md + /nodelete]**
 
