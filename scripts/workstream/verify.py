@@ -44,6 +44,11 @@ import re
 from pathlib import Path
 
 
+def _sanitize_for_shell(value):
+    """Strip shell metacharacters from values interpolated into commands."""
+    return re.sub(r'[;&|`$(){}!\[\]<>\'"\\]', '', str(value))
+
+
 def run_cmd(cmd, cwd=None):
     result = subprocess.run(
         cmd, shell=True, capture_output=True, text=True, cwd=cwd
@@ -153,11 +158,12 @@ def mode_dependency(workspace, files):
 
     for target in files:
         basename = os.path.basename(target).replace(".ts", "").replace(".tsx", "").replace(".py", "").replace(".rs", "")
+        safe_basename = _sanitize_for_shell(basename)
         print(f"\n  Target: {target}")
-        print(f"  Basename: {basename}")
+        print(f"  Basename: {safe_basename}")
 
         grep_out, _, _ = run_cmd(
-            f'grep -rn "import.*{basename}\\|from.*{basename}\\|require.*{basename}" '
+            f'grep -rn "import.*{safe_basename}\\|from.*{safe_basename}\\|require.*{safe_basename}" '
             f'--include="*.ts" --include="*.tsx" --include="*.py" --include="*.rs" '
             f'--include="*.js" . 2>/dev/null | grep -v node_modules | grep -v __pycache__ '
             f'| grep -v ".git/" | grep -v target/',
@@ -201,11 +207,13 @@ def mode_callers(workspace, target_file):
         "test_fixtures": [],
     }
 
+    safe_stem = _sanitize_for_shell(stem)
+    safe_basename = _sanitize_for_shell(basename)
     grep_out, _, _ = run_cmd(
-        f'grep -rn "{stem}" --include="*.ts" --include="*.tsx" --include="*.py" '
+        f'grep -rn "{safe_stem}" --include="*.ts" --include="*.tsx" --include="*.py" '
         f'--include="*.rs" --include="*.js" --include="*.jsx" . 2>/dev/null '
         f'| grep -v node_modules | grep -v __pycache__ | grep -v ".git/" '
-        f'| grep -v "target/" | grep -v "{basename}"',
+        f'| grep -v "target/" | grep -v "{safe_basename}"',
         cwd=workspace,
     )
 
