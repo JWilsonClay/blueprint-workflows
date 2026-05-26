@@ -302,3 +302,94 @@ The suite has reached the complexity threshold where it needs the same infrastru
 - **Onboarding** = Pre-Execution Mandate for human newcomers (context refresh)
 
 The tools exist. They just haven't been turned inward.
+
+---
+
+## Divergence #5 — The Workflow Health Dashboard (Gap Analysis Pass 2)
+**Vector:** Inversion — machine-readable data exists but no human-readable synthesis
+**Status:** APPROVED — ON HOLD
+**Source:** /divergence gap analysis, 2026-05-25 (second pass after full hardening session)
+
+### Core Idea
+A `lint_workflows.py --dashboard` mode that produces a single-page visual summary synthesizing all governance data: suite health score, workflow count by grade/type, dependency graph as ASCII, top linter findings, platform coverage status, stale hash/checkpoint alerts, quality witness accumulation, and iteration trend data.
+
+### Why It Matters
+The suite now has rich machine-readable data (dependency_graph.json, v1 frontmatter, HARDEN_GRADES.md, quality_witness.log, ITERATION_LEDGER.md) but no composite view. The user must run 3+ tools and mentally compose the results. A dashboard gives "suite health in one glance" from one command.
+
+### Implementation Notes
+- New mode in `lint_workflows.py` — reads existing data sources, produces formatted terminal output
+- Data sources: frontmatter (grade/type counts), dependency_graph.json (edge counts, orphan detection), HARDEN_GRADES.md (script coverage), linter findings (CRITICAL/WARNING counts), quality_witness.log (entry count + review status)
+- Output: structured ASCII dashboard, ~40 lines, scannable in 15 seconds
+- Complexity: LOW-MEDIUM (aggregation of existing data, no new collection)
+
+### Prerequisites
+None — all data sources already exist. Can be built independently.
+
+---
+
+## Divergence #6 — The Workflow Test Runner (Gap Analysis Pass 2)
+**Vector:** Constraint removal — workflows are untestable → workflows are testable
+**Status:** APPROVED — ON HOLD
+**Source:** /divergence gap analysis, 2026-05-25 (second pass)
+
+### Core Idea
+`scripts/suite/test_workflows.py` — behavioral smoke tests that invoke each workflow in a sandboxed context and verify the output contains expected structural markers (section headers, required fields, format compliance). Treats workflows as programs with entry points, not just documents to read.
+
+### Why It Matters
+The adversarial audit identified behavioral testing as the biggest verification gap. The linter checks structure (does the file HAVE the right sections?). The test runner checks behavior (does the workflow PRODUCE the right output when invoked?). A frontmatter change that breaks YAML parsing in a way the linter doesn't catch would only surface when a user tries to invoke the workflow. The test runner catches it proactively.
+
+### Implementation Notes
+- Define "expected output markers" per workflow type: execution workflows produce structured output blocks, behavioral modifiers produce nothing (silent activation), meta workflows produce reports
+- Sandbox: run each workflow with a minimal synthetic workspace (temp directory with concept.md, tasks.md stubs)
+- Verify: HOW TO BEGIN parses correctly, Phase 0 runs without error, structured output template appears in output
+- NOT full execution — activation verification only. 5-10 seconds per workflow, not minutes.
+- Complexity: MEDIUM-HIGH (requires defining expected behavior per type, building sandboxed execution)
+
+### Prerequisites
+- Linter frontmatter `type` field (DONE — all 33 workflows have type classification)
+- Understanding of which workflows are safe to invoke in a sandbox (read-only workflows = safe; execution workflows = need mock targets)
+
+---
+
+## Divergence #7 — The Cross-Session Memory Bridge (Gap Analysis Pass 2)
+**Vector:** Future User — agent starting session #100
+**Status:** APPROVED — ON HOLD
+**Source:** /divergence gap analysis, 2026-05-25 (second pass)
+
+### Core Idea
+A lightweight `SESSION_PRIORS.md` file per workspace (or a section in CLAUDE.md) capturing the top 5-10 operational lessons learned from the most recent sessions. Updated by /secretary at session close. Read by /onboard or /sentinel at session start. The bridge between "what we learned" and "what the next agent does differently."
+
+### Why It Matters
+PROCESS_LEARNINGS.md is cross-project institutional memory (narrative, appended by /retrospective). HANDOFF.md is per-session state (overwritten each session). Neither provides per-workspace operational intelligence that persists across sessions. The gap: an agent starting session #100 doesn't know what agents in sessions #95-99 learned about this specific workspace's quirks, patterns, and gotchas.
+
+This is the macro version of Context Erosion — across sessions, not within them. Forced Context Refresh solves within-session. The Memory Bridge solves across-session.
+
+### Implementation Notes
+- File: `{workspace}/.workflow_state/SESSION_PRIORS.md` — append-only, top-N format
+- Updated by: /secretary Phase 4 — extracts 1-3 key operational lessons from the session and appends
+- Read by: /onboard Phase 1 (if present) and /sentinel Phase 2 (if present)
+- Format: structured entries with date, lesson, and "applies when" context
+- Max size: 50 entries. After 50, oldest entries are archived (not deleted) to keep the file scannable.
+- The Failure Pattern Registry (Divergence #4, approved, unbuilt) would be a component of this — failure patterns are the failure-specific subset of cross-session memory. Building the Memory Bridge as the broader container would naturally house the registry.
+- Complexity: LOW (small addition to /secretary; small read step in /onboard and /sentinel)
+
+### Prerequisites
+- /onboard (DONE — built this session)
+- /secretary (DONE — already operational)
+- /sentinel (DONE — already operational)
+
+---
+
+## Implementation Priority (all approved divergences)
+
+| Priority | Divergence | Status | Depends On |
+|----------|-----------|--------|------------|
+| 1 | #1 Linter | ✅ COMPLETE | — |
+| 2 | #3 Dependency Graph | ✅ COMPLETE (as dependency_graph.json) | #1 |
+| 3 | #2 Onboarding | ✅ COMPLETE (/onboard built) | #1, #3 |
+| 4 | #4 Failure Pattern Registry | ON HOLD | — (consolidation task) |
+| 5 | #5 Health Dashboard | ON HOLD | #1 (linter exists) |
+| 6 | #7 Memory Bridge | ON HOLD | #2 (/onboard), /secretary |
+| 7 | #6 Test Runner | ON HOLD | #1 (linter type classification) |
+
+Frontmatter divergences (Platform Compatibility, Injection Lineage, Comprehension Estimate, Invocation Signature) are tracked in the V2 Frontmatter Deferred Items section above.
