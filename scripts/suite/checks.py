@@ -13,7 +13,7 @@ from pathlib import Path
 
 from suite.models import (
     LintReport, V1_REQUIRED_FIELDS, VALID_TYPES, VALID_GRADES,
-    VALID_RETENTION, SYMLINK_DIR, OPENCODE_DIR, COMMANDS_DIR,
+    VALID_RETENTION, SYMLINK_DIR, OPENCODE_DIR, ANTIGRAVITY_DIR, COMMANDS_DIR,
 )
 
 try:
@@ -180,7 +180,11 @@ def check_symlinks(workflow_name, workspace_root, report):
 
     opencode_link = Path(OPENCODE_DIR) / workflow_name
     if not opencode_link.exists():
-        report.add("INFO", workflow_name, "symlink", f"OpenCode pointer missing: {opencode_link}")
+        report.add("WARNING", workflow_name, "pointer", f"OpenCode pointer missing: {opencode_link}")
+
+    antigravity_link = Path(ANTIGRAVITY_DIR) / workflow_name
+    if not antigravity_link.exists():
+        report.add("WARNING", workflow_name, "pointer", f"Antigravity pointer missing: {antigravity_link}")
 
 
 def check_content_hash(content, fm, workflow_name, report):

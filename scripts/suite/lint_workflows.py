@@ -30,7 +30,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from suite.models import COMMANDS_DIR, LintReport
+from suite.models import COMMANDS_DIR, SYMLINK_DIR, OPENCODE_DIR, ANTIGRAVITY_DIR, LintReport
 from suite.checks import (
     parse_frontmatter, compute_content_hash,
     check_frontmatter, check_structure, check_cross_references,
@@ -78,6 +78,8 @@ def main():
                         help="Generate dependency_graph.json in manifest/")
     parser.add_argument("--fix-hashes", action="store_true",
                         help="Recompute and print content hashes for all workflows")
+    parser.add_argument("--fix-pointers", action="store_true",
+                        help="Auto-create missing pointer files for all 3 platforms")
     parser.add_argument("--quiet", action="store_true", help="Suppress INFO findings")
     args = parser.parse_args()
 
@@ -96,6 +98,45 @@ def main():
             content = (commands_dir / wf_file).read_text(encoding="utf-8", errors="replace")
             h = compute_content_hash(content)
             print(f"  {wf_file}: sha256:{h}")
+        sys.exit(0)
+
+    if args.fix_pointers:
+        canonical = Path(workspace) / COMMANDS_DIR
+        created = 0
+        for wf_file in all_files:
+            name = wf_file
+            canon_path = canonical / name
+            content = canon_path.read_text(encoding="utf-8", errors="replace")
+            fm, _ = parse_frontmatter(content)
+            desc = fm.get("description", name.replace(".md", "")) if fm else name.replace(".md", "")
+
+            # Claude Code symlink
+            claude_path = Path(SYMLINK_DIR) / name
+            if not claude_path.exists():
+                os.makedirs(SYMLINK_DIR, exist_ok=True)
+                os.symlink(str(canon_path), str(claude_path))
+                print(f"  Created symlink: {claude_path}")
+                created += 1
+
+            # OpenCode pointer
+            opencode_path = Path(OPENCODE_DIR) / name
+            if not opencode_path.exists():
+                os.makedirs(OPENCODE_DIR, exist_ok=True)
+                with open(opencode_path, "w") as f:
+                    f.write(f"# /{name.replace('.md', '')}\n\n@home/jwils/blueprint-workflows/claude-commands/{name}\n")
+                print(f"  Created OpenCode pointer: {opencode_path}")
+                created += 1
+
+            # Antigravity pointer
+            antigravity_path = Path(ANTIGRAVITY_DIR) / name
+            if not antigravity_path.exists():
+                os.makedirs(ANTIGRAVITY_DIR, exist_ok=True)
+                with open(antigravity_path, "w") as f:
+                    f.write(f'---\ndescription: "{desc}"\n---\n\n# PAYLOAD LOCATION\nview_file /home/jwils/blueprint-workflows/claude-commands/{name}\n\n# IF PAYLOAD MISSING\nIf the file above cannot be read, HALT and report:\n"PAYLOAD MISSING: {name} not found at the canonical path."\n')
+                print(f"  Created Antigravity pointer: {antigravity_path}")
+                created += 1
+
+        print(f"\nPointer fix complete: {created} pointers created across {len(all_files)} workflows")
         sys.exit(0)
 
     if args.generate_graph:

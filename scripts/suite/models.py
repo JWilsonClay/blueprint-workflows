@@ -9,6 +9,7 @@ import os
 COMMANDS_DIR = "claude-commands"
 SYMLINK_DIR = os.path.expanduser("~/.claude/commands")
 OPENCODE_DIR = os.path.expanduser("~/.opencode/commands")
+ANTIGRAVITY_DIR = os.path.expanduser("~/.gemini/antigravity/global_workflows")
 
 V1_REQUIRED_FIELDS = [
     "description", "type", "grade", "version", "content_hash",
