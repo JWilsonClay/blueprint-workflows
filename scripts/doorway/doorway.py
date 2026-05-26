@@ -171,6 +171,8 @@ class DoorwayContextualizer:
             critical_files[self.architecture_file] = "Architecture.md.template"
         if not self.manifest_file.exists():
             critical_files[self.manifest_file] = "MANIFEST.md.template"
+        if not self.ownership_file.exists():
+            critical_files[self.ownership_file] = "FOLDER_OWNERSHIP.md.template"
         self.integrity_manager.ensure_substrate(self.data_dir, critical_files)
 
         # Step 0.5 — Apply approved breadcrumb proposals.

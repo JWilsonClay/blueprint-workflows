@@ -135,7 +135,10 @@ Right now, the user IS the pipeline. They've been manually learning what the rig
 Re-visit this item after completing the Layer 2 build roadmap (Stages 1-3: /receipt-check, /retrospective, /provenance). By then, the user will have more operational experience to evaluate whether /pipeline adds value.
 
 ## ITEM 5 — WORKFLOW_DEPENDENCIES.md (Divergence #5 from /secretary session)
-**Status**: DEFERRED — Approved, Awaiting Optimal Timing
+**Status**: ✅ COMPLETE — Implemented as `manifest/dependency_graph.json` (2026-05-25)
+
+**[RESOLUTION — 2026-05-25, /nodelete]**
+Implemented as machine-readable JSON (`dependency_graph.json`) rather than the originally proposed markdown table. Generated automatically by `scripts/suite/lint_workflows.py --generate-graph`. Contains per-workflow: type, grade, dependencies, triggers, produces, consumes, flags, and detected cross-references. Consumed by the linter for dependency ↔ trigger reciprocity cross-validation (13 mismatches found and fixed). Also consumed by /triage (stale graph trigger), /harden-workflow (ripple effect detection), and future /canvas (visual rendering). The format is more powerful than the original proposal — JSON enables programmatic queries that markdown tables cannot support.
 **Origin**: /secretary Divergence session, 2026-05-07
 **User note**: "#5 should be added to the TODO.md as a TODO item and not as a discussion item; approved, but awaiting optimal timing for implementation."
 
@@ -232,3 +235,4 @@ The "Senior Architect of Workflows" identity section in `~/.claude/CLAUDE.md` is
 | ITEM 1 /sentinel (Divergence #2) | ✅ Built — `sentinel.md` + `sentinel/core.md` (Sovereign, Std. v1). Doorway Protocol extracted to `scripts/doorway/` (Diamond-hardened). | 2026-05-10 |
 | ITEM 6 Claude Code Destructive Cleanup | ✅ All 3 steps executed — 17 dirs deleted, 2 partial cleanups, 25 root pointers deleted. Workspace fully clean. | 2026-05-21 |
 | ITEM 7 CLAUDE.md Identity Modularization | ✅ Universal role written for global frame; architect identity scoped to blueprint-workflows only via workspace CLAUDE.md + /role | 2026-05-21 |
+| ITEM 5 WORKFLOW_DEPENDENCIES | ✅ Implemented as `manifest/dependency_graph.json` via `lint_workflows.py --generate-graph`. JSON format, auto-generated, cross-validated. | 2026-05-25 |
