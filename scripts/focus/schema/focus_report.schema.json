@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://blueprint-workflows/focus/focus_report.schema.json",
+  "title": "Focus Triad Evidence Report",
+  "description": "Structured evidence report emitted by scripts/focus/focus.py and consumed by the /focus-plan workflow. The report is the deterministic, incorruptible substitute for the per-item SEARCH EVIDENCE blocks /focus-plan formerly asked the agent to hand-write.",
+  "type": "object",
+  "required": ["schema_version", "tool", "workspace", "plan_found", "items", "summary"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"type": "string", "const": "1.0"},
+    "tool": {"type": "string", "const": "focus"},
+    "tool_version": {"type": "string"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "workspace": {"type": "string", "description": "Resolved absolute path to the scanned workspace."},
+    "plan_found": {"type": "boolean"},
+    "plan_file": {"type": ["string", "null"], "description": "Resolved path to the located plan, or null."},
+    "plan_spelling": {
+      "type": ["string", "null"],
+      "enum": ["hyphen", "underscore", "explicit", null],
+      "description": "Which filename matched: 'hyphen' = canonical implementation-plan.md, 'underscore' = legacy implementation_plan.md, 'explicit' = --plan override."
+    },
+    "checkboxes": {
+      "type": "object",
+      "description": "Plan-level task checkbox tally. Orphaned open/in-progress tasks are a /triage signal.",
+      "required": ["open", "done", "in_progress"],
+      "properties": {
+        "open": {"type": "integer", "minimum": 0},
+        "done": {"type": "integer", "minimum": 0},
+        "in_progress": {"type": "integer", "minimum": 0}
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "source_line", "anchors", "absent_anchors", "mock_trap_candidates"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "integer"},
+          "title": {"type": "string"},
+          "level": {"type": "integer", "description": "Markdown header depth (2-4)."},
+          "source_line": {"type": "integer", "description": "1-based line of the item's header in the plan."},
+          "anchors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["kind", "raw", "query", "status"],
+              "properties": {
+                "kind": {"type": "string", "enum": ["file", "symbol"]},
+                "raw": {"type": "string", "description": "Token as written in the plan."},
+                "query": {"type": "string", "description": "Normalized search term used against the substrate."},
+                "status": {
+                  "type": "string",
+                  "enum": ["EXISTS", "MISSING", "INVALID", "FOUND_PRODUCTION", "FOUND_TEST_ONLY", "ABSENT"],
+                  "description": "file → EXISTS|MISSING|INVALID; symbol → FOUND_PRODUCTION|FOUND_TEST_ONLY|ABSENT."
+                },
+                "locations": {
+                  "type": "array",
+                  "items": {"type": "string"},
+                  "description": "Up to 5 substrate locations (relpath or relpath:Lnn) where the anchor was found."
+                },
+                "production_matches": {"type": "integer", "description": "Symbol anchors only: hit count outside test/mock paths."},
+                "test_matches": {"type": "integer", "description": "Symbol anchors only: hit count inside test/mock paths."}
+              }
+            }
+          },
+          "absent_anchors": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Anchors not found in the substrate. Ghost Logic CANDIDATES — the agent must classify each as true Ghost Logic vs a legitimately not-yet-built item."
+          },
+          "mock_trap_candidates": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Symbols found ONLY under test/mock/fixture paths. Mock Trap candidates: the item looks implemented but only its test double exists."
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["total_items", "total_anchors", "present", "absent", "mock_trap_candidates", "verdict_hint", "advisory"],
+      "properties": {
+        "total_items": {"type": "integer"},
+        "items_with_anchors": {"type": "integer"},
+        "total_anchors": {"type": "integer"},
+        "present": {"type": "integer", "description": "Anchors verified present in production substrate."},
+        "absent": {"type": "integer", "description": "Anchors not found anywhere."},
+        "mock_trap_candidates": {"type": "integer"},
+        "verdict_hint": {
+          "type": "string",
+          "enum": ["GREEN", "YELLOW", "RED"],
+          "description": "ADVISORY ONLY. RED = plan missing or a Mock Trap candidate exists; YELLOW = coverage gaps to adjudicate; GREEN = all anchors present in production. The agent owns the final verdict."
+        },
+        "advisory": {"type": "string"}
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  }
+}

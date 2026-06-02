@@ -3,7 +3,7 @@ description: "Receipt Coverage Map — Project Quality Observability Baseline. R
 type: audit
 grade: Hardened
 version: 2
-content_hash: "sha256:42d23a173e5ad473"
+content_hash: "sha256:37577f471124415f"
 last_hardened: "2026-05-07"
 strict_rule_count: 8
 phase_count: 5
@@ -35,7 +35,7 @@ This workflow does NOT:
 - Infer coverage from code alone — only from explicit receipt files
 - Run any destructive commands
 
-This workflow is the **observability baseline** for Layer 2. It is the first workflow to run after a session if you need to know where a project stands across all four quality dimensions.
+This workflow is the **observability baseline** for Layer 2. It is the first workflow to run after a session if you need to know where a project stands across all five quality dimensions (the four receipt dimensions plus the Quality-Process dimension added in v4).
 
 ---
 
@@ -48,6 +48,7 @@ This workflow is the **observability baseline** for Layer 2. It is the first wor
 | **VALIDATION_RECEIPTS.md** | Written by `/iterate-test` Step 6. One entry per validated stage. |
 | **HARDEN_GRADES.md** | Written by `/harden` Phase 2f. One entry per hardening session per file. |
 | **DOCS_RECEIPTS.md** | Written by `/document` when Stage 1a is complete. One entry per documentation session. Primary source for the Documented dimension. Until Stage 1a is complete, the Documented dimension falls back to git log grep. |
+| **quality_witness.log** | **[v4 wiring 2026-06-02]** Written by `/quality` Step 7 — one line per quality-checked output. Audited deterministically by `scripts/quality/quality_audit.py`. Source for the **Quality-Process** dimension. |
 | **Coverage Map** | The structured output of this workflow — a table mapping each component to its Build/Validate/Harden/Document status. |
 | **Gap** | Any component that has a Build Receipt but is missing a Validation, Harden, or Document receipt — or a component in tasks.md with no Build Receipt at all. |
 | **Modified-after-harden** | A file that has a Harden Receipt but whose git modification timestamp is newer than the receipt date. The harden grade no longer applies to the current state. |
@@ -79,6 +80,7 @@ Use the Read tool to read each receipt file:
 - Read `{workspace_root}/.workflow_state/receipts/BUILD_RECEIPTS.md`
 - Read `{workspace_root}/.workflow_state/receipts/VALIDATION_RECEIPTS.md`
 - Read `{workspace_root}/.workflow_state/receipts/HARDEN_GRADES.md`
+- **[v4 wiring 2026-06-02]** Run `python3 ~/blueprint-workflows/scripts/quality/quality_audit.py --workspace {workspace_root} --output-json` (or read `.workflow_state/quality_witness.log`) for the Quality-Process dimension
 
 If a receipt file does not exist: note it as ABSENT — this means the corresponding workflow has never run (or was never configured to write receipts for this project). Do not treat ABSENT as "all tasks covered."
 
@@ -139,6 +141,7 @@ If a receipt file is ABSENT or EMPTY: record `NO ENTRIES` for that receipt type.
 | **Validated** | VALIDATION_RECEIPTS.md | ✅ / ❌ / ⚠️ (receipt exists but FAIL status) |
 | **Hardened** | HARDEN_GRADES.md | ✅ [grade] / ❌ / 🔄 (modified-after-harden) |
 | **Documented** | DOCS_RECEIPTS.md (primary) / git log grep (fallback if DOCS_RECEIPTS.md absent) | ✅ / ❌ / UNVERIFIABLE (Stage 1a not yet configured) |
+| **Quality-Process** **[v4 wiring 2026-06-02]** | quality_witness.log via `quality_audit.py` | ✅ (valid entries, no P3) / ⚠️ (P3 — 25+ unreviewed) / ❌ (malformed lines) / ABSENT (no log) |
 
 **Modified-after-harden check:**
 
@@ -286,3 +289,4 @@ Divergence report.
 2. **2026-05-07**: `[INJECTED — Divergence #4, /nodelete]` DOCS_RECEIPTS.md added as fourth receipt file. Glossary entry added. INTAKE MANIFEST updated to include DOCS_RECEIPTS.md. Phase 2 Documentation dimension source updated: DOCS_RECEIPTS.md is now primary; git log grep is fallback (UNVERIFIABLE). Phase 4 Infrastructure Status block updated from 3-file to 4-file report. Integration section updated with /document as source workflow. DOCS_RECEIPTS.md path added to receipt file location list.
 3. **2026-05-15**: `[STAGE 1a COMPLETE — /focus-plan + /implementation-plan + /quality, /nodelete]` All four receipt-writing sub-steps implemented. /execute-build Step 6+7 now writes to BUILD_RECEIPTS.md. /iterate-test Step 6 now writes to VALIDATION_RECEIPTS.md. /harden Phase 2f now writes to HARDEN_GRADES.md. /document Phase 2 now writes to DOCS_RECEIPTS.md. All injections use atomic `cat >>` append with `mkdir -p` guard and non-blocking failure handling. /secretary Phase 3 updated with escalation gate: auto-files helpdesk ticket after 2+ consecutive RECEIPT INFRASTRUCTURE NOT INITIALIZED sessions. STRICT RULE 16 added to /secretary. Dependency note in INTEGRATION section retired. Stage 1a is now operational. Source: helpdesk ticket 20260512_receipt-check_workflow.md.
 4. **2026-05-21**: `[PORTED — Claude Code migration]` Pointer/Payload architecture retired. Merged into single command file at `~/blueprint-workflows/claude-commands/receipt-check.md`. Phase 0b updated: `view_file` commands replaced with Read tool.
+5. **2026-06-02**: `[INJECTED — /quality Option-F wiring, /nodelete]` Added the **Quality-Process** observability dimension (the fifth): sourced from `.workflow_state/quality_witness.log` via `scripts/quality/quality_audit.py`. GLOSSARY source row, INTAKE read step, and Phase 2 dimension-table row added; "four dimensions" → "five". All prior content preserved per /nodelete. Standard Version: 3.

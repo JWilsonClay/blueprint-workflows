@@ -2,14 +2,15 @@
 description: "Quality Workflow — Uncompromising Excellence Protocol with Quality Chain (Witness, Gradient, Chain Tag, Delegated Critique) for evidence-based quality verification across single and multi-agent sessions"
 type: behavioral-modifier
 grade: Sovereign
-version: 3
-content_hash: "sha256:793d2aad12ba3c0e"
-last_hardened: "2026-05-25"
-strict_rule_count: 14
+version: 4
+content_hash: "sha256:5a5090c8e1093ebe"
+last_hardened: "2026-06-02"
+strict_rule_count: 17
 phase_count: 0
 context_retention: low
 flags: []
-dependencies: []
+dependencies:
+  - "scripts/quality/quality_audit.py"
 triggers:
   - "/triage"
   - "/implementation-plan"
@@ -44,6 +45,10 @@ platform_requirements:
 | **Quality Level** | **[INJECTED 2026-05-25 — Divergence #2]** One of three graduated application levels (Standard, Elevated, Maximum) auto-selected in Step 1 based on task classification. Replaces the binary on/off model. |
 | **Quality Chain Tag** | **[INJECTED 2026-05-25 — Divergence #3]** A one-line metadata fingerprint embedded in outputs that cross agent boundaries (handoff blocks, PM reports). Enables the receiving agent to verify quality protocol application without trusting the producing agent's claim. |
 | **Delegated Critique** | **[INJECTED 2026-05-25 — Divergence #4]** In multi-agent contexts, Step 5 can be executed by a DIFFERENT agent than the one that produced the output. The PM runs /quality Step 5 on engineer output as part of the workstream audit. |
+| **Quality Process Auditor** | **[v4 — 2026-06-02]** The read-only engine `scripts/quality/quality_audit.py` that verifies quality *process receipts* (witness ledger, chain tags) and flags *mechanical smells*. It NEVER assesses quality — that is the 7-step protocol's sole authority. Sibling of `doorway.py` / `focus.py`. |
+| **Verification Rail** | **[v4 — 2026-06-02]** The v4 layer that runs the Quality Process Auditor at session checkpoints and across agent boundaries, making the formerly trust-only witness/tag artifacts structurally verifiable. |
+| **Process Receipt** | **[v4 — 2026-06-02]** A machine-checkable artifact left by the quality protocol — a witness-log line or a chain tag. Verifiable by the engine; distinct from quality itself, which is NOT machine-checkable. |
+| **Smell Linter (one-directional)** | **[v4 — 2026-06-02]** The engine's mechanical anti-pattern detector. Smells found ⇒ likely defect; no smells ⇒ says nothing about quality. Reading "no smells" as "quality" is the Mock Trap. |
 
 ---
 
@@ -248,6 +253,34 @@ Follow this exact 7-step workflow for EVERY query or task. Never skip or abbrevi
 
 ---
 
+## VERIFICATION RAIL (v4 — Script-Backed Process Audit)
+
+> **v4 adds a deterministic verification rail beneath /quality. It does NOT assess quality — it verifies the quality *process receipts* and flags *mechanical anti-pattern smells*. Quality remains the sole province of the 7-step judgment protocol above.**
+
+The earlier divergences (Quality Witness, Quality Chain Tag) created *evidence* of quality-protocol application but enforced it only by instruction — nothing verified the witness line was written or that a cross-agent tag was well-formed. The read-only engine `scripts/quality/quality_audit.py` closes that gap.
+
+**When to run it** (none of these substitute for Steps 1–7):
+
+- **At session checkpoints / when /triage is due** — audit the witness ledger:
+  ```bash
+  python3 ~/blueprint-workflows/scripts/quality/quality_audit.py --workspace {WS} --output-json
+  ```
+  Reports `valid_entries`, `malformed_lines`, `unreviewed_entries`, and the `audit_trigger` (P3 at ≥25 unreviewed, where "unreviewed" = entries after the last `[REVIEWED]` marker). This is the deterministic count /triage acts on — replacing the former vague "monitors the log."
+
+- **Before handing a cross-agent output across a boundary** — verify the Quality Chain Tag is actually `VALID`, not merely present:
+  ```bash
+  python3 ~/blueprint-workflows/scripts/quality/quality_audit.py --workspace {WS} --scan {OUTPUT_FILE} --output-json
+  ```
+  The receiving agent runs the same check; `MALFORMED` or `ABSENT` means quality-protocol application is UNVERIFIED — now a structural fact, not a trust assumption.
+
+- **As advisory input to Step 5/6** — the scan also runs the **Anti-Pattern Smell Linter** (hedge-language, closing pleasantries, filler openers, truncation). Treat any smell as a candidate defect to fix in Step 6.
+
+**The Mock-Trap guard (non-negotiable):** the smell linter is **one-directional**. Smells found ⇒ likely mechanical defect. **No smells found says NOTHING about quality.** A `CLEAN` audit is never a quality pass — reading it as one is the Mock Trap. The engine cannot and does not judge excellence; only the 7-step protocol and the world-class expert test do.
+
+**Engine HALT condition:** if Python 3 or the engine is unavailable, the rail is skipped — the 7-step protocol is fully functional without it. The engine is verification infrastructure, not a dependency.
+
+---
+
 ## STRICT RULES (never violate)
 
 1. Execute all 7 steps for every query or task. No step is optional. No step is abbreviated.
@@ -264,6 +297,9 @@ Follow this exact 7-step workflow for EVERY query or task. Never skip or abbrevi
 12. **[INJECTED 2026-05-25 — Divergence #2, /nodelete]** Quality Level is auto-classified in Step 1 for every task. "Standard" is the minimum — never skip Step 5 (self-critique) regardless of level. "With /quality" from the user always forces Maximum.
 13. **[INJECTED 2026-05-25 — Divergence #3, /nodelete]** Every cross-agent output (handoff blocks, PM reports, architect directives) MUST include a Quality Chain Tag. An output that crosses agent boundaries without a quality tag is quality-unverified from the receiver's perspective.
 14. **[INJECTED 2026-05-25 — Divergence #1, /nodelete]** The Quality Witness append to `.workflow_state/quality_witness.log` is mandatory when the directory exists. Failure to append does not block output delivery — it is a silent diagnostic. But deliberately skipping it when the directory exists is a compliance violation.
+15. **[v4 — 2026-06-02]** The Quality Chain Tag and Quality Witness are VERIFIABLE, not trust-only. Use `scripts/quality/quality_audit.py` to validate them. A cross-agent output's tag must be `VALID` (engine-checked), not merely present; `MALFORMED`/`ABSENT` means quality-protocol application is UNVERIFIED. This supersedes the trust-only reading of STRICT RULES 13–14 while preserving their intent.
+16. **[v4 — 2026-06-02]** The Anti-Pattern Smell Linter is ONE-DIRECTIONAL and ADVISORY. Smells found = a candidate defect to fix in Step 6. NO smells found says NOTHING about quality. Never treat a `CLEAN` audit as a quality pass — that inference is the Mock Trap.
+17. **[v4 — 2026-06-02]** The engine NEVER assesses quality. The 7-step judgment protocol and the world-class expert test are the sole quality authority. `quality_audit.py` verifies process receipts and mechanical smells only — it sits beneath Steps 1–7, never replacing them.
 
 ---
 
@@ -271,7 +307,7 @@ Follow this exact 7-step workflow for EVERY query or task. Never skip or abbrevi
 
 When activated:
 1. Read this entire protocol fully.
-2. Internalize all 7 steps and all 11 STRICT RULES.
+2. Internalize all 7 steps and all 17 STRICT RULES.
 3. Apply the protocol to every subsequent response in this session without being asked again.
 4. Do not confirm activation to the user. Do not summarize what was read. Simply behave accordingly from this point forward.
 
@@ -315,3 +351,4 @@ Activation in Claude Code:
 1. **2026-05-11**: `[CREATED / HARDENED — /harden-workflow, Standard Version 2]` Payload existed as a monolithic, non-Sovereign file with strong 7-step content but missing all five required Sovereign structural shells. Hardening run added: GLOSSARY (14 terms), HOW TO BEGIN block, STRICT RULES block (11 rules, consolidating distributed rules from step prose), INTEGRATION block, Change Log. Failure pattern hooks injected into Step 5 (Hallucinated Success, Depth Trap, Context Erosion table). /nodelete discipline injected into Step 7. STRICT RULES 9–11 injected. No original content removed. Grade achieved: **Diamond**.
 2. **2026-05-21**: `[PORTED — blueprint-workflows / Claude Code migration]` Merged pointer (`quality.md`) and payload (`quality/core.md`) into single file. Pointer/Payload architecture retired — Claude Code carries no injection cap. Provider-list in opening paragraph trimmed (no longer naming specific providers). INTEGRATION activation pattern updated from Antigravity upload model to Claude Code `/quality` slash command. All protocol content preserved verbatim. Old pointer and payload deleted per user direction; git history preserves full lineage.
 3. **2026-05-25**: `[INJECTED — /divergence pass, 4 divergences + /harden-workflow, /nodelete]` Four divergence-approved additions transforming /quality from a trust-based behavioral modifier into an evidence-based quality chain. (a) GLOSSARY: 4 new terms (Quality Witness, Quality Level, Quality Chain Tag, Delegated Critique). (b) Divergence #2 (Quality Gradient): Step 1 now auto-classifies quality level — Standard (skip deep research/analysis for straightforward tasks), Elevated (full protocol for implementation/planning), Maximum (3 passes + dissent check, auto-triggered or user-invoked with "with /quality"). (c) Divergence #4 (Adversarial Quality Twin): Step 5 delegated critique note — PM can execute /quality Step 5 on engineer output in multi-agent contexts. (d) Divergence #3 (Quality Chain Tag): Step 7 embeds `[QUALITY: type|level|findings|agent]` metadata in cross-agent outputs. (e) Divergence #1 (Quality Witness): Step 7 silently appends one diagnostic line to `.workflow_state/quality_witness.log` per output — accumulates for /triage audit trigger. STRICT RULES 12-14 added. INTEGRATION updated with multi-agent quality chain connections (/workstream, /implementation-plan --audit, /triage, /receipt-check). Standard Version: 3.
+4. **2026-06-02**: `[HARDENED — Option F: Script-Backed Verification Rail + Cross-Workflow Wiring — /implementation-plan + /helpdesk-tickets(20260602_quality) + /nodelete + /quality]` Built `scripts/quality/` — a read-only Quality Process Auditor (ledger_auditor + tag_verifier + smell_linter + reporter + CLI + JSON schema, 18-test unittest suite) modeled on `scripts/doorway/` and `scripts/focus/`. Added the **v4 Verification Rail**: the engine verifies the quality *process receipts* (witness ledger, chain tags) and flags *mechanical anti-pattern smells* — it NEVER assesses quality, which remains the sole province of the 7-step judgment protocol (scripting quality would be a Mock Trap / Grade Fraud). **Defects fixed**: (a) HOW TO BEGIN "all 11 STRICT RULES" → "all 17" (was contradicted by `strict_rule_count: 14` and the 14 rules present); (b) the Quality Chain Tag (RULE 13) and Quality Witness (RULE 14) were enforced by instruction only — now structurally verifiable via the engine (RULES 15–17); (c) the vague "/triage monitors the log" given a real deterministic call with a defined `unreviewed` count (entries after the last `[REVIEWED]` marker) and the P3 trigger. **Wired** into /triage and /receipt-check. **Preserved per /nodelete**: all 7 judgment steps verbatim; all GLOSSARY terms; STRICT RULES 1–14 (13–14 superseded-in-reading by 15, not deleted). Verified: 18/18 quality tests pass; live run validated tags/smells (a documentation-mention false-positive was caught and fixed during the build); quality.md lints CLEAN. Grade: **Sovereign** (v4). Standard Version: 3.

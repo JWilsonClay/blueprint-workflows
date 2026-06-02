@@ -1,16 +1,17 @@
 ---
-description: "A recursive verification loop to synchronize Intent, Plan, and Substrate before proceeding with execution. The blocking pre-gate before /execute-build."
+description: "A recursive verification loop to synchronize Intent, Plan, and Substrate before proceeding with execution. The blocking pre-gate before /execute-build. v3: script-backed by the Focus Evidence Engine (scripts/focus/focus.py)."
 type: audit
 grade: Sovereign
-version: 2
-content_hash: "sha256:7e0248dda6119172"
-last_hardened: "2026-05-08"
-strict_rule_count: 13
-phase_count: 0
+version: 3
+content_hash: "sha256:9ae6a5ec13c2cd3b"
+last_hardened: "2026-06-02"
+strict_rule_count: 17
+phase_count: 4
 context_retention: medium
 flags: []
 dependencies:
   - "/implementation-plan"
+  - "scripts/focus/focus.py"
 triggers:
   - "/triage"
   - "/execute-build"
@@ -31,168 +32,129 @@ platform_requirements:
 
 | Term | Definition |
 |------|------------|
-| **Ghost Logic** | A named suite failure pattern: system behavior — DB writes, state changes, feature execution — that was discussed or promised but is absent from the actual substrate. The primary target of this workflow. If found, it is a MISMATCH in Phase 5. |
+| **Ghost Logic** | A named suite failure pattern: system behavior — DB writes, state changes, feature execution — that was discussed or promised but is absent from the actual substrate. The primary target of this workflow. If found, it is a MISMATCH in PHASE 4 (or Manual Fallback Phase 5). |
 | **Substrate** | The physical codebase — actual files on disk, as they exist right now. Not the plan. Not the conversation. The ground truth of what is implemented. |
-| **Physical Anchors** | The specific, verifiable pointers to substrate locations for a plan item: file paths, function names, class names, protocol IDs. Enumerated in Phase 1 before any file is opened. |
-| **Discussion corpus** | All sources where intent was expressed: the current conversation, referenced documents (concept.md, Architecture.md, governance files), prior plans, task files, walkthrough artifacts. Identified at Initialization and mined in Phase 2 and the Negative Space Scan. |
-| **Item Inventory** | The numbered list of every plan item to be audited, produced at Initialization. Serves as loop control and final completeness check. |
-| **Focus Loop** | The iterative 5-phase audit executed independently for each item in the Item Inventory. |
-| **Triad Alignment** | The three-layer verification model: Intent (what the user said), Plan (what the plan documents), Substrate (what the code actually does). All three must be in 1:1 parity for an item to pass Phase 5. |
-| **Anchor Manifest** | The explicit enumeration of files, grep patterns, and config files to inspect for a given plan item, produced at the start of Phase 1 before any inspection begins. Even an empty manifest must be stated explicitly. |
-| **SEARCH EVIDENCE block** | The mandatory log of every search action in Phase 3 — command, path, and result (including null results). A Phase 3 without a SEARCH EVIDENCE block is invalid. |
-| **Reconciliation Gap** | The specific description of how Intent, Plan, and Substrate diverge for a given item. Produced when Phase 5 returns MISMATCH. |
-| **PARITY** | Phase 5 outcome: Intent, Plan, and Substrate are in 1:1 alignment and all confidence levels are HIGH. Proceed to the next item. |
-| **MISMATCH** | Phase 5 outcome: one or more layers diverge. HALT. Surface the Reconciliation Gap. Wait for user instruction. |
-| **UNVERIFIABLE** | Phase 5 outcome: one or more layers carry LOW confidence, or the substrate cannot be physically inspected (feature not yet implemented). HALT. Report which layer, what is needed, and whether to defer or flag as risk. UNVERIFIABLE is honest reporting, not failure. |
-| **Sovereign Gate** | Phase 5 itself — the decision point that either confirms PARITY and advances the loop, or halts on MISMATCH or UNVERIFIABLE. Nothing advances past Phase 5 without explicit resolution. |
-| **Negative Space Scan** | The post-loop scan that mines the discussion corpus for concepts, decisions, and constraints that have no corresponding plan item — recovering forgotten details the Focus Loop cannot find because they were never in the plan to begin with. |
+| **Physical Anchors** | The specific, verifiable pointers to substrate locations for a plan item: file paths, function names, class names, protocol IDs. In v3 these are extracted mechanically by the Focus Evidence Engine. |
+| **Discussion corpus** | All sources where intent was expressed: the current conversation, referenced documents (concept.md, Architecture.md, governance files), prior plans, task files, walkthrough artifacts. Identified at Initialization and mined in Intent Recovery and the Negative Space Scan. |
+| **Item Inventory** | The numbered list of every plan item to be audited. In v3 it is produced by the engine (one item per plan header); in fallback mode the agent produces it. Serves as loop control and final completeness check. |
+| **Focus Loop** | The iterative per-item audit. In v3 the mechanical half is performed by the engine; in Manual Fallback Mode it is the original 5-phase hand-executed loop. |
+| **Triad Alignment** | The three-layer verification model: Intent (what the user said), Plan (what the plan documents), Substrate (what the code actually does). All three must be in 1:1 parity for an item to pass the Sovereign Gate. |
+| **Anchor Manifest** | The explicit enumeration of files, grep patterns, and config files to inspect for a given plan item. In v3 the engine's per-item anchor list IS the Anchor Manifest. |
+| **SEARCH EVIDENCE block** | The log of every search action and its result (including null results). **In v3 the engine's JSON evidence report IS the SEARCH EVIDENCE — generated by a script, it cannot be hallucinated.** In fallback mode it is hand-written. |
+| **Reconciliation Gap** | The specific description of how Intent, Plan, and Substrate diverge for a given item. Produced when the Sovereign Gate returns MISMATCH. |
+| **PARITY** | Gate outcome: Intent, Plan, and Substrate are in 1:1 alignment and all confidence levels are HIGH. Proceed to the next item. |
+| **MISMATCH** | Gate outcome: one or more layers diverge. HALT. Surface the Reconciliation Gap. Wait for user instruction. |
+| **UNVERIFIABLE** | Gate outcome: one or more layers carry LOW confidence, or the substrate cannot be physically inspected (feature not yet implemented). HALT. Report which layer, what is needed, and whether to defer or flag as risk. UNVERIFIABLE is honest reporting, not failure. |
+| **Sovereign Gate** | The decision point that either confirms PARITY and advances the loop, or halts on MISMATCH or UNVERIFIABLE. Nothing advances past the gate without explicit resolution. |
+| **Negative Space Scan** | The post-loop scan that mines the discussion corpus for concepts, decisions, and constraints that have no corresponding plan item — recovering forgotten details the Focus Loop cannot find because they were never in the plan to begin with. **The crown jewel of this workflow — a judgment task the engine does NOT replace.** |
 | **Candidate Forgotten Detail** | Any concept, decision, or constraint surfaced by the Negative Space Scan that has no corresponding Item Inventory entry. |
-| **False-negative problem** | The risk that the Focus Loop completes with all-PARITY results not because everything is aligned, but because the evidence gathering was insufficient. Countermeasure: every phase requires explicit evidence — null results included. |
-| **Null-result** | A search that returns no matches. Must be logged explicitly (command + "0 matches") — never silently discarded or treated as confirmation. |
-| **Confidence level** | The reliability of a Triad layer's evidence. HIGH: direct evidence (quoted text, viewed file, confirmed path). MED: inferred or partially verified. LOW: reconstructed from memory or general understanding. |
-| **Hallucinated Success** | A Focus Loop that produces PARITY results without having actually executed the Phase 3 substrate verification — SEARCH EVIDENCE stated but not performed. The false-negative problem realized. |
-| **Mock Trap** | A Triad Table showing PARITY where substrate verification was run against a test stub or fixture rather than the real implementation. The verification passed; the actual substrate was never checked. |
-| **Context Erosion** | Verification rigor decaying over a long Focus Loop — Phase 3 SEARCH EVIDENCE blocks becoming thinner, Anchor Manifests becoming less exhaustive as the session extends. Countermeasure: re-read STRICT RULES before each new item in sessions with more than 5 items. |
-| **Active Witness Marker** | **[INJECTED 2026-05-11 — Divergence #1]** Self-reporting provenance comment or metadata block embedded in substrate code that automatically testifies about its own alignment state. |
-| **Suite Memory Ledger** | **[INJECTED 2026-05-11 — Divergence #2]** Persistent append-only record of every Candidate Forgotten Detail across all /focus-plan sessions. |
+| **False-negative problem** | The risk that the Focus Loop completes with all-PARITY results not because everything is aligned, but because the evidence gathering was insufficient. v3 countermeasure: the engine gathers evidence deterministically, so "I looked and found nothing" is backed by a script, not a claim. |
+| **Null-result** | A search that returns no matches. The engine logs these as `ABSENT` / `MISSING` anchors — never silently discarded. |
+| **Confidence level** | The reliability of a Triad layer's evidence. HIGH: direct evidence (engine citation, quoted text, confirmed path). MED: inferred or partially verified. LOW: reconstructed from memory or general understanding. |
+| **Hallucinated Success** | A Focus Loop that produces PARITY results without having actually executed substrate verification. **v3 makes this structurally impossible in the Substrate layer: the agent does not gather the substrate evidence, the engine does.** |
+| **Mock Trap** | A Triad Table showing PARITY where substrate verification was run against a test stub or fixture rather than the real implementation. The engine defends against this directly: symbols found ONLY under test/mock/fixture paths are flagged as `mock_trap_candidates`, separated from production matches. |
+| **Context Erosion** | Verification rigor decaying over a long Focus Loop. v3 countermeasure: the engine applies identical rigor to item 1 and item 50 — mechanical verification does not fatigue. |
+| **Focus Evidence Engine** | **[v3 — 2026-06-02]** The deterministic, read-only script at `scripts/focus/focus.py` that locates the plan, parses it into items + anchors, verifies each anchor against the substrate, and emits a structured JSON Evidence Report. The mechanical half of /focus-plan. Architectural sibling of `doorway.py` (which backs /sentinel). |
+| **Evidence Report (JSON)** | **[v3 — 2026-06-02]** The structured output of the Focus Evidence Engine, conforming to `scripts/focus/schema/focus_report.schema.json`. Contains per-item anchors with `EXISTS`/`MISSING`/`FOUND_PRODUCTION`/`FOUND_TEST_ONLY`/`ABSENT` status, plus a summary and an advisory `verdict_hint`. |
+| **Verdict Hint** | **[v3 — 2026-06-02]** A mechanical `GREEN`/`YELLOW`/`RED` signal in the Evidence Report computed from substrate coverage alone. **Advisory only.** The agent owns the final verdict after intent interpretation, the Negative Space Scan, and the Sovereign Gate. |
+| **Mute Witness enforcement** | **[v3 — 2026-06-02]** The principle (from /investigate) that a guarantee enforced architecturally is stronger than one enforced by instruction. The engine is read-only by construction — it cannot mutate the substrate it inspects — so the anti-Hallucinated-Success guarantee is structural, not a request. |
+| **Manual Fallback Mode** | **[v3 — 2026-06-02]** The original hand-executed 5-phase Focus Loop, retained verbatim per /nodelete. Used when the engine cannot run (no Python, plan in an unparseable format, or a substrate the engine cannot reach). Superseded for capable agents when the engine is available, but never deleted. |
+| **Active Witness Marker** | **[INJECTED 2026-05-11 — Divergence #1]** Self-reporting provenance comment or metadata block embedded in substrate code. **[v3 note]** Optional only — embedding markers in production code is substrate mutation and must never be mandatory. |
+| **Suite Memory Ledger** | **[INJECTED 2026-05-11 — Divergence #2]** Persistent append-only record of Candidate Forgotten Details across sessions. **[v3 note]** Optional enhancement, not a gating requirement — see STRICT RULE 15. |
 | **Triad Confidence Oracle** | **[INJECTED 2026-05-11 — Divergence #3]** Forward-looking risk forecast generated from Triad patterns and historical memory. |
 
 ---
 
 # /focus-plan — Intent/Plan/Substrate Synchronization Loop
 
-This workflow is designed to eliminate context drift and Ghost Logic by forcing a deep-dive synchronization between historical intent, the current implementation plan, and the physical codebase (the substrate).
+This workflow eliminates context drift and Ghost Logic by forcing a deep-dive synchronization between historical intent, the current implementation plan, and the physical codebase (the substrate).
 
-**Primary purpose**: Rediscover forgotten details — large and small — that were discussed or implied but never captured in the plan.
+**Primary purpose**: Rediscover forgotten details — large and small — that were discussed or implied but never captured in the plan; and confirm that what the plan claims is actually present in the substrate.
 
-**On the false-negative problem**: When this workflow finds nothing, that finding is only as reliable as the evidence gathered. Every phase requires you to show your work — what you searched, where, and what the result was (even null results). "I looked and found nothing" must always be accompanied by proof of where you looked.
+> ### v3 Architecture — Deterministic Evidence + Judgment Layer
+>
+> Earlier versions asked the agent to *both* gather substrate evidence *and* attest to it — for every plan item, by hand. That ceremony was a scaffold to force weaker models to show their work; capable models route around it, and its central guarantee (that a search actually happened) rested on instruction alone (the weakest enforcement).
+>
+> **v3 splits the work.** A deterministic, read-only engine — `scripts/focus/focus.py` — performs the mechanical half (locate the plan, extract anchors, grep the substrate, separate production from test-only matches) and emits a structured JSON **Evidence Report**. The agent performs only what judgment uniquely can: interpret intent, adjudicate the engine's findings, run the **Negative Space Scan**, and make the **Sovereign Gate** call. Because a script gathers the evidence, the agent cannot hallucinate it — the anti-Hallucinated-Success guarantee becomes *structural* (Mute Witness enforcement).
+>
+> The original hand-executed loop is preserved below as **Manual Fallback Mode** for when the engine cannot run.
 
----
-
-## 0. Initialization
-Before starting the loop, locate the plan source. In priority order:
-- `implementation_plan.md` in the current workspace -> read all items
-- If no file exists: extract plan items from the current conversation (list them explicitly before starting the loop)
-- If no plan exists at all: ask the user to describe the plan, then generate a structured item list before proceeding.
-
-Produce an **Item Inventory** at the start — a numbered list of every plan item you will audit. This list is your loop control and your final completeness check.
-
-Before the loop begins, also identify the "discussion corpus" — all sources where intent was expressed:
-- The current conversation (scroll/search from the top)
-- Referenced documents (concept.md, Architecture.md, governance files, meeting notes)
-- Any prior implementation plans, task files, or walkthrough artifacts
-This corpus is what Phases 2 and the Negative Space Scan will mine.
+**On the false-negative problem**: When this workflow finds nothing, that finding is only as reliable as the evidence gathered. In v3 the engine shows its work in machine-readable form — every anchor, every null result, every citation. "I looked and found nothing" is backed by a script, not a claim.
 
 ---
 
-## The Focus Loop (Iterative for each Plan Item)
+# EXECUTION MODEL (v3) — AUTHORITATIVE
 
-For each item in the Item Inventory, execute the following phases with absolute technical rigor:
+When the Focus Evidence Engine is available (Python 3 present, `scripts/focus/focus.py` reachable), execute PHASES 1–4. If the engine cannot run, drop to **Manual Fallback Mode** and log why.
 
-### Phase 1: Technical Anchor Extraction
-Identify the "Physical Anchors" of this item. Do not rely on memory.
-- **Anchors**: List specific File Paths, Function Names, Class Names, and Protocol IDs associated with this item.
-- **Keywords**: Extract specific technical jargon or constraints used in previous discussions (e.g., "sinusoidal jitter", "Protocol 26 JSON schema").
+## PHASE 1 — Run the Focus Evidence Engine
 
-**Evidence Manifest (Phase 1)**
-List every file you intend to inspect for this item before inspecting them. This forces explicit enumeration rather than selective recall:
+Invoke the engine against the target workspace and capture its JSON:
+
+```bash
+python3 ~/blueprint-workflows/scripts/focus/focus.py \
+  --workspace {TARGET_WORKSPACE} --output-json
 ```
-ANCHOR MANIFEST (Item N):
-  Files to inspect: [list]
-  Grep patterns to run: [list]
-  Registry/config files to check: [list]
-```
-If the anchor manifest is empty (no files identifiable for this item), state explicitly: "No substrate anchors identified — this item may be entirely new/unimplemented."
 
----
+The engine:
+- Locates the plan: `implementation-plan.md` (canonical) → `implementation_plan.md` (legacy, tolerated). Pass `--plan PATH` to override.
+- Parses it into items (one per `##`/`###`/`####` header) and extracts file + symbol anchors.
+- Verifies each anchor against the real substrate, **excluding the plan file itself** (a plan that mentions a symbol is intent, not substrate) and **separating production matches from test/mock/fixture matches** (Mock Trap defense).
+- Emits the Evidence Report (schema: `scripts/focus/schema/focus_report.schema.json`).
 
-### Phase 2: Evidence-Based Intent Recovery
-Search the discussion corpus (identified in Initialization) for the specific origin of this item's requirements.
-- **Forced Retrieval**: Use `grep` or log analysis to find the USER's exact definition of this feature. Show the grep command and its output.
-- **Intent Quote**: Quote the USER's requirement directly to reset context.
-- **Plan Mapping**: Locate the exact line range in the `implementation_plan.md` that addresses this intent.
+**Engine HALT condition**: If the engine exits non-zero, prints no JSON, or Python is unavailable — log `FOCUS ENGINE: ABSENT — falling back to manual mode` and proceed to Manual Fallback Mode. The investigation is fully functional without the engine; the engine is the strong path, not a hard dependency.
 
-**Null-Result Handling**
-If no direct quote is found: state "Intent not directly quoted — reconstructed from conversation context: [reconstruction]" and flag confidence as LOW. Do not silently proceed as if intent is confirmed.
+**If `plan_found` is false**: the engine searched for both filenames and found neither. Fall back to extracting plan items from the conversation (Manual Fallback Mode, Initialization), and note the plan is unwritten.
 
----
+## PHASE 2 — Intent Recovery & Anchor Adjudication
 
-### Phase 3: Substrate Reality Check (Verification)
-Examine the current codebase to verify if reality matches the narrative.
-- **Logic Audit**: Use the Read tool on the Anchors identified in Phase 1.
-- **Ghost Logic Search**: Specifically look for features that were discussed/promised in the logs but are *absent* from the current files.
-- **Import/Path Integrity**: Verify that any paths mentioned in the plan actually exist in the substrate.
+The engine reports *what is in the substrate*. It cannot read *what the user meant* or decide *whether an absence is a problem*. That is this phase.
 
-**Mandatory Search Evidence**
-After every search action in Phase 3, log the result explicitly — even null results:
-```
-SEARCH EVIDENCE (Item N):
-  grep -r "<keyword>" <path> -> [N matches / 0 matches / error]
-  Read <path>:L<start>-L<end> -> [found / not found / file missing]
-  path check <path> -> [exists / does not exist]
-```
-A Phase 3 with no SEARCH EVIDENCE block is invalid. "I searched and found nothing" without the search log is not acceptable.
+For each item in the Evidence Report (prioritize items with `absent_anchors` or `mock_trap_candidates`):
 
-**[INJECTION — 2026-05-11] Failure Pattern Check — Phase 3:**
-Before closing Phase 3, explicitly check for these failure patterns:
+1. **Intent layer** — Mine the discussion corpus for the user's actual requirement for this item. Quote it directly. This is the layer the engine never touches.
+2. **Adjudicate each absent anchor** — For every entry in `absent_anchors`, decide which it is:
+   - **Ghost Logic** — the feature was discussed/promised as *done* but the substrate lacks it → MISMATCH evidence. File a helpdesk ticket if it was believed implemented.
+   - **Not-yet-built** — the plan item is forward-looking and legitimately unimplemented → UNVERIFIABLE (defer), not a failure.
+   Only judgment separates these. The engine deliberately labels them `absent_anchors`, not "Ghost Logic," for exactly this reason.
+3. **Adjudicate each Mock Trap candidate** — For every entry in `mock_trap_candidates` (symbol found only under test paths), verify whether a production implementation is genuinely expected. A feature that exists only as its test double is a MISMATCH.
+4. **Build the Triad Table** for items that need one (any item with absent anchors, mock-trap candidates, or LOW-confidence intent):
 
-| Pattern | Signature | Response |
-|---|---|---|
-| **Ghost Logic** | Feature was discussed or promised in the corpus; no corresponding code exists in the substrate anchors. | Log as MISMATCH evidence. Surface in Phase 5. File a helpdesk ticket if the feature was believed to be implemented. |
-| **Mock Trap** | SEARCH EVIDENCE was run against test files, stubs, or fixtures rather than production substrate. Verification passes; real implementation was never checked. | Re-run all searches excluding `test/`, `spec/`, `mock/`, `__pycache__/` paths. |
-| **Sound Effect Execution** | A function or handler exists in the substrate but is never called on the actual execution path for this feature. Code is present; it is never reached. | Verify call sites — not just definition existence. |
-| **Hallucinated Success** | SEARCH EVIDENCE block is present but searches were not actually executed — block was written from memory or assumption. | Re-execute every search command listed. Show live output, not reconstructed output. |
-
-**[INJECTED 2026-05-11 — Divergence #1: Substrate as Active Witness]**  
-**Phase 3b: Active Witness Marker Embedding (optional but recommended for new code)**  
-When updating `implementation_plan.md` or creating new substrate files during a build, embed lightweight self-witnessing markers:
-```python
-# FOCUS-ANCHOR: item-N, intent-hash:abc123, last-verified:2026-05-11
-```
-These markers allow future Phase 3 scans to receive direct testimony from the substrate itself, reducing external search overhead and eliminating Sound Effect Execution blind spots.
-
----
-
-### Phase 4: The Triad Alignment Table
-Generate a mandatory "Triad Table" to visualize the state of the item:
-
-| Layer | State / Logic / Requirement | Source (File:Line / Log ID) | Confidence |
+| Layer | State / Logic / Requirement | Source | Confidence |
 | :--- | :--- | :--- | :--- |
-| **Intent** | [Direct requirement from the USER] | [Conversation Log Snippet] | HIGH / MED / LOW |
-| **Plan** | [How it is currently documented] | [implementation_plan.md:L#] | HIGH / MED / LOW |
-| **Substrate** | [How it is actually implemented] | [File_Path:L#] | HIGH / MED / LOW |
+| **Intent** | [Direct requirement from the USER] | [Conversation snippet] | HIGH / MED / LOW |
+| **Plan** | [How it is documented] | [implementation-plan.md:L# — from engine `source_line`] | HIGH / MED / LOW |
+| **Substrate** | [How it is actually implemented] | [engine anchor `locations`] | HIGH / MED / LOW |
 
-**Confidence Definitions**
-- **HIGH**: Direct evidence found (quoted text, viewed file, confirmed path)
-- **MED**: Inferred from context or partially verified
-- **LOW**: No direct evidence; reconstructed from memory or general understanding
+Items where every anchor is `EXISTS`/`FOUND_PRODUCTION` and intent is HIGH-confidence may be recorded as **PARITY** in one line — no full table required. The engine's citation is the evidence.
 
-A table row with LOW confidence on any layer must be flagged in Phase 5 as UNVERIFIABLE regardless of apparent alignment.
+**Confidence Definitions** — HIGH: direct evidence (engine citation, quoted text, confirmed path). MED: inferred or partially verified. LOW: reconstructed from memory. A LOW on any layer forces UNVERIFIABLE regardless of apparent alignment.
 
----
+## PHASE 3 — Negative Space Scan (MANDATORY — the engine does NOT replace this)
 
-### Phase 5: Halt or Proceed (The Sovereign Gate)
-Analyze the Triad Table for any "Reconciliation Gaps":
+The engine audits anchors that exist *in the plan*. It cannot find what the plan forgot. Run the **Negative Space Scan** (canonical procedure in the shared section below) to recover Candidate Forgotten Details from the discussion corpus. This is the single most valuable part of /focus-plan and is mandatory in every mode.
 
-1. **MISMATCH**: If Intent, Plan, and Substrate are not in 1:1 parity, **HALT**. Print the "Reconciliation Gap" to the screen and wait for USER instruction.
+## PHASE 4 — The Sovereign Gate (HALT or PROCEED)
 
-2. **PARITY**: If all three layers are synchronized AND all confidence levels are HIGH, document "Alignment Confirmed" and proceed to the next item.
+Synthesize the engine's `verdict_hint` (advisory), your PHASE 2 adjudication, and the Negative Space Scan into the final verdict:
 
-3. **UNVERIFIABLE** (new first-class outcome): If any layer has LOW confidence, or if the substrate cannot be physically verified (file not yet created, feature not yet implemented), **HALT**. Report:
-   - Which layer could not be verified
-   - What would be needed to verify it
-   - Whether to defer verification (plan ahead of implementation) or to flag as a risk
+1. **MISMATCH** — any confirmed Ghost Logic or confirmed Mock Trap. **HALT.** Print the Reconciliation Gap. Wait for user instruction.
+2. **UNVERIFIABLE** — any LOW-confidence layer or not-yet-built item that blocks the plan. **HALT.** Report which layer, what is needed, defer-or-risk.
+3. **PARITY** — all items aligned, all confidence HIGH, no unresolved Forgotten Details. Document "Alignment Confirmed" and pass the gate.
 
-**Important**: A result of UNVERIFIABLE is not a failure — it is honest reporting. It means "we cannot confirm this yet." The user can then decide to accept the risk or resolve the uncertainty before proceeding.
+The engine's `verdict_hint` never overrides this judgment. A GREEN hint with an unresolved Forgotten Detail is still RED. A RED hint that resolves to all-not-yet-built is YELLOW. **You own the verdict.**
 
-**[INJECTION — 2026-05-11] Context Erosion countermeasure:**
-In sessions with more than 5 items in the Item Inventory, re-read the STRICT RULES block before beginning each new item's Phase 1. Verification rigor must not decay as the loop extends. A PARITY result on item 12 must be as evidence-dense as a PARITY result on item 1.
+## Final Review (v3)
+
+Produce the structured summary (shared **Final Review** format below): the Alignment Summary table, Forgotten Details Recovered, any Plan Updates (under /nodelete), and the single overall **GREEN / YELLOW / RED** Verification Confidence Score. Attach the engine's summary block as the substrate-evidence appendix.
 
 ---
 
-## Negative Space Scan (run after the Focus Loop completes)
+# SHARED CANONICAL SECTIONS (used by both v3 and Manual Fallback Mode)
 
-This is the most important addition. The Focus Loop audits plan items that exist. This scan looks for things that *should* exist in the plan but don't.
+## Negative Space Scan (run after the per-item loop completes, in every mode)
+
+This is the most important addition. The per-item loop audits plan items that exist. This scan looks for things that *should* exist in the plan but don't.
 
 **Method**: Mine the discussion corpus for concepts, requirements, decisions, and constraints that have no corresponding plan item.
 
@@ -200,12 +162,10 @@ This is the most important addition. The Focus Loop audits plan items that exist
 1. Extract all **named concepts** from the discussion corpus (nouns, system names, protocol names, feature names, data types, external services).
 2. Extract all **decisions made** (any sentence containing "we will", "we decided", "we agreed", "let's use", "the approach is").
 3. Extract all **constraints expressed** (any sentence containing "must", "cannot", "never", "always", "requires", "depends on").
-4. For each item in these three lists: check if it appears in the Item Inventory from Initialization.
+4. For each item in these three lists: check if it appears in the Item Inventory.
 5. Any item NOT in the plan is a **Candidate Forgotten Detail**. List it explicitly.
 
 ### Forgotten Detail Categories (proactively check each, even if not discussed):
-The following categories are commonly forgotten in implementation plans. For each category, explicitly state whether it was addressed in the plan or not:
-
 ```
 FORGOTTEN DETAIL CHECKLIST:
 [ ] Error handling & failure modes -- what happens when each step fails?
@@ -214,7 +174,7 @@ FORGOTTEN DETAIL CHECKLIST:
 [ ] Dependencies not in requirements -- new packages, external APIs, credentials needed
 [ ] Data migration -- does existing data need to be transformed?
 [ ] Testing strategy -- unit, integration, E2E test plan for the new work
-[ ] Performance implications -- will this introduce latency, memory pressure, or I/O bottlenecks?
+[ ] Performance implications -- latency, memory pressure, I/O bottlenecks?
 [ ] Security / auth considerations -- new attack surfaces, credential handling
 [ ] Configuration / environment -- new env vars, config keys, deployment changes
 [ ] Cross-cutting concerns -- logging, monitoring, alerting for the new feature
@@ -222,120 +182,177 @@ FORGOTTEN DETAIL CHECKLIST:
 [ ] Documentation -- what needs to be updated (README, API docs, architecture docs)?
 [ ] Cross-item contradictions -- do any plan items conflict with each other?
 ```
-
 For each unchecked item: ask "Was this considered? If not, should it be added to the plan?"
 
-**[INJECTED 2026-05-11 — Divergence #2: Memory-Augmented Negative Space]**  
-**Persistent Suite Memory Ledger**  
-After listing Candidate Forgotten Details, append every new detail (and its recommendation) to the suite-wide ledger at `manifest/FOCUS-MEMORY-LEDGER.md` (append-only per /nodelete).  
-Future Negative Space Scans automatically cross-reference this ledger to detect recurring omission patterns and surface *meta-patterns* (e.g., "security is forgotten in 70% of new items").
+**[INJECTED 2026-05-11 — Divergence #2: Memory-Augmented Negative Space] [v3 — now OPTIONAL, see STRICT RULE 15]**
+The Suite Memory Ledger at `manifest/FOCUS-MEMORY-LEDGER.md` is an *optional* enhancement. If you choose to use it, append new Candidate Forgotten Details (append-only per /nodelete) so future scans can detect recurring omission meta-patterns. It is NOT a gating requirement — its prior mandatory status created a phantom-file contradiction (the ledger was never created, which trained agents to treat STRICT RULES as ignorable).
 
----
-
-## Final Review
-After the Focus Loop and Negative Space Scan, produce a structured summary:
+## Final Review Format
 
 ### Alignment Summary
 | Item | Triad Result | Confidence | Notes |
 |------|-------------|------------|-------|
 | [Item 1] | PARITY / MISMATCH / UNVERIFIABLE | HIGH/MED/LOW | |
-| ... | | | |
 
 ### Forgotten Details Recovered
-List every Candidate Forgotten Detail surfaced by the Negative Space Scan, with a recommendation:
 - ADD TO PLAN: [detail] — reason it belongs in the plan
 - ACKNOWLEDGED: [detail] — already implicitly covered
 - DEFER: [detail] — out of scope for this phase
 
 ### Plan Update
-
-**[INJECTION — 2026-05-11] /nodelete discipline — Plan Updates:**
-When updating `implementation_plan.md` to reflect MISMATCHes or Forgotten Details:
+**[/nodelete discipline — Plan Updates]:**
 - Never overwrite an existing plan entry. Inject corrections using a clearly marked reconciliation note:
-  `**[FOCUS-PLAN RECONCILIATION — YYYY-MM-DD]** Prior entry: [original text]. Ground truth: [corrected text]. Reason: [Triad evidence].`
-- Append new Forgotten Detail items; do not reorganize existing plan structure to accommodate them unless the user explicitly requests restructuring.
-- Log every change in the plan's Change Log — append only, never overwrite prior log entries.
-- A corrected plan entry and its original form both remain in the file. The correction is the authoritative version; the original is the historical record.
+  `**[FOCUS-PLAN RECONCILIATION — YYYY-MM-DD]** Prior entry: [original]. Ground truth: [corrected]. Reason: [Triad evidence].`
+- Append new Forgotten Detail items; do not reorganize existing structure unless the user requests it.
+- Log every change in the plan's Change Log — append only.
 
 ### Verification Confidence Score
-At the end, provide a single overall confidence score for the entire plan:
 - **GREEN** (HIGH confidence across all items): plan is ready to execute
 - **YELLOW** (some MED confidence or UNVERIFIABLE items): proceed with caution, document risks
 - **RED** (any MISMATCH or multiple UNVERIFIABLEs): resolve before execution
 
-**[INJECTED 2026-05-11 — Divergence #3: Triad Confidence Oracle]**  
-**Triad Confidence Oracle**  
-After the Alignment Summary, generate a machine-readable forecast block:
+**[INJECTED 2026-05-11 — Divergence #3: Triad Confidence Oracle]** After the Alignment Summary, optionally emit a forecast block for downstream /execute-build and /continuous-verify:
 ```
 TRIAD CONFIDENCE ORACLE
-Predicted Ghost Logic risk: X% (based on historical patterns + memory ledger)
+Predicted Ghost Logic risk: X% (based on engine absent_anchors + historical patterns)
 High-risk items: [list]
 Recommended pre-emptive actions: [list]
 ```
-This oracle is emitted for downstream consumption by /execute-build and /continuous-verify.
+
+---
+
+# MANUAL FALLBACK MODE — the original Focus Loop
+
+> **[SUPERSEDED for capable agents when the Focus Evidence Engine is available; retained verbatim per /nodelete.]**
+> Use this mode when: Python 3 is unavailable, the engine exits without producing JSON, the plan is in a format the parser cannot read, or the substrate is unreachable by the engine. In this mode the agent hand-executes the mechanical verification the engine would otherwise perform. Log `FOCUS ENGINE: ABSENT` with the reason before using this mode.
+
+## 0. Initialization
+Before starting the loop, locate the plan source. In priority order:
+- `implementation-plan.md` in the current workspace (canonical) → read all items
+- `implementation_plan.md` (legacy underscore spelling) → tolerated fallback
+- If no file exists: extract plan items from the current conversation (list them explicitly before starting the loop)
+- If no plan exists at all: ask the user to describe the plan, then generate a structured item list before proceeding.
+
+Produce an **Item Inventory** at the start — a numbered list of every plan item you will audit. Then identify the **discussion corpus** — the current conversation, referenced documents (concept.md, Architecture.md, governance files), and any prior plans/task files. This corpus is what Intent Recovery and the Negative Space Scan mine.
+
+## The Focus Loop (Iterative for each Plan Item)
+
+### Phase 1: Technical Anchor Extraction
+Identify the Physical Anchors of this item. Do not rely on memory.
+- **Anchors**: List specific File Paths, Function Names, Class Names, Protocol IDs.
+- **Keywords**: Extract specific technical jargon or constraints from prior discussion.
+```
+ANCHOR MANIFEST (Item N):
+  Files to inspect: [list]
+  Grep patterns to run: [list]
+  Registry/config files to check: [list]
+```
+If the manifest is empty: "No substrate anchors identified — this item may be entirely new/unimplemented."
+
+### Phase 2: Evidence-Based Intent Recovery
+- **Forced Retrieval**: Use `grep` or log analysis to find the USER's exact definition of this feature. Show the command and output.
+- **Intent Quote**: Quote the USER's requirement directly.
+- **Plan Mapping**: Locate the exact line range in `implementation-plan.md` that addresses this intent.
+- **Null-Result Handling**: If no direct quote is found: "Intent not directly quoted — reconstructed from conversation context: [reconstruction]" and flag confidence LOW.
+
+### Phase 3: Substrate Reality Check (Verification)
+- **Logic Audit**: Use the Read tool on the Phase 1 Anchors.
+- **Ghost Logic Search**: Look for features discussed/promised but *absent* from the files.
+- **Import/Path Integrity**: Verify paths mentioned in the plan exist in the substrate.
+```
+SEARCH EVIDENCE (Item N):
+  grep -r "<keyword>" <path> -> [N matches / 0 matches / error]
+  Read <path>:L<start>-L<end> -> [found / not found / file missing]
+  path check <path> -> [exists / does not exist]
+```
+A Phase 3 with no SEARCH EVIDENCE block is invalid. "I searched and found nothing" without the search log is not acceptable.
+
+**Failure Pattern Check — Phase 3:**
+
+| Pattern | Signature | Response |
+|---|---|---|
+| **Ghost Logic** | Feature discussed/promised; no corresponding code in the anchors. | Log as MISMATCH evidence. Surface in the Gate. File a helpdesk ticket if believed implemented. |
+| **Mock Trap** | SEARCH EVIDENCE run against test files/stubs/fixtures rather than production. | Re-run searches excluding `test/`, `spec/`, `mock/`, `__pycache__/`. |
+| **Sound Effect Execution** | A function exists but is never called on the actual execution path. | Verify call sites — not just definition existence. |
+| **Hallucinated Success** | SEARCH EVIDENCE present but searches not actually executed. | Re-execute every search; show live output. |
+
+**[INJECTED 2026-05-11 — Divergence #1: Substrate as Active Witness — OPTIONAL]**
+**Phase 3b: Active Witness Marker Embedding (optional only — never mandatory)**
+When *explicitly authorized to modify substrate*, you *may* embed lightweight self-witnessing markers (`# FOCUS-ANCHOR: item-N, intent-hash:abc123`). This is substrate mutation and must never be done without authorization or in a read-only verification pass.
+
+### Phase 4: The Triad Alignment Table
+(Same Triad Table + Confidence Definitions as v3 PHASE 2 above.)
+
+### Phase 5: Halt or Proceed (The Sovereign Gate)
+(Same MISMATCH / PARITY / UNVERIFIABLE semantics as v3 PHASE 4 above.)
+
+**Context Erosion countermeasure:** In sessions with more than 5 items, re-read the STRICT RULES before beginning each new item's Phase 1. A PARITY result on item 12 must be as evidence-dense as on item 1.
+
+*(After the loop, run the shared Negative Space Scan and Final Review above.)*
 
 ---
 
 ## STRICT RULES (never violate)
 
-1. Never rely on memory in any phase. Show your work — what you searched, where, and what the result was. Null results must be logged explicitly.
-2. Every Phase 1 must produce an Anchor Manifest. Even an empty manifest must be stated explicitly with a reason.
-3. Every Phase 3 must contain a SEARCH EVIDENCE block. A Phase 3 without one is invalid regardless of outcome.
-4. Null results are never silently discarded. "0 matches" is a result. Log it.
-5. Any Triad layer with LOW confidence produces UNVERIFIABLE in Phase 5 — regardless of apparent alignment with the other layers.
-6. HALT on MISMATCH. Do not advance the loop without explicit user instruction resolving the Reconciliation Gap.
-7. HALT on UNVERIFIABLE. Report which layer, what is needed, and whether to defer or flag as risk. Then wait.
-8. Run the Negative Space Scan after every Focus Loop completion. It is not optional. It is the most important part.
-9. **[INJECTED — 2026-05-11]** In sessions with more than 5 items, re-read STRICT RULES before beginning each new item's Phase 1. Context Erosion is a real risk in long loops.
-10. **[INJECTED — 2026-05-11]** Never overwrite existing `implementation_plan.md` entries. Inject reconciliation notes; append new items. Preserve prior content per /nodelete discipline.
-11. **[INJECTED — 2026-05-11]** If Ghost Logic, Mock Trap, Sound Effect Execution, or Hallucinated Success is detected at any phase, name it explicitly, log it in the Phase 5 Reconciliation Gap, and file a helpdesk ticket before proceeding.
-12. **[INJECTED — 2026-05-11]** SEARCH EVIDENCE must reflect live command execution, not reconstructed output. If a search was not actually run, do not fabricate its output — state "search not yet executed" and run it before advancing.
-13. **[INJECTED 2026-05-11 — Divergences #1–#3]** Always apply Active Witness markers when possible, maintain the Suite Memory Ledger, and generate the Triad Confidence Oracle in every Final Review. These evolutionary extensions are now core responsibilities of /focus-plan.
+1. Never rely on memory in any phase. Show your work — what was searched, where, and the result. Null results must be logged explicitly. *(In v3, the engine satisfies this for the Substrate layer.)*
+2. Every per-item audit must produce an Anchor Manifest. *(In v3, the engine's per-item anchor list IS the manifest.)*
+3. Every substrate check must contain SEARCH EVIDENCE. *(In v3, the engine's JSON Evidence Report IS the SEARCH EVIDENCE — and it cannot be hallucinated.)*
+4. Null results are never silently discarded. "0 matches" / `ABSENT` / `MISSING` is a result. Log it.
+5. Any Triad layer with LOW confidence produces UNVERIFIABLE — regardless of apparent alignment.
+6. HALT on MISMATCH. Do not advance without explicit user instruction resolving the Reconciliation Gap.
+7. HALT on UNVERIFIABLE. Report which layer, what is needed, defer-or-risk. Then wait.
+8. Run the Negative Space Scan after every per-item loop completion, in every mode. It is not optional. It is the most important part.
+9. **[INJECTED 2026-05-11]** In sessions with more than 5 items (Manual Fallback Mode), re-read STRICT RULES before each new item's Phase 1. Context Erosion is real in long manual loops.
+10. **[INJECTED 2026-05-11]** Never overwrite existing `implementation-plan.md` entries. Inject reconciliation notes; append new items. Preserve prior content per /nodelete.
+11. **[INJECTED 2026-05-11]** If Ghost Logic, Mock Trap, Sound Effect Execution, or Hallucinated Success is detected at any phase, name it explicitly, log it in the Reconciliation Gap, and file a helpdesk ticket before proceeding.
+12. **[INJECTED 2026-05-11]** SEARCH EVIDENCE must reflect live execution, not reconstructed output. *(In v3 this is enforced structurally: the engine executes the searches, not the agent.)*
+13. **[INJECTED 2026-05-11 — Divergences #1–#3]** ~~Always apply Active Witness markers, maintain the Suite Memory Ledger, and generate the Triad Confidence Oracle in every Final Review.~~ **[SUPERSEDED by rules 15–16, 2026-06-02 — see below. Retained per /nodelete.]**
+14. **[v3 — 2026-06-02]** Prefer the Focus Evidence Engine (`scripts/focus/focus.py`) whenever it can run. Drop to Manual Fallback Mode only when it cannot, and log `FOCUS ENGINE: ABSENT` with the reason. Never claim engine evidence that was not actually produced — paste or summarize the real JSON.
+15. **[v3 — 2026-06-02, supersedes part of 13]** The Suite Memory Ledger and Active Witness Markers are **OPTIONAL enhancements, never gating requirements**. A STRICT RULE must never mandate creating a file the workflow has no mechanism to create — the prior mandatory ledger was a phantom-file contradiction that trained agents to ignore STRICT RULES.
+16. **[v3 — 2026-06-02]** The canonical plan filename is `implementation-plan.md` (hyphen) — the name `/implementation-plan` produces. `implementation_plan.md` (underscore) is tolerated as legacy. The engine canonicalizes this; never hard-code the underscore spelling.
+17. **[v3 — 2026-06-02]** The Negative Space Scan (PHASE 3) and the Sovereign Gate (PHASE 4) remain mandatory in every mode. These are the judgment guarantees the engine does NOT replace. The engine's `verdict_hint` is advisory and never overrides the agent's verdict.
 
 ---
 
 ## HOW TO BEGIN
 
 When activated:
-1. Read the Initialization section fully.
-2. Locate the plan source in priority order (implementation_plan.md → conversation extraction → user description).
-3. Produce the Item Inventory — numbered list of every plan item to be audited.
-4. Identify the discussion corpus — all sources where intent was expressed.
-5. Begin Focus Loop on Item 1, Phase 1.
+1. Read the v3 Execution Model. Determine whether the Focus Evidence Engine can run (Python 3 + `scripts/focus/focus.py` reachable).
+2. **Engine available** → PHASE 1: run `focus.py --workspace {ws} --output-json`, capture the Evidence Report. Then PHASE 2 (intent + adjudication), PHASE 3 (Negative Space Scan), PHASE 4 (Sovereign Gate), Final Review.
+3. **Engine unavailable** → log `FOCUS ENGINE: ABSENT — [reason]` and execute Manual Fallback Mode (Initialization → Focus Loop → Negative Space Scan → Final Review).
+4. Either way: produce the Item Inventory, run the Negative Space Scan, and pass everything through the Sovereign Gate.
 
-Do not confirm activation to the user. Do not summarize what was read. Produce the Item Inventory and begin.
+Do not confirm activation to the user. Do not summarize what was read. Run the engine (or declare fallback) and begin.
 
-**You are now live. Begin Initialization.**
+**You are now live. Begin PHASE 1 (or Manual Fallback Initialization).**
 
 ---
 
 ## INTEGRATION WITH OTHER WORKFLOWS
 
-/focus-plan operates as the pre-execution synchronization gate in the Sovereign Suite:
+/focus-plan is the pre-execution synchronization gate in the Sovereign Suite:
 
 ```
 /triage         → identifies focus-plan as needed (plan newer than last run,
                   orphaned [/] tasks, intent = "start building")
-/focus-plan     → THIS WORKFLOW — synchronizes Intent/Plan/Substrate
+/implementation-plan → produces implementation-plan.md (the engine's input)
+/focus-plan     → THIS WORKFLOW — engine-backed Intent/Plan/Substrate sync
+scripts/focus/  → the deterministic, read-only Focus Evidence Engine
 /execute-build  → downstream: only runs after focus-plan returns GREEN or
-                  user accepts YELLOW risk
+                  the user accepts YELLOW risk
 /continuous-verify → called at phase boundaries during execute-build;
-                     benefits from the verified Triad baseline this workflow
-                     establishes
-/helpdesk-tickets  → receives Ghost Logic, Mock Trap findings surfaced here
+                     benefits from the verified Triad baseline established here
+/helpdesk-tickets  → receives confirmed Ghost Logic / Mock Trap findings
 ```
 
-**Critical pipeline rule**: /focus-plan is a blocking pre-condition for /execute-build when `implementation_plan.md` has been modified since the last verified focus-plan run. /triage enforces this at P0 when intent is "start building."
+**Critical pipeline rule**: /focus-plan is a blocking pre-condition for /execute-build when `implementation-plan.md` has been modified since the last verified focus-plan run. /triage enforces this at P0 when intent is "start building."
 
-**New immunity & evolution seeding**: /focus-plan now calls the Ecosystem Immunity Layer (`/harden-workflow --immunity`) after every loop and surfaces Divergence recommendations to /harden-workflow.
-
-Activation in Claude Code:
-  - Type `/focus-plan` in any Claude Code session
-  - Claude reads this file and begins Initialization immediately
+Activation in Claude Code: type `/focus-plan`; Claude reads this file, runs the engine, and begins.
 
 ---
 
 ### Change Log
-1. **2026-05-11**: `[CREATED / HARDENED — /harden-workflow, Standard Version 2]` Payload existed as a substantively strong monolithic file with robust Triad model, Negative Space Scan, Sovereign Gate, and null-result enforcement — but missing all five required Sovereign structural shells. Hardening run added: GLOSSARY (19 terms), HOW TO BEGIN block, STRICT RULES block (12 rules, consolidating distributed rules from phase prose), INTEGRATION block documenting pipeline position, Change Log. Failure pattern hooks injected into Phase 3 (Ghost Logic, Mock Trap, Sound Effect Execution, Hallucinated Success table). Context Erosion countermeasure injected into Phase 5. /nodelete discipline injected into Plan Update section. STRICT RULES 9–12 injected as new entries. No original content removed. Grade achieved: **Diamond**.
-2. **2026-05-11**: `[INJECTED — Divergences #1, #2, #3, /nodelete + /quality + /focus-plan]` Substrate as Active Witness (Phase 3b), Memory-Augmented Negative Space (persistent ledger in Negative Space Scan), and Triad Confidence Oracle (Final Review) injected. Pointer/Payload conversion completed. STRICT RULE 13 added. All prior content preserved. Grade elevated to **Sovereign** with evolutionary extensions. Standard Version: 2.
-3. **2026-05-21**: `[PORTED — blueprint-workflows / Claude Code migration]` Merged pointer (`focus-plan.md`) and payload (`focus-plan/core.md`) into single file. Pointer/Payload architecture retired. `view_file` references updated to Read tool throughout (Phase 3 Logic Audit, SEARCH EVIDENCE block template). INTEGRATION section extended with Claude Code activation note. All protocol content preserved verbatim. Old pointer and payload deleted per user direction; git history preserves full lineage.
+1. **2026-05-11**: `[CREATED / HARDENED — /harden-workflow, Standard Version 2]` Payload was a substantively strong monolithic file (Triad model, Negative Space Scan, Sovereign Gate, null-result enforcement) missing all five required Sovereign structural shells. Hardening added: GLOSSARY (19 terms), HOW TO BEGIN, STRICT RULES (12 rules), INTEGRATION block, Change Log. Failure pattern hooks injected into Phase 3. Context Erosion countermeasure into Phase 5. /nodelete into Plan Update. STRICT RULES 9–12 injected. No original content removed. Grade: **Diamond**.
+2. **2026-05-11**: `[INJECTED — Divergences #1, #2, #3, /nodelete + /quality + /focus-plan]` Substrate as Active Witness (Phase 3b), Memory-Augmented Negative Space (persistent ledger), and Triad Confidence Oracle injected. Pointer/Payload conversion completed. STRICT RULE 13 added. Grade elevated to **Sovereign**. Standard Version: 2.
+3. **2026-05-21**: `[PORTED — blueprint-workflows / Claude Code migration]` Merged pointer + payload into single file. `view_file` → Read tool throughout. INTEGRATION extended with Claude Code activation. All protocol content preserved verbatim.
+4. **2026-06-02**: `[HARDENED — Option D: Script-Backed Triad Verification — /investigate + /helpdesk-tickets(20260602_focus-plan) + /nodelete + /quality]` Re-architected from instructional-only to engine-backed per investigation finding that the suite's highest-stakes gate enforced its core anti-Hallucinated-Success guarantee with its weakest mechanism (instruction). Built `scripts/focus/` — a deterministic, **architecturally read-only** Focus Evidence Engine (plan_parser, anchor_scanner, reporter, focus orchestrator, JSON schema, 18-test unittest suite) modeled on `scripts/doorway/`. Added the **v3 Execution Model** (Phases A–D) as authoritative: engine gathers substrate evidence, agent performs intent interpretation + Negative Space Scan + Sovereign Gate. **Defects fixed**: (a) plan-filename canonicalized to `implementation-plan.md` (hyphen) — the body's 8 underscore references contradicted the suite generator and the real artifact, causing Phase 0 to silently miss the plan (STRICT RULE 16); (b) the phantom Suite Memory Ledger demoted from mandatory STRICT RULE 13 to optional (STRICT RULE 15) — it mandated a file the workflow could never create; (c) Active Witness Markers demoted to optional/authorized-only (substrate mutation must never be mandatory); (d) frontmatter `phase_count` 0 → 4, `version` 2 → 3, `strict_rule_count` 13 → 17, engine added to dependencies. **Preserved per /nodelete**: the entire original 5-phase ceremony as **Manual Fallback Mode** (used when the engine cannot run); all GLOSSARY terms; STRICT RULES 1–13 (13 struck-through with superseding pointer, not deleted); the Negative Space Scan and Sovereign Gate, which remain MANDATORY in every mode (STRICT RULE 17) — the engine does not replace judgment. Verified: 18/18 focus tests pass; live run against this workspace located the hyphen plan, extracted 18 anchors, verified each with citations, confirmed read-only. Grade: **Sovereign** (v3).

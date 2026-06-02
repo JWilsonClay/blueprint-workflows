@@ -5,7 +5,7 @@
 
 ---
 
-## Divergence #1 — The Living Specification (Workflow Linter)
+## Divergence #1 — The Living Specification (Workflow Linter) [COMPLETED]
 **Vector:** Inversion — workflows as testable codebase
 **Status:** APPROVED — first implementation priority
 **Nuance from user:** Explore non-human-readable mechanisms for machine verification
@@ -126,7 +126,7 @@ python ~/blueprint-workflows/scripts/suite/lint_workflows.py --workspace ~/bluep
 
 ---
 
-## Divergence #2 — The Sovereign Onboarding Agent
+## Divergence #2 — The Sovereign Onboarding Agent [COMPLETED]
 **Vector:** Future User — graduated entry path
 **Status:** APPROVED — DEFERRED to after #1 and #3
 **Location:** TODO list — build after linter and dependency graph exist
@@ -158,7 +158,7 @@ DO FIRST: [the single most important action]
 
 ---
 
-## Divergence #3 — The Workflow Dependency Graph
+## Divergence #3 — The Workflow Dependency Graph [COMPLETED]
 **Vector:** Scale distortion — what breaks at 64 workflows
 **Status:** APPROVED — second implementation priority (after linter)
 **User nuance:** How is it invoked? Who references it? What references it? Must be autonomous.

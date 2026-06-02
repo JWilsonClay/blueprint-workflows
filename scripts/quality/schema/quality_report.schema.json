@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://blueprint-workflows/quality/quality_report.schema.json",
+  "title": "Quality Process Audit Report",
+  "description": "Output of scripts/quality/quality_audit.py, consumed by /quality (verification rail), /triage, and /receipt-check. Verifies quality PROCESS RECEIPTS and mechanical SMELLS only — it never assesses quality itself (that is irreducible judgment owned by the /quality 7-step protocol).",
+  "type": "object",
+  "required": ["schema_version", "tool", "workspace", "ledger", "summary"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"type": "string", "const": "1.0"},
+    "tool": {"type": "string", "const": "quality"},
+    "tool_version": {"type": "string"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "workspace": {"type": "string"},
+    "ledger": {
+      "type": "object",
+      "description": "Audit of .workflow_state/quality_witness.log.",
+      "required": ["log_found", "log_path", "total_entries", "valid_entries", "malformed_lines", "unreviewed_entries", "audit_trigger"],
+      "properties": {
+        "log_found": {"type": "boolean"},
+        "log_path": {"type": "string"},
+        "total_entries": {"type": "integer"},
+        "valid_entries": {"type": "integer"},
+        "malformed_lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "line_no": {"type": "integer"},
+              "reason": {"type": "string"},
+              "raw": {"type": "string"}
+            }
+          }
+        },
+        "last_reviewed": {"type": ["string", "null"], "description": "Date from the last [REVIEWED <date>] marker, or null."},
+        "unreviewed_entries": {"type": "integer", "description": "Valid entries after the last [REVIEWED] marker. The deterministic definition of 'unreviewed'."},
+        "entries_by_level": {"type": "object"},
+        "audit_trigger": {"type": "string", "enum": ["NONE", "P3"], "description": "P3 when unreviewed_entries >= 25 (the threshold /triage acts on)."}
+      }
+    },
+    "scan": {
+      "type": ["object", "null"],
+      "description": "Present only with --scan FILE.",
+      "properties": {
+        "target_file": {"type": "string"},
+        "chain_tag": {
+          "type": "object",
+          "properties": {
+            "status": {"type": "string", "enum": ["VALID", "MALFORMED", "ABSENT"]},
+            "count": {"type": "integer"},
+            "tags": {"type": "array"}
+          }
+        },
+        "smells": {
+          "type": "object",
+          "description": "Mechanical anti-pattern smells. ADVISORY and ONE-DIRECTIONAL: smells => likely defect; no smells says NOTHING about quality.",
+          "properties": {
+            "smell_total": {"type": "integer"},
+            "smells": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "pattern": {"type": "string", "enum": ["hedge_language", "closing_pleasantry", "filler_opener", "truncation"]},
+                  "count": {"type": "integer"},
+                  "samples": {"type": "array"}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["verdict_hint", "advisory"],
+      "properties": {
+        "verdict_hint": {
+          "type": "string",
+          "enum": ["CLEAN", "REVIEW"],
+          "description": "ADVISORY. REVIEW = a concrete mechanical problem (P3 trigger, malformed witness line, malformed chain tag, or a detected smell). CLEAN = no mechanical issues detected — NOT a quality verdict."
+        },
+        "advisory": {"type": "string"}
+      }
+    },
+    "notes": {"type": "array", "items": {"type": "string"}}
+  }
+}
