@@ -3,7 +3,7 @@ description: "The Triage Desk — reads workspace state, recommends which workfl
 type: meta
 grade: Sovereign
 version: 3
-content_hash: "sha256:ddabf570c3967ba3"
+content_hash: "sha256:8d30d92d7e47054a"
 last_hardened: "2026-05-25"
 strict_rule_count: 11
 phase_count: 3
@@ -170,6 +170,7 @@ Evaluate the collected state against the **Trigger Matrix** below. For each work
 | Any file with a Bronze harden grade that has been modified since graded | P1 | |
 | More than 14 days since last harden session | P2 | → P1 if intent is "new feature" |
 | No harden infrastructure present at all | P0 | |
+| **[v3 — 2026-06-02 — deterministic call]** Run `python3 ~/blueprint-workflows/scripts/harden/harden_audit.py --workspace . --output-json` — a firm CRITICAL (`verdict_hint: BLOCKED`) in any non-test script → P0; a firm HIGH or a `requires_confirmation` credential candidate (`verdict_hint: FINDINGS`) → P1. Actual finding evidence, not just receipt absence (mirrors the `lint_workflows.py --quiet` precedent for `/harden-workflow`). | P0 / P1 | → P0 if intent is "push"/"staging"/"release" |
 
 **`/focus-plan`**
 | Trigger | Priority | Intent Modifier |
@@ -195,6 +196,7 @@ Evaluate the collected state against the **Trigger Matrix** below. For each work
 | New/modified stage files since last Validation Receipt | P1 | |
 | More than 7 days since last validation of active stages | P2 | |
 | intent is "test" or "validate" or "verify" | P1 (intent-driven) | |
+| **[v3 — 2026-06-02 — deterministic call]** Run `python3 ~/blueprint-workflows/scripts/iterate/iterate_audit.py --workspace . --output-json` — a `MOCK_TRAP_CANDIDATE` (`verdict_hint: FINDINGS`) in a test for a stage built/modified in the last 7 days → P1; a `HARDCODED_ASSERTION` smell → P2. Actual finding evidence, not just receipt absence (mirrors the `harden_audit.py` and `lint_workflows.py --quiet` precedents). The PRIMARY/INFRASTRUCTURE call stays with /iterate-test Step 4b — the engine never makes it. | P1 / P2 | → P0 if intent is "push"/"staging"/"release" |
 
 **`/continuous-verify`**
 | Trigger | Priority | Intent Modifier |
@@ -468,3 +470,4 @@ Typical invocation triggers:
 6. **2026-05-25**: `[INJECTED — Quality Witness audit trigger, /nodelete]` New `/quality` audit trigger block added to Trigger Matrix. Fires P3 when `.workflow_state/quality_witness.log` accumulates 25+ unreviewed entries. Fires P2 when 5+ consecutive `findings=0` entries detected (potential Hallucinated Success in self-critique). Enables autonomous quality audit discovery without user remembering to check. Standard Version: 3.
 7. **2026-05-23**: `[INJECTED — Multi-Agent Workstream Orchestration triggers, /nodelete]` Four new Trigger Matrix blocks added: `/implementation-plan` (base command — was absent from matrix entirely), `/implementation-plan --workstreams` (workstream design triggers), `/workstream` (workstream execution triggers), `/implementation-plan --audit --workstreams` (workstream audit triggers). Phase 0h added: Multi-Agent Workstream State collection step — reads `WORKSTREAM_STATUS.md`, `DECISIONS.md`, and checks `implementation-plan.md` for workstream definitions, stores as `<WORKSTREAM_STATE>`. All existing content preserved per /nodelete. Standard Version: 3.
 8. **2026-06-02**: `[INJECTED — /quality Option-F wiring, /nodelete]` The `/quality` P3 audit trigger now names its deterministic source: `scripts/quality/quality_audit.py --workspace . --output-json` → `ledger.audit_trigger == "P3"`, replacing the hand-count heuristic (the engine recognizes both `## REVIEWED` and `[REVIEWED]` reset markers). All prior trigger wording preserved per /nodelete. Standard Version: 3.
+9. **2026-06-02**: `[INJECTED — /iterate-test Mock-Trap Detector wiring (Verification-Spine Campaign), /nodelete]` The `/iterate-test` Trigger Matrix block gains a deterministic-call row: `scripts/iterate/iterate_audit.py --workspace . --output-json` — a `MOCK_TRAP_CANDIDATE` (`verdict_hint: FINDINGS`) in a recently-built stage's test promotes the recommendation from receipt-absence to actual-finding evidence (P1; `HARDCODED_ASSERTION` → P2), mirroring the existing `harden_audit.py` and `lint_workflows.py --quiet` precedents. One-directional: the engine surfaces candidates; the PRIMARY/INFRASTRUCTURE classification stays with /iterate-test Step 4b. All prior trigger wording preserved per /nodelete. Standard Version: 3.

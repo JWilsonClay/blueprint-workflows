@@ -1,0 +1,151 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://blueprint-workflows/iterate/iterate_report.schema.json",
+  "title": "Mock-Trap Evidence Report",
+  "description": "Output of scripts/iterate/iterate_audit.py, consumed by /iterate-test (Step-4b verification rail) and /triage. Verifies the DETERMINISTIC half of /iterate-test: which imported production symbols a Python test mocks vs calls un-patched, and canned-value assertion tautologies. The signal is ONE-DIRECTIONAL: a MOCK_TRAP_CANDIDATE means an imported production symbol is mocked, but the engine does NOT decide whether it is the PRIMARY intelligence under test (a Mock Trap) or INFRASTRUCTURE (a valid mock) — that is the agent's Step-4b judgment. A clean scan (NO_FINDINGS) is NEVER a fidelity certification. Reading a clean scan as a HOT pass is the Mock Trap this engine surfaces. Python-first: the AST analysis is exact for Python only.",
+  "type": "object",
+  "required": ["schema_version", "tool", "workspace", "files", "summary"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"type": "string", "const": "1.0"},
+    "tool": {"type": "string", "const": "iterate"},
+    "tool_version": {"type": "string"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "workspace": {"type": "string", "description": "Resolved absolute path to the scanned workspace."},
+    "subject": {
+      "type": ["string", "null"],
+      "description": "The production module/symbol the test claims to validate (--subject), or null."
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "parse_error", "imports", "patches", "symbols", "file_signal"],
+        "additionalProperties": true,
+        "properties": {
+          "path": {"type": "string", "description": "Workspace-relative path of the analyzed test file."},
+          "parse_error": {"type": "boolean", "description": "True if the file could not be parsed as Python."},
+          "parse_error_detail": {"type": "string"},
+          "imports": {
+            "type": "object",
+            "properties": {
+              "production_candidates": {
+                "type": "array",
+                "description": "Imports that are NOT test infrastructure — candidate subjects/dependencies.",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "local_name": {"type": "string"},
+                    "qualified_name": {"type": "string"},
+                    "lineno": {"type": "integer"}
+                  }
+                }
+              },
+              "test_infra": {
+                "type": "array",
+                "description": "Imports of unittest/mock/pytest and related scaffolding.",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "local_name": {"type": "string"},
+                    "qualified_name": {"type": "string"},
+                    "lineno": {"type": "integer"}
+                  }
+                }
+              }
+            }
+          },
+          "patches": {
+            "type": "array",
+            "description": "Every patch()/@patch/patch.object/mocker.patch/monkeypatch.setattr call.",
+            "items": {
+              "type": "object",
+              "required": ["func", "kind", "lineno"],
+              "properties": {
+                "func": {"type": "string", "description": "Dotted name of the patch-like callable."},
+                "target": {"type": ["string", "null"], "description": "The literal patch-target string, or null if not a string literal."},
+                "kind": {"type": "string", "enum": ["decorator", "with", "call"]},
+                "lineno": {"type": "integer"}
+              }
+            }
+          },
+          "mock_constructions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {"type": "string"},
+                "lineno": {"type": "integer"},
+                "canned_output": {"type": "boolean", "description": "True if constructed with a literal return_value/side_effect."}
+              }
+            }
+          },
+          "symbols": {
+            "type": "array",
+            "description": "Per imported production candidate: is it mocked, and how often is it called?",
+            "items": {
+              "type": "object",
+              "required": ["name", "patched", "call_count", "fidelity"],
+              "properties": {
+                "name": {"type": "string", "description": "Local binding name in the test."},
+                "qualified_name": {"type": "string"},
+                "patched": {"type": "boolean", "description": "True if a patch target matches this symbol — its behavior is replaced by a mock."},
+                "patch_how": {
+                  "type": ["object", "null"],
+                  "properties": {
+                    "target": {"type": "string"},
+                    "kind": {"type": "string"},
+                    "lineno": {"type": "integer"}
+                  }
+                },
+                "call_count": {"type": "integer", "description": "Number of calls whose callee root is this symbol."},
+                "fidelity": {
+                  "type": "string",
+                  "enum": ["MOCK_TRAP_CANDIDATE", "CALLED_LIVE", "IMPORTED_UNUSED"],
+                  "description": "MOCK_TRAP_CANDIDATE = imported + mocked (PRIMARY/INFRASTRUCTURE is the agent's call). CALLED_LIVE = imported + called un-patched (NOT a certification). IMPORTED_UNUSED = imported, neither mocked nor called."
+                },
+                "is_subject": {"type": "boolean", "description": "True if this symbol matches --subject."}
+              }
+            }
+          },
+          "hardcoded_assertions": {
+            "type": "array",
+            "description": "A mock's canned return_value/side_effect literal echoed in an assertion (Step-4g / RULE-10 deficiency). Advisory, one-directional.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "value_repr": {"type": "string"},
+                "lineno_canned": {"type": "integer"},
+                "lineno_assert": {"type": "integer"}
+              }
+            }
+          },
+          "file_signal": {
+            "type": "string",
+            "enum": ["MOCK_TRAP_CANDIDATE", "HARDCODED_ASSERTION", "NO_PRODUCTION_IMPORT", "LIVE", "PARSE_ERROR"],
+            "description": "ONE-DIRECTIONAL. A finding lowers confidence; LIVE/NO_FINDINGS certifies NOTHING about fidelity. The HOT/MOCKED verdict and PRIMARY/INFRASTRUCTURE classification stay the agent's (Step 4b)."
+          },
+          "signal_basis": {"type": "string", "description": "Human explanation of the file signal."}
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["tests_scanned", "verdict_hint", "advisory"],
+      "properties": {
+        "tests_scanned": {"type": "integer"},
+        "mock_trap_candidate_files": {"type": "integer"},
+        "hardcoded_assertion_files": {"type": "integer"},
+        "no_production_import_files": {"type": "integer"},
+        "parse_error_files": {"type": "integer"},
+        "verdict_hint": {
+          "type": "string",
+          "enum": ["FINDINGS", "NO_FINDINGS"],
+          "description": "ADVISORY. FINDINGS = >=1 mock-trap candidate or hardcoded-assertion file. NO_FINDINGS = none detected — explicitly NOT a fidelity certification."
+        },
+        "advisory": {"type": "string"}
+      }
+    },
+    "notes": {"type": "array", "items": {"type": "string"}}
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://blueprint-workflows/harden/harden_report.schema.json",
+  "title": "Hardening Evidence Report",
+  "description": "Output of scripts/harden/harden_audit.py, consumed by /harden (verification rail) and /triage. Verifies the DETERMINISTIC half of /harden: CWE signatures with exact matches and a grade CEILING computed from them. The ceiling is ONE-DIRECTIONAL: a CRITICAL/HIGH finding forbids a higher grade, but a clean scan is NEVER a certification. Threat modeling, exploitability, and Sound-Effect-Execution remain irreducible judgment owned by the /harden agent, who grades AT OR BELOW the ceiling. Reading a clean scan as a Diamond is Grade Fraud.",
+  "type": "object",
+  "required": ["schema_version", "tool", "workspace", "files", "summary"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"type": "string", "const": "1.0"},
+    "tool": {"type": "string", "const": "harden"},
+    "tool_version": {"type": "string"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "workspace": {"type": "string", "description": "Resolved absolute path to the scanned workspace."},
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "threat_context", "findings", "grade_ceiling", "severity_counts"],
+        "additionalProperties": false,
+        "properties": {
+          "path": {"type": "string", "description": "Workspace-relative path of the scanned script."},
+          "threat_context": {
+            "type": "string",
+            "enum": ["NETWORK-FACING", "PRIVILEGED", "DATA-HANDLING", "INTERNAL-ONLY"],
+            "description": "ADVISORY heuristic suggestion. The /harden agent owns the final threat model; an INTERNAL-ONLY label is a hypothesis, never a clearance."
+          },
+          "threat_signals": {"type": "array", "items": {"type": "string"}},
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["signature", "cwe", "severity", "line"],
+              "properties": {
+                "signature": {"type": "string", "description": "Stable id of the matched deterministic signature."},
+                "category": {"type": "string", "description": "The harden.md Phase-2c checklist category."},
+                "cwe": {"type": "string", "description": "CWE identifier for the finding class."},
+                "severity": {"type": "string", "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"]},
+                "line": {"type": "integer", "description": "1-based line of the match."},
+                "excerpt": {"type": "string", "description": "The matched line (credential values redacted)."},
+                "note": {"type": "string"},
+                "advisory": {"type": "boolean", "description": "True for heuristic, often-non-security findings (weak hash, weak RNG, insecure temp). Excluded from the firm ceiling; surfaced for agent adjudication."},
+                "requires_confirmation": {"type": "boolean", "description": "True for FP-prone findings (credential candidates). Excluded from the firm ceiling; the agent must confirm before it counts."}
+              }
+            }
+          },
+          "grade_ceiling": {
+            "type": "string",
+            "enum": ["UNGRADED", "Bronze", "Silver", "Gold", "Diamond"],
+            "description": "The BEST grade the deterministic firm findings PERMIT. ONE-DIRECTIONAL: a finding can only LOWER it. 'Diamond' means 'no deterministic finding caps the grade' — NOT a Diamond certification. The agent assigns the final grade at or below this."
+          },
+          "ceiling_basis": {"type": "string", "description": "Human explanation of why the ceiling sits where it does."},
+          "severity_counts": {
+            "type": "object",
+            "description": "Counts across ALL findings (firm + advisory + confirmation-pending).",
+            "properties": {
+              "CRITICAL": {"type": "integer"}, "HIGH": {"type": "integer"},
+              "MEDIUM": {"type": "integer"}, "LOW": {"type": "integer"}
+            }
+          },
+          "firm_severity_counts": {
+            "type": "object",
+            "description": "Counts of FIRM findings only — these alone drove the grade ceiling.",
+            "properties": {
+              "CRITICAL": {"type": "integer"}, "HIGH": {"type": "integer"},
+              "MEDIUM": {"type": "integer"}, "LOW": {"type": "integer"}
+            }
+          },
+          "confirmation_pending": {"type": "integer", "description": "Count of findings requiring agent confirmation (credential candidates)."},
+          "advisory_count": {"type": "integer", "description": "Count of advisory findings."}
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["files_scanned", "verdict_hint", "lowest_ceiling", "advisory"],
+      "properties": {
+        "files_scanned": {"type": "integer"},
+        "files_with_findings": {"type": "integer"},
+        "total_findings": {"type": "integer"},
+        "severity_totals": {"type": "object"},
+        "confirmation_pending": {"type": "integer"},
+        "advisory_findings": {"type": "integer"},
+        "files_by_ceiling": {"type": "object", "description": "Histogram of per-file grade ceilings."},
+        "lowest_ceiling": {
+          "type": "string",
+          "enum": ["UNGRADED", "Bronze", "Silver", "Gold", "Diamond"],
+          "description": "The worst (lowest) ceiling across all scanned files."
+        },
+        "verdict_hint": {
+          "type": "string",
+          "enum": ["BLOCKED", "FINDINGS", "ADVISORY", "CLEAN_SCAN"],
+          "description": "ADVISORY. BLOCKED = a firm CRITICAL exists (not certifiable). FINDINGS = firm HIGH or a credential candidate to confirm. ADVISORY = only advisory items. CLEAN_SCAN = no deterministic findings — explicitly NOT a grade or a quality verdict."
+        },
+        "advisory": {"type": "string"}
+      }
+    },
+    "notes": {"type": "array", "items": {"type": "string"}}
+  }
+}

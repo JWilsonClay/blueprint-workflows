@@ -1,15 +1,16 @@
 ---
 description: "Hardening and securing selected script files — Universal Security Hardening Workflow with 19-item checklist and Diamond/Gold/Silver/Bronze grading"
 type: audit
-grade: Hardened
-version: 2
-content_hash: "sha256:6b053669d36e6d1d"
-last_hardened: "2026-05-07"
-strict_rule_count: 11
-phase_count: 0
+grade: Sovereign
+version: 3
+content_hash: "sha256:a946afdba554f8f6"
+last_hardened: "2026-06-02"
+strict_rule_count: 15
+phase_count: 4
 context_retention: medium
 flags: []
-dependencies: []
+dependencies:
+  - "scripts/harden/harden_audit.py"
 triggers:
   - "/triage"
   - "/execute-build"
@@ -42,6 +43,11 @@ platform_requirements:
 | **PRIVILEGED** | Script runs as root/sudo, modifies system state, or manages credentials. Second-highest threat tier. |
 | **DATA-HANDLING** | Script reads/writes files, databases, or user-supplied input. Third tier. |
 | **INTERNAL-ONLY** | Local orchestration, cron jobs, no external input surface. Lowest tier. |
+| **Hardening Evidence Engine** | **[v3 — 2026-06-02]** The deterministic, read-only script at `scripts/harden/harden_audit.py` that inventories scripts, detects the Phase-2c CWE signatures and Phase-0 credential candidates, suggests an advisory Threat Context, and computes a Grade Ceiling. The mechanical half of /harden. Architectural sibling of `doorway.py` / `focus.py` / `quality_audit.py`. |
+| **Grade Ceiling** | **[v3 — 2026-06-02]** The best Hardening Grade the deterministic findings PERMIT, computed by the engine. ONE-DIRECTIONAL: a CRITICAL/HIGH finding lowers it; a clean scan (`Diamond` ceiling) certifies nothing. The agent assigns the final grade at or below the ceiling after the judgment audit. |
+| **Firm vs Advisory finding** | **[v3 — 2026-06-02]** A *firm* finding (exact signature: dynamic exec, the `shell`-True keyword, disabled TLS, etc.) drives the Grade Ceiling. An *advisory* finding (weak hash/RNG, insecure temp) or a `requires_confirmation` finding (credential candidate) does NOT move the firm ceiling until the agent adjudicates it — its absence proves nothing. |
+| **Grade Fraud** | A named suite failure pattern: certifying a Hardening Grade whose structural criteria were never mechanically verified — e.g., asserting Diamond over an unresolved `shell`-True call, or reading a clean engine scan as a Diamond. v3 makes the grade's deterministic floor structural to prevent it. |
+| **Mute Witness enforcement** | **[v3 — 2026-06-02]** The principle (from /investigate) that a guarantee enforced architecturally beats one enforced by instruction. The Hardening Evidence Engine is read-only by construction, so the evidence behind the grade cannot be hallucinated. |
 
 ---
 
@@ -62,6 +68,53 @@ You are a **Principal Application Security Engineer** with 15+ years of experien
 - Exit the per-file loop based on checklist completion, not a fixed iteration count. 4–6 passes is a minimum floor, not the exit criterion.
 
 ---
+
+# EXECUTION MODEL (v3) — ENGINE-BACKED · AUTHORITATIVE
+
+Earlier versions asked the agent to *both* detect every security finding by hand *and* assign the Hardening Grade — a grade whose definition (Phase 2f) is a closed-form function of finding severities. Detection and grading enforced by instruction alone is the weakest model: a capable agent can assert "Diamond" without ever having run the scan that would cap it. That is **Grade Fraud** waiting to happen, and it rests on nothing structural.
+
+**v3 splits the work.** A deterministic, read-only **Hardening Evidence Engine** — `scripts/harden/harden_audit.py` — performs the mechanical half: it inventories eligible scripts, detects the Phase-2c checklist items that carry exact CWE signatures, suggests a Threat Context (advisory), and computes a **Grade Ceiling** from real findings. The agent performs only what judgment uniquely can: the threat model, exploitability adjudication, the Sound-Effect-Execution check, the actual fixes, and the final grade — assigned **at or below** the engine's ceiling. Because a script gathers the evidence, the agent cannot hallucinate it (**Mute Witness enforcement**): the read-only engine cannot mutate the substrate it inspects, so the anti-Grade-Fraud / anti-Hallucinated-Success guarantee becomes *structural*, not a request.
+
+> **The Grade Ceiling is ONE-DIRECTIONAL — internalize this.** A CRITICAL/HIGH **firm** finding *lowers* the ceiling: you may not certify above it. But a clean scan (`grade_ceiling: Diamond`, `verdict_hint: CLEAN_SCAN`) certifies **nothing** — it means only "no deterministic finding caps the grade." Reading it as a Diamond is the exact Grade Fraud this engine exists to prevent. Security excellence — is the control reached on the real path? is the validation sufficient? — is irreducible judgment the engine never touches.
+
+When the engine can run (Python 3 present, `scripts/harden/harden_audit.py` reachable), execute PHASES 1–4. If it cannot, log `HARDEN ENGINE: ABSENT — [reason]` and use the **Manual / Judgment Protocol** (the original Phases 0–3) to perform the deterministic detection by hand.
+
+## PHASE 1 — Baseline & Run the Hardening Evidence Engine
+
+First establish the reversible baseline (original **Phase 0** below): the baseline commit (or timestamped backups if git is unavailable). Then run the engine against the workspace and capture its JSON:
+
+```bash
+python3 ~/blueprint-workflows/scripts/harden/harden_audit.py \
+  --workspace {TARGET_WORKSPACE} --output-json
+```
+
+The engine returns, per eligible non-test script: deterministic CWE findings (each with CWE id, severity, line, and a `firm` / `advisory` / `requires_confirmation` class), an advisory `threat_context`, and a per-file `grade_ceiling` with its `ceiling_basis`; plus a workspace summary (`severity_totals`, `files_by_ceiling`, `lowest_ceiling`, advisory `verdict_hint`). Schema: `scripts/harden/schema/harden_report.schema.json`. This **replaces the hand-run Phase-0 credential grep and the deterministic half of the Phase-2c checklist** — those are now gathered by a script that cannot hallucinate them, and the credential scan's secret values are redacted in the report.
+
+**Engine HALT condition:** if the engine exits non-zero, prints no JSON, or Python is unavailable — log `HARDEN ENGINE: ABSENT — [reason]` and drop to the Manual / Judgment Protocol. The workflow is fully functional without the engine; the engine is the strong path, not a hard dependency.
+
+## PHASE 2 — Threat Model & Finding Adjudication (judgment)
+
+The engine reports *what is mechanically present*. It cannot decide *what it means*. For each file with findings (worst `grade_ceiling` first):
+
+1. **Threat model (original Phase 2a)** — state attack surface, worst-case impact, and trust boundaries. Treat the engine's `threat_context` as an advisory starting hypothesis, never a clearance: an INTERNAL-ONLY label does not lower your scrutiny on its own.
+2. **Adjudicate each firm finding** — confirm the deterministic signature is a real defect in context and plan the fix. A firm CRITICAL (the `shell`-True keyword, dynamic exec, disabled TLS) is not deferrable.
+3. **Adjudicate each `requires_confirmation` finding** — a credential CANDIDATE is not yet a finding. Confirm whether the value is a real secret (not a placeholder/example); if real, treat it as CRITICAL and move it to env/secret management. Its absence from the report proves nothing.
+4. **Adjudicate each `advisory` finding** — weak hash, weak RNG, insecure temp: decide whether the security context actually applies (e.g., a non-security checksum may be N/A).
+5. **Sound Effect Execution check** — for every security control the file already contains, confirm it is reached on the real execution path. The engine cannot see this; you must. A sanitizer that sits beside a live `shell`-True call is not protection.
+
+## PHASE 3 — Iterative Fixing & Regression Check (judgment — original Phase 2d/2e)
+
+Apply fixes through the original **Phase 2d** iterative loop (analyze → fix → apply → re-ingest → re-analyze) under the **/nodelete fixing discipline** below, then run the original **Phase 2e** regression check. Every judgment rule there (the explicit approval gates, the failure-pattern awareness table, mandatory re-ingestion) stands unchanged. Re-run the engine after fixing to confirm firm findings are cleared.
+
+## PHASE 4 — Grade Assignment (≤ ceiling) & Receipt
+
+Assign the final Hardening Grade using the original **Phase 2f** table — but **never above the engine's `grade_ceiling` for that file** (STRICT RULE 13). The ceiling is the maximum the deterministic evidence permits; your judgment may assign the same or lower (e.g., the engine reports a `Diamond` ceiling, but your Sound-Effect-Execution check found an unreachable control → you assign Silver). A clean ceiling is the *permission* to certify high, never the certification itself. Then write the receipt (original **Phase 2f** `HARDEN_GRADES.md` writer) and record the engine's `grade_ceiling` alongside your assigned grade so any gap is auditable.
+
+---
+
+## MANUAL / JUDGMENT PROTOCOL — Phases 0–3 (preserved verbatim per /nodelete)
+
+> The phases below are the detailed judgment protocol the v3 EXECUTION MODEL feeds — **not** dead fallback. The engine backs the deterministic detection inside Phase 0 (credential scan) and Phase 2c (checklist signatures) and computes the Phase 2f Grade Ceiling; everything else here — threat modeling, iterative fixing, regression checking, grading judgment — is executed by the agent in every mode. When the engine cannot run, the agent additionally performs the deterministic detection by hand from these phases. Nothing here was removed in the v3 upgrade.
 
 ### Phase 0: Baseline & Pre-Flight
 **Mandatory before any file is touched.**
@@ -202,6 +255,8 @@ After the file passes the regression check, assign a **Hardening Grade**:
 | **Silver** | All CRITICAL findings resolved. 1–2 HIGH findings documented. MEDIUM findings noted. |
 | **Bronze** | Partially hardened. CRITICAL findings resolved. Known HIGH/MEDIUM findings remain with justification. |
 
+**[v3 — 2026-06-02 — engine-computed ceiling, /nodelete]** This grade table is now the *definition* the Hardening Evidence Engine computes as a **Grade Ceiling** (`scripts/harden/grade_computer.py`): ≥1 CRITICAL → UNGRADED; 1–2 firm HIGH → Silver; ≥3 firm HIGH or ≥3 firm MEDIUM → Bronze; 1–2 firm MEDIUM → Gold; none → Diamond ceiling. Assign the final grade with this table AS BEFORE, but **never above the engine's ceiling** for the file (STRICT RULE 13). The ceiling is the floor on rigor; your judgment (Sound Effect Execution, validation sufficiency, threat model) supplies the rest and may grade lower.
+
 Output a concise hardening summary:
 File: <filename>
 Grade: <Diamond / Gold / Silver / Bronze>
@@ -241,6 +296,7 @@ cat >> "${_WORKSPACE_ROOT}/.workflow_state/receipts/HARDEN_GRADES.md" << 'RECEIP
 ## $(date +%Y-%m-%d) — /harden — <filename>
 - Phase/Stage: Phase 2f
 - Grade/Status: <Diamond / Gold / Silver / Bronze>
+- Engine Grade Ceiling: <grade_ceiling from harden_audit.py — assigned grade must be <= this>
 - Files: <absolute path to filename>
 - Commit: $(git -C "${_WORKSPACE_ROOT}" rev-parse --short HEAD 2>/dev/null || echo "N/A")
 ---
@@ -302,11 +358,17 @@ Remaining Recommendations: <any systemic issues deferred>
 9. **[INJECTED — 2026-05-11]** Never overwrite a prior session's hardening record. Append only. Prior grades are historical; current grade is authoritative. Both are preserved per /nodelete discipline.
 10. **[INJECTED — 2026-05-11]** If an exclusion instruction in the activation message is genuinely ambiguous, halt at Phase 1 and surface one specific clarifying question before proceeding. Do not silently interpret scope.
 11. **[INJECTED — 2026-05-11]** If Hallucinated Success, Ghost Logic, Sound Effect Execution, or Context Erosion is detected at any point, name it explicitly, file a helpdesk ticket, and do not proceed until the failure is resolved.
+12. **[v3 — 2026-06-02]** Prefer the Hardening Evidence Engine (`scripts/harden/harden_audit.py`) whenever it can run: run it in PHASE 1 to gather the credential scan and the deterministic Phase-2c signatures, and re-run it after fixing. Drop to the Manual / Judgment Protocol only when it cannot run, and log `HARDEN ENGINE: ABSENT` with the reason. Never claim engine findings that were not actually produced — paste or summarize the real JSON.
+13. **[v3 — 2026-06-02]** The Grade Ceiling is ONE-DIRECTIONAL. Never assign a Hardening Grade ABOVE the engine's `grade_ceiling` for a file. A clean scan (`grade_ceiling: Diamond` / `verdict_hint: CLEAN_SCAN`) is NOT a Diamond certification — it is permission to certify high only after the threat model, Sound-Effect-Execution, and input-validation judgment pass. Certifying a grade the deterministic evidence forbids, or reading a clean scan as a grade, is **Grade Fraud**.
+14. **[v3 — 2026-06-02]** The engine NEVER assesses security excellence, exploitability, or runtime reachability. It detects deterministic signatures and computes the ceiling only. Threat modeling, the Sound-Effect-Execution check, and input-validation sufficiency remain the agent's irreducible judgment — they sit above the engine, never replaced by it.
+15. **[v3 — 2026-06-02]** A `requires_confirmation` finding (credential candidate) and an `advisory` finding (weak hash/RNG, insecure temp) are not counted until the agent adjudicates them; their absence from the report proves nothing about the file's security. Confirm credential candidates before grading; a confirmed hardcoded secret is CRITICAL.
 
 ────────────────────────────────────────────
 HOW TO BEGIN
 ────────────────────────────────────────────
-When activated, immediately execute Phase 0 (Baseline & Pre-Flight):
+**[v3 — 2026-06-02]** When activated, follow the **EXECUTION MODEL (v3)** above: establish the baseline, then run the Hardening Evidence Engine (PHASE 1) and reason over its JSON (PHASES 2–4). The engine performs the Cross-Workspace Credential Scan and the deterministic Phase-2c detection for you, and computes the Grade Ceiling each file's final grade must respect. Drop to the steps below (Manual / Judgment Protocol) only if the engine cannot run — log `HARDEN ENGINE: ABSENT — [reason]`.
+
+When activated (or in Manual mode), execute Phase 0 (Baseline & Pre-Flight):
   Step 0a: Create a clean baseline commit so every change is reversible.
   Step 0b: Perform a Cross-Workspace Credential Scan across all eligible files.
 
@@ -326,11 +388,15 @@ This workflow operates in this sequence within the broader pipeline:
 
   1. /[any build/refactor workflow]  → [unhardened scripts]
   2. /harden   → THIS WORKFLOW
+       scripts/harden/harden_audit.py → the read-only Hardening Evidence Engine (PHASE 1)
   3. /receipt-check → [reads Hardening Grades to verify security coverage]
 
 Typical invocation triggers (from /triage perspective):
   - New `.py/.sh/.js/.ts` files detected with no harden record
   - Missing harden infrastructure (`.workflow_state/receipts/` absent)
+  - **[v3 — 2026-06-02]** /triage runs `harden_audit.py --quiet`; firm CRITICAL/HIGH findings in
+    scripts lacking a current grade promote the /harden recommendation from receipt-existence
+    to actual-finding evidence (mirrors the existing `lint_workflows.py --quiet` P0 precedent).
 
 ---
 
@@ -338,3 +404,4 @@ Typical invocation triggers (from /triage perspective):
 1. **2026-05-11**: `[CREATED]` Migrated to Sovereign Pointer/Payload architecture (Standard Version 2) per `/harden-workflow`. Monolithic content preserved in full. Structural elements (HOW TO BEGIN, STRICT RULES, INTEGRATION) appended.
 2. **2026-05-11**: `[HARDENED — /harden-workflow, Standard Version 2]` Sovereign grade hardening run executed by Senior Architect. Findings: GLOSSARY missing (CRITICAL for grade), /nodelete discipline not anchored (HIGH), ambiguity protocol absent (MEDIUM), failure pattern hooks absent (MEDIUM). All four findings resolved via targeted injection. STRICT RULES expanded from 8 to 11. HOW TO BEGIN Step 0c injected. Phase 2d failure pattern awareness block injected. Phase 2d /nodelete discipline block injected. Phase 2f session record append-only rule injected. No prior content removed. Grade achieved: **Diamond**.
 3. **2026-05-21**: `[PORTED — Claude Code migration]` Pointer/Payload architecture retired. Merged into single command file at `~/blueprint-workflows/claude-commands/harden.md`. GLOSSARY "Injection cap" entry updated: retired concept in Claude Code.
+4. **2026-06-02**: `[HARDENED — Script-Backed Hardening Evidence Engine + Deterministic Grade Ceiling — /implementation-plan(Verification-Spine Campaign) + /helpdesk-tickets(20260602_harden) + /nodelete + /quality]` Re-architected from instructional-only detection+grading to engine-backed, per the investigation finding that /harden's terminal artifact — a grade *defined* as a closed-form function of finding severities — was rendered by judgment with no mechanical detection of the signatures that cap it (Grade Fraud surface). Built `scripts/harden/` — a deterministic, **architecturally read-only** Hardening Evidence Engine (`cwe_scanner` + `threat_classifier` + `grade_computer` + `reporter` + `harden_audit` orchestrator + JSON schema, 33-test unittest suite incl. a read-only invariant) modeled on `scripts/doorway/`, `scripts/focus/`, `scripts/quality/`. Added the **v3 EXECUTION MODEL** (PHASES 1–4) as authoritative: the engine inventories scripts, detects the deterministic Phase-2c CWE signatures + the Phase-0 credential candidates (values redacted), suggests an advisory Threat Context, and computes a **Grade Ceiling**; the agent performs the threat model, the Sound-Effect-Execution check, the fixes, and assigns the final grade AT OR BELOW the ceiling. **Honest-design boundary (anti-Grade-Fraud / anti-Mock-Trap):** the ceiling is ONE-DIRECTIONAL — a firm CRITICAL/HIGH finding forbids a higher grade, but a clean scan (`grade_ceiling: Diamond` / `verdict_hint: CLEAN_SCAN`) certifies NOTHING; security excellence stays irreducible judgment in the model (STRICT RULES 13–14). **Defects fixed**: (a) the grade now has deterministic backing — the Phase-2f table is the function `grade_computer.py` computes as a ceiling; (b) the Phase-0 credential scan and the deterministic Phase-2c items are gathered by a script that cannot hallucinate them (Mute Witness enforcement), replacing the hand-run `grep` and "state PASS/FINDING/N/A"; (c) frontmatter corrected — `version` 2→3, `last_hardened`→2026-06-02, `phase_count` 0→4, `strict_rule_count` 11→15, engine added to `dependencies`, `grade` Hardened→Sovereign (now the same engine-backed architecture as /focus-plan v3 and /quality v4). **Wired** into /triage (a real `harden_audit.py --quiet` call mirroring the existing `lint_workflows.py --quiet` P0 precedent — firm CRITICAL/HIGH findings promote the /harden recommendation from receipt-existence to actual-finding evidence). **Preserved per /nodelete**: the entire original Phases 0–3 (threat model, iterative fixing, regression check, grade table, /nodelete fixing discipline, Stage-1a receipt writer) verbatim as the Manual / Judgment Protocol the engine feeds; all prior GLOSSARY terms; STRICT RULES 1–11 (none contradicted — rules 12–15 added). **Verified**: 33/33 harden tests pass (read-only invariant included); full suite shows only the known unrelated `test_core.test_import_patterns_python` failure; live run against this workspace flagged 2 genuine `shell`-True CRITICALs (`scripts/workstream/verify.py:54`, `scripts/core/git_ops.py:110`) — files instruction-based hardening had left, now correctly capped at UNGRADED — with zero false positives, and confirmed read-only (clean `git status`). Per-run hardening grade: **Diamond** (v3, engine-backed).

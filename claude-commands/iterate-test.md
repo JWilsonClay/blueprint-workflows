@@ -1,15 +1,16 @@
 ---
 description: "Iterative Stage Tester (Sovereign Fidelity Loop) — Mock Trap prevention with Intelligence Bridge Declaration, stage fidelity verification, and validation receipts"
 type: audit
-grade: Hardened
-version: 2
-content_hash: "sha256:a99bd5ab92bc2e50"
-last_hardened: "2026-05-07"
-strict_rule_count: 13
+grade: Sovereign
+version: 3
+content_hash: "sha256:59ef6a39da8367f7"
+last_hardened: "2026-06-02"
+strict_rule_count: 16
 phase_count: 7
 context_retention: high
 flags: []
 dependencies:
+  - "scripts/iterate/iterate_audit.py"
   - "/execute-build"
 triggers:
   - "/triage"
@@ -54,6 +55,39 @@ You must follow the exact closed-loop workflow below on every iteration. Never s
 | **Fidelity Halt** | A stop condition triggered in Step 4b when a PRIMARY intelligence bridge is declared MOCKED. The test cannot proceed until HOT execution is configured or the scope is rescoped to infrastructure only. |
 | **Iteration Log** | The running provenance record of all iterations in the current session. Referenced by every Step 1 re-contextualization. The source of truth for prior patches and goals. |
 | **Regression Guard** | The mandatory pre-patch validation in Step 5c. Certifies that a proposed patch does not contradict prior intent, goals, or patches. |
+| **Mock-Trap Detector** | **[v3 — 2026-06-02]** The deterministic, read-only, Python-first engine at `scripts/iterate/iterate_audit.py` that parses a test file's AST (no execution) and reports which imported production symbols are replaced by a mock (`patch`/`@patch`/`patch.object`/`mocker.patch`/`monkeypatch.setattr`), which are called un-patched, and any hardcoded-assertion tautology. The mechanical half of Step 4b. Architectural sibling of `doorway.py` / `focus.py` / `quality_audit.py` / `harden_audit.py`. Also called the **Fidelity Evidence Engine**. |
+| **Patched-Subject** | **[v3 — 2026-06-02]** A production symbol the test *imports* and also *patches* — so its behavior in the test is the mock's, not the real code's. The engine reports it as a `MOCK_TRAP_CANDIDATE`. Whether it is a Mock Trap depends entirely on whether that symbol is the PRIMARY intelligence under test — the agent's call, never the engine's. |
+| **One-Directional Fidelity Signal** | **[v3 — 2026-06-02]** The engine's honesty boundary: a finding (a Patched-Subject, a canned-value assertion) *lowers* confidence and demands the agent's PRIMARY/INFRASTRUCTURE adjudication; a clean scan (`verdict_hint: NO_FINDINGS`, `file_signal: LIVE`) certifies NOTHING — a live-called test can still be a tautology or never reach the intelligence. Reading a clean scan as a HOT pass is the Mock Trap this engine surfaces. |
+| **Mute Witness enforcement** | **[v3 — 2026-06-02]** The principle (from /investigate, shared with /harden v3) that a guarantee enforced architecturally beats one enforced by instruction. The Mock-Trap Detector is read-only by construction, so the import/patch/call evidence behind the Step-4b declaration cannot be hallucinated. |
+
+---
+
+# EXECUTION MODEL (v3) — ENGINE-BACKED FIDELITY RAIL · AUTHORITATIVE
+
+Earlier versions enforced this workflow's central guarantee — that a test reaches the *real* intelligence instead of a mock of it — by an **attestation**. Step 4b (the Intelligence Bridge Declaration) asks the agent to self-declare each bridge HOT or MOCKED and to self-issue a FIDELITY HALT if a PRIMARY bridge is MOCKED. Nothing read the test file to confirm the declaration was true. An unverified "HOT" over a test that mocks its subject is Hallucinated Success wrapped around the suite's most important fidelity check — the very Mock Trap this workflow exists to prevent.
+
+**v3 splits the work.** A deterministic, read-only, Python-first **Mock-Trap Detector** — `scripts/iterate/iterate_audit.py`, the **Fidelity Evidence Engine** — parses the test file's AST (without executing it) and reports the mechanical facts the declaration asserts: which imported production symbols are replaced by a mock (a **Patched-Subject**), which are called un-patched, and whether a mock's canned `return_value`/`side_effect` is echoed in an assertion (the Step-4g / RULE-10 deficiency). The agent performs only what judgment uniquely can: classifying each bridge PRIMARY or INFRASTRUCTURE, the HOT/MOCKED decision, and the final "does this test the real intelligence?" verdict. Because a script gathers the evidence, the agent cannot hallucinate it (**Mute Witness enforcement**): the read-only engine cannot mutate the substrate it inspects, so the anti-Mock-Trap guarantee becomes *structural*, not a request.
+
+> **The signal is a One-Directional Fidelity Signal — internalize this.** A finding (a `MOCK_TRAP_CANDIDATE`, a hardcoded-assertion smell) *lowers* confidence and demands adjudication: a Patched-Subject that is the PRIMARY intelligence is a Mock Trap; a Patched-Subject that is INFRASTRUCTURE (HTTP client, retry wrapper) is a valid mock. **Only you can tell which** — the engine never decides, because scripting that call would make the detector itself a Mock Trap. And a clean scan (`verdict_hint: NO_FINDINGS`, `file_signal: LIVE`) certifies **nothing**: a test that imports and calls production code live can still be a tautology, or never reach the intelligence on the real path (Sound Effect Execution). Reading a clean scan as a HOT pass is the exact Mock Trap this engine exists to surface.
+
+### Running the detector (before authoring the Step-4b declaration)
+
+When the engine can run (Python 3 present, the stage under test is Python, `scripts/iterate/iterate_audit.py` reachable), run it against the test file for `<STAGE_ID>` and capture its JSON:
+
+```bash
+python3 ~/blueprint-workflows/scripts/iterate/iterate_audit.py \
+  --workspace {TARGET_WORKSPACE} --test {TEST_FILE} --subject {STAGE_MODULE_OR_SYMBOL} --output-json
+```
+
+It returns, per test file: the import set split into production candidates vs test-infrastructure; every patch target (literal string); a per-symbol `fidelity` (`MOCK_TRAP_CANDIDATE` / `CALLED_LIVE` / `IMPORTED_UNUSED`) with `is_subject` marking the `--subject`; the hardcoded-assertion tautologies; and a per-file `file_signal` with its `signal_basis`. Schema: `scripts/iterate/schema/iterate_report.schema.json`. This **backs Step 4b**: the declaration's HOT/MOCKED for each bridge must be consistent with the engine's Patched-Subject list — a bridge you declare HOT that the engine reports as a Patched-Subject is a contradiction you must resolve before writing test code.
+
+### How the evidence feeds the declaration
+
+- A `MOCK_TRAP_CANDIDATE` you classify as **PRIMARY** → the engine has mechanically surfaced the FIDELITY HALT condition of Step 4b. Do not write the test; reconfigure for HOT execution or rescope to infrastructure-only (Step 4b options).
+- A `MOCK_TRAP_CANDIDATE` you classify as **INFRASTRUCTURE** → a valid mock; record the classification in the declaration and proceed.
+- `CALLED_LIVE` / `NO_FINDINGS` → permission to proceed, **never** a fidelity certification. The Step-4g dynamic evaluation and the iteration's success criteria still decide fidelity.
+
+**Engine HALT / ABSENT condition:** if the engine exits non-zero, prints no JSON, Python is unavailable, or the stage under test is **not Python** (the detector is Python-first by deliberate scope), log `ITERATE ENGINE: ABSENT — [reason]` and perform Step 4b as the manual declaration — by hand, reading the test for imports, patches, and live calls. The workflow is fully functional without the engine; the engine is the strong path, not a hard dependency. All original phases below run in every mode; the engine specifically backs the deterministic half of Step 4b.
 
 ---
 
@@ -171,6 +205,8 @@ Import only `<STAGE_ID>` and its direct dependencies. No full pipeline bootstrap
 **4b. Intelligence Bridge Declaration. ← MANDATORY BEFORE WRITING TEST CODE**
 
 *This step prevents the "Mock Trap": the failure mode where the intelligence being tested is mocked, producing a 100% pass rate that validates only the surrounding plumbing — not the intelligence itself.*
+
+**[v3 — 2026-06-02 — engine-backed, /nodelete]** Before authoring the declaration below, run the **Mock-Trap Detector** (see EXECUTION MODEL above) against the test file for `<STAGE_ID>`. Its `MOCK_TRAP_CANDIDATE` (Patched-Subject) list is the mechanical set of imported production symbols whose behavior is replaced by a mock; reconcile every entry against the declaration you are about to write. A bridge you would declare HOT that the engine reports as a Patched-Subject is a contradiction — resolve it before writing test code. The engine surfaces the evidence; the PRIMARY/INFRASTRUCTURE classification below remains yours (it is a One-Directional Fidelity Signal, never a verdict). If the engine cannot run (non-Python stage, no Python 3), log `ITERATE ENGINE: ABSENT` and complete the declaration by hand.
 
 Identify every LLM, AI Governor, external inference endpoint, or ML model component that `<STAGE_ID>` depends on or calls.
 
@@ -370,12 +406,17 @@ Ask the user: move to the next stage, or continue hardening this one?
 11. Never present a patch that fails the Regression Guard in Step 5c.
 12. Phase 0 runs exactly once. Do not re-discover the workspace on each iteration unless the user signals a structural change.
 13. **[INJECTED 2026-05-08 — Intelligence Bridge Fidelity, /nodelete]** Step 4b (Intelligence Bridge Declaration) is mandatory and must be completed before any test code is written. If any PRIMARY intelligence bridge is declared MOCKED: issue FIDELITY HALT immediately. A test that mocks the intelligence it claims to validate counts as zero coverage for all intelligence-related fail points. It cannot satisfy any criterion from Step 2 that relates to the intelligence's behavior, output quality, or persona fidelity. HOT execution is the only valid mode for primary intelligence validation. Infrastructure mocks (networking, retry, client) remain valid regardless of rule 13.
+14. **[v3 — 2026-06-02]** Prefer the **Mock-Trap Detector** (`scripts/iterate/iterate_audit.py`) whenever it can run: run it in Step 4b before authoring the Intelligence Bridge Declaration, and reconcile the declaration against its `MOCK_TRAP_CANDIDATE` (Patched-Subject) list. Drop to the manual declaration only when it cannot run (non-Python stage, no Python 3), and log `ITERATE ENGINE: ABSENT` with the reason. Never claim engine findings that were not actually produced — paste or summarize the real JSON.
+15. **[v3 — 2026-06-02]** The engine's output is a **One-Directional Fidelity Signal**. A clean scan (`verdict_hint: NO_FINDINGS` / `file_signal: LIVE`) is NOT a fidelity certification — a live-called test can still be a tautology or never reach the intelligence on the real path (Sound Effect Execution). Never read a clean scan as a HOT pass; the Step-4g dynamic evaluation and the iteration's success criteria still decide fidelity.
+16. **[v3 — 2026-06-02]** The engine NEVER decides whether a Patched-Subject is the PRIMARY intelligence (a Mock Trap) or INFRASTRUCTURE (a valid mock). That classification, and the final fidelity verdict, are the agent's irreducible judgment (Step 4b). A `MOCK_TRAP_CANDIDATE` the agent classifies as PRIMARY triggers the FIDELITY HALT; scripting that classification would make the detector itself a Mock Trap.
 
 ---
 
 ────────────────────────────────────────────
 HOW TO BEGIN
 ────────────────────────────────────────────
+**[v3 — 2026-06-02]** Follow the **EXECUTION MODEL (v3)** above: the Mock-Trap Detector backs Step 4b. Run it against the stage's test file before authoring the Intelligence Bridge Declaration and reconcile the declaration with its output (a One-Directional Fidelity Signal — a finding demands your PRIMARY/INFRASTRUCTURE call; a clean scan certifies nothing). Drop to the manual declaration only if the engine cannot run — log `ITERATE ENGINE: ABSENT — [reason]`.
+
 When activated, immediately execute Phase 0 (Workspace Discovery):
   Step 0a: Search the workspace for the canonical intent document.
   Step 0b: Map the pipeline structure, state model, and intelligence bridges (LLM components).
@@ -400,6 +441,9 @@ INTEGRATION WITH OTHER WORKFLOWS
   /redteam          → adversarial audit (complement: /iterate-test verifies fidelity; /redteam attacks)
   /harden           → applies security hardening to the stage after /iterate-test validates it
   /receipt-check    → reads Validation Receipts to produce coverage maps
+  scripts/iterate/iterate_audit.py → the read-only Mock-Trap Detector backing Step 4b (run in the EXECUTION MODEL)
+
+**[v3 — 2026-06-02]** /triage runs `iterate_audit.py --output-json` over recently-built stage test files; a `MOCK_TRAP_CANDIDATE` promotes the /iterate-test recommendation from receipt-absence to actual-finding evidence (mirrors the `harden_audit.py` and `lint_workflows.py --quiet` precedents).
 
 Standard pipeline position:
   /execute-build (builds stage) → /iterate-test (validates stage) → /redteam (attacks stage) → /harden (secures stage)
@@ -416,3 +460,4 @@ Standard pipeline position:
 ### Change Log
 1. **2026-05-08**: `[CREATED — Pointer/Payload conversion, /harden-workflow + /focus-plan + /quality]` Converted from Legacy-grade monolithic (11,805 bytes, at injection cap) to Sovereign-grade Pointer/Payload. Origin: helpdesk ticket 20260508_redteam_workflow.md — The Mock Trap incident in nelson_neighbor Phases 10/11. All original content preserved verbatim. Structural additions: GLOSSARY (12 terms), INTEGRATION section, Change Log, STRICT RULE 13. Content addition: Step 4b (Intelligence Bridge Declaration) inserted between original 4a and 4b; original steps 4b–4g renumbered to 4c–4h for clean sequential ordering. STRICT RULE 13 added to codify the HOT/MOCKED distinction permanently. Validation Receipt updated with Intelligence field. Standard Version: 2.
 2. **2026-05-21**: `[PORTED — Claude Code migration]` Pointer/Payload architecture retired. Merged into single command file at `~/blueprint-workflows/claude-commands/iterate-test.md`. No content changes.
+3. **2026-06-02**: `[HARDENED — Script-Backed Mock-Trap Detector + One-Directional Fidelity Signal — /implementation-plan(Verification-Spine Campaign) + /helpdesk-tickets(20260602_iterate-test) + /nodelete + /quality]` Re-architected the Step-4b guarantee from an instructional attestation to engine-backed, per the investigation finding that /iterate-test — the suite's flagship Mock Trap workflow — enforced its central fidelity check (does the test reach the real intelligence or a mock of it?) by a self-declared, unverified Intelligence Bridge Declaration (Hallucinated Success surface). Built `scripts/iterate/` — a deterministic, **architecturally read-only**, **Python-first** Mock-Trap Detector (`mock_analyzer` AST engine + `bridge_classifier` + `reporter` + `iterate_audit` orchestrator/CLI + JSON schema, 27-test unittest suite incl. a read-only invariant) modeled on `scripts/doorway/`, `scripts/focus/`, `scripts/quality/`, `scripts/harden/`. It parses a test file's AST (no execution) and reports which imported production symbols are replaced by a mock (a Patched-Subject: `patch`/`@patch`/`patch.object`/`mocker.patch`/`monkeypatch.setattr`), which are called un-patched, and the hardcoded-assertion tautology (a `return_value`/`side_effect` literal echoed in an `assert ==` — the Step-4g / RULE-10 deficiency). Added the **v3 EXECUTION MODEL (Fidelity Rail)** as authoritative: run the detector before authoring the Step-4b declaration and reconcile the declaration against its Patched-Subject list. **Honest-design boundary (anti-Mock-Trap / anti-Hallucinated-Success):** the signal is ONE-DIRECTIONAL — a `MOCK_TRAP_CANDIDATE` *demands* the agent's PRIMARY-vs-INFRASTRUCTURE adjudication (PRIMARY ⇒ FIDELITY HALT; INFRASTRUCTURE ⇒ valid mock), and the engine NEVER makes that call (scripting it would make the detector itself a Mock Trap); a clean scan (`NO_FINDINGS`/`LIVE`) certifies NOTHING about fidelity (STRICT RULES 14–16). **Defect fixed:** the Step-4b attestation now has deterministic backing — a script that cannot hallucinate the import/patch/call evidence (Mute Witness enforcement), replacing the self-declared HOT/MOCKED with a reconciliation against real AST facts. **Frontmatter corrected:** `version` 2→3, `grade` Hardened→Sovereign (now the same engine-backed architecture as /focus-plan v3, /quality v4, /harden v3), `last_hardened`→2026-06-02, `strict_rule_count` 13→16, engine added to `dependencies`; `phase_count` stays 7 (the rail uses non-`## PHASE` headers — the original 7 phases are untouched). **Wired** into /triage (a real `iterate_audit.py --output-json` call mirroring the `harden_audit.py` and `lint_workflows.py --quiet` precedents — a `MOCK_TRAP_CANDIDATE` in a recently-built stage's test promotes the /iterate-test recommendation from receipt-absence to actual-finding evidence). **Preserved per /nodelete:** the entire original Phases 0–6 (re-contextualize, define goal, fail points, design/execute test incl. the original Step 4b declaration + FIDELITY HALT, repair, success gate, the Stage-1a VALIDATION_RECEIPTS.md writer) verbatim; all prior GLOSSARY terms; STRICT RULES 1–13 (none contradicted — rules 14–16 added). **Verified:** 27/27 iterate tests pass (read-only invariant included); full suite shows only the known unrelated `test_core.test_import_patterns_python` failure; live run against this workspace analyzed 13 test files with 0 false positives after an `__init__.py`-exclusion fix (regression-tested), confirmed read-only (clean `git status`), and the JSON validates against the schema. Per-run hardening grade: **Sovereign** (v3, engine-backed).
