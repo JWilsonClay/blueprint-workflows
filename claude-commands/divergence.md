@@ -2,13 +2,14 @@
 description: "Sovereign Lateral Thinking & Adjacent Possibility Engine — surfaces genuinely orthogonal ideas from outside the current frame using Six Divergence Vectors and a Novelty x Relevance correlation gate"
 type: audit
 grade: Sovereign
-version: 2
-content_hash: "sha256:ed94a5f38f7c17a7"
-last_hardened: "2026-05-07"
-strict_rule_count: 10
+version: 3
+content_hash: "sha256:2824ab90334c9786"
+last_hardened: "2026-06-12"
+strict_rule_count: 13
 phase_count: 5
 context_retention: high
-flags: []
+flags:
+  - "--convergence"
 dependencies: []
 triggers:
   - "/triage"
@@ -52,6 +53,12 @@ This workflow produces **genuinely orthogonal insight**: ideas that arrive from 
 | **Correlation Gate** | The two-axis filter (Novelty Test + Relevance Test) that every candidate idea must pass before presentation. |
 | **Adjacent Possible** | Second-order capabilities unlocked by the current build that have not yet been named or discussed. |
 | **Scarcity Principle** | Only the rarest, highest-quality divergent ideas are presented — quality over volume. |
+| **Convergence** | The inverse operating mode (`--convergence`): instead of expanding the possibility space, it contracts the active substrate — surfacing redundancy, bloat, and contradiction for safe pruning. |
+| **Pruning Report** | The structured output of Convergence Mode: evidence-cited consolidation/removal candidates, each routed to /nodelete or /depreciate for safe execution. |
+| **Context Bloat** | Historical or dead-weight content occupying an active prompt surface, diluting the directives an agent actually needs to follow. |
+| **Instruction Duplication** | The same directive stated in multiple files or locations, creating drift risk when one copy is updated and the others are not. |
+| **Constraint Redundancy** | The same constraint expressed in both affirmative and negative vocabulary (e.g., "always X" alongside "never not-X"), inflating the surface without adding signal. |
+| **Pruning Gate** | The inverse of the Correlation Gate: a two-axis filter (Redundancy × Safety) every pruning candidate must pass before it appears in the Pruning Report. |
 
 ---
 
@@ -73,12 +80,17 @@ Typical /triage triggers for this workflow:
   - Intent is ambiguous or the team feels stuck in local optima
   - A major architectural decision is about to be locked in
   - The suite needs fresh evolutionary direction (e.g., after /focus-plan or /receipt-check)
+  - **[Convergence]** A workspace shows prompt congestion / context bloat — run `/divergence --convergence` to surface a Pruning Report
+
+**Convergence pairing**: in `--convergence` mode this workflow is the *detection* arm for substrate pruning; /nodelete (Active Surface Correction) and /depreciate (quarantine + safe replacement) are the *execution* arms. Divergence finds the dead weight; the preservation workflows remove it without losing history.
 
 ---
 
 ### Change Log
 1. **2026-05-11**: `[HARDENED — /harden-workflow, Standard Version 2]` Payload existed as a strong monolithic file with excellent protocol content but missing full Sovereign structural shells. Hardening run performed: (a) GLOSSARY added after preamble, (b) INTEGRATION WITH OTHER WORKFLOWS section added, (c) Change Log created, (d) Pointer/Payload architecture confirmed for size safety. All original content preserved per /nodelete. Grade elevated to **Sovereign**. 
 2. **2026-05-21**: `[PORTED — Claude Code migration]` Pointer/Payload architecture retired. Merged into single command file at `~/blueprint-workflows/claude-commands/divergence.md`. Typo fixed: `DIVERGANCE` → `DIVERGENCE` in Phase 4 heading and output block format. Unusual document structure preserved per /nodelete: INTEGRATION and Change Log sections appear between GLOSSARY and Phase 0 body content (intentional — reflects original hardening order).
+3. **2026-06-12**: `[INJECTED — /harden-workflow --tickets, /nodelete]` Resolved helpdesk ticket `20260612_divergence_workflow.md` (MEDIUM: no substrate-pruning/convergence mode). Added **CONVERGENCE MODE** (`--convergence`): a read-only, advisory inverse mode that scans an active substrate for Instruction Duplication, Context Bloat, Constraint Redundancy, and Active Contradiction, filters candidates through the Pruning Gate (Redundancy × Safety), and emits an evidence-cited Pruning Report. Convergence never deletes — it routes execution to /nodelete (Active Surface Correction) and /depreciate (quarantine). GLOSSARY extended (Convergence, Pruning Report, Context Bloat, Instruction Duplication, Constraint Redundancy, Pruning Gate). STRICT RULES 11–13 added (read-only/advisory; cite-don't-assume; /nodelete-respecting). HOW TO BEGIN gained a mode-check branch. INTEGRATION updated with the convergence detection/execution pairing. All Phase 0–4 divergence content preserved verbatim per /nodelete. Frontmatter: flags []→["--convergence"], strict_rule_count 10→13, version 2→3, last_hardened→2026-06-12, content_hash recomputed. Grade remains Sovereign. Standard Version: 3.
+4. **2026-06-12**: `[ADDED — Legacy-ghost detection + vocabulary alignment, /quality + user-directed]` Convergence Mode now scans for a fifth congestion class — **Legacy Ghost** (`<!-- QUARANTINED -->` tags, "superseded" notes, inline contradictions left by the old "never delete" doctrine) — routing unambiguous ones to /nodelete (Remediation on Contact), lost-resolution ones to surface-and-ask, and broad infestations to /depreciate. Aligned convergence's vocabulary with /nodelete's final three-contract model: the stale Tier-1/Tier-2 references introduced earlier this session (Context Bloat destination, Pruning Gate Safety Axis, Pruning Report template, STRICT RULE 13) are cleanly replaced with Append-Only Ledger / `.history/` / active-surface terms — completing the migration in this file per Remediation on Contact. content_hash recomputed. Grade remains Sovereign. Standard Version: 3.
 
 ---
 
@@ -291,6 +303,60 @@ After all ideas, add a brief **Synthesis Note**: are any of the passing ideas re
 
 ---
 
+## CONVERGENCE MODE — Substrate Pruning (`--convergence`)
+
+**[INJECTED 2026-06-12 — Helpdesk ticket `20260612_divergence_workflow.md`, /nodelete]**
+
+By default, /divergence expands — it surfaces orthogonal possibilities the team has not yet imagined. Invoked with `--convergence`, it runs in reverse: it contracts. Where divergence asks *"what haven't we thought to build?"*, convergence asks *"what is on the active surface that no longer earns its place?"* This mode exists because active prompt surfaces (system prompts, config files, voice/style specs, rule sets) accumulate redundancy, historical dead-weight, and quiet contradictions that dilute the directives an agent actually follows — prompt congestion that silently degrades fidelity.
+
+Convergence Mode is **read-only and advisory**. It analyzes the substrate and emits a **Pruning Report**. It NEVER edits, consolidates, or deletes anything directly. Execution of any recommended removal is handed to /nodelete (Active Surface Correction — relocate to Archive) or /depreciate (contradiction quarantine and safe replacement), both of which preserve history under /nodelete discipline. Convergence finds the dead weight; the preservation workflows remove it safely.
+
+**Step C0 — Ingest the target substrate (read, do not reconstruct).**
+- Read every file named in the invocation, or every active prompt/config file in the target workspace if none is named.
+- Record each instruction, constraint, and parameter with its source file and line. The map you build is the evidence base — every later recommendation must cite it.
+
+**Step C1 — Scan for the four congestion classes.**
+- **Instruction Duplication** — the same directive in two or more places. Record all locations; the copies consolidate to one canonical home.
+- **Context Bloat** — historical, superseded, or dead-weight content occupying an active surface. Candidate for relocation off the active surface (to the off-surface `.history/` ledger or an Append-Only archive).
+- **Constraint Redundancy** — the same constraint stated in both affirmative and negative vocabulary, or restated without added signal. Candidate for collapse to a single statement.
+- **Active Contradiction** — two live directives that conflict. This is NOT a simple prune: route it to /depreciate for quarantine and reconciliation, never a silent deletion.
+- **Legacy Ghost** — residue of the old "never delete" doctrine: `<!-- QUARANTINED -->` tags, "superseded / x used to = z" notes, contradictions left inline because the old rule forbade clean removal. Flag every occurrence — these are high-value prunes. Route unambiguous ones to /nodelete (Remediation on Contact), lost-resolution ones to a surface-and-ask, and broad infestations to /depreciate.
+
+**Step C2 — The Pruning Gate (Redundancy × Safety).**
+Every candidate must pass BOTH axes before it enters the report. This is the inverse of the Correlation Gate, and it is just as strict — over-pruning is as harmful as bloat.
+- **Redundancy Axis** — Is this *verifiably* duplicated, dead, or redundant in the actual substrate you read? Not "looks unnecessary" — proven by citation. If you cannot cite the duplicate or the supersession, it fails.
+- **Safety Axis** — Can this be removed or consolidated with ZERO loss of unique signal or decisional history? If the content carries any unique directive, nuance, or Append-Only Ledger (decisional-history) record, it fails the gate and stays. When in doubt, it stays.
+
+**Step C3 — Emit the Pruning Report.** Present only candidates that passed the Pruning Gate, each in this format:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PRUNING CANDIDATE #[N] — [Short Title]
+Class: [Instruction Duplication | Context Bloat | Constraint Redundancy | Active Contradiction]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+LOCATION(S):
+[file:line for every occurrence — citation is mandatory]
+
+EVIDENCE:
+[Quote the redundant/bloated/contradictory text. Show the duplicate pair or the dead-weight directly.]
+
+PRUNING GATE RESULT:
+Redundancy: PASS — [why it is verifiably redundant/dead]
+Safety:     PASS — [why removal loses zero unique signal or history]
+
+RECOMMENDED ACTION:
+[Consolidate to <canonical location> | Relocate to off-surface `.history/` | Quarantine via /depreciate]
+
+SAFE-EXECUTION ROUTE (/nodelete):
+[Which preservation workflow carries this out — /nodelete Active Surface Correction or /depreciate. Convergence never executes it directly.]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+After all candidates, add a **Convergence Summary**: the total active-surface reduction achievable, the single highest-value consolidation, and whether any apparent "duplication" is actually intentional redundancy that must be kept. If the Pruning Gate eliminates every candidate, report `SUBSTRATE CLEAN — no safe pruning candidates found` rather than inventing low-value cuts. The Scarcity Principle applies in reverse: a few high-confidence, safe prunes are worth more than many speculative ones.
+
+---
+
 ## STRICT RULES (never violate)
 
 1. Never present an idea that is inside the Current Frame. Disqualify before presenting.
@@ -303,12 +369,17 @@ After all ideas, add a brief **Synthesis Note**: are any of the passing ideas re
 8. Novelty is verified, not assumed. Explicitly check each candidate against the exclusion zone.
 9. Do not rank ideas by how comfortable they are. The most uncomfortable idea — the one that most challenges the current frame — deserves the most careful presentation, not suppression.
 10. End every Divergence Report with the Synthesis Note. Pattern recognition across ideas is itself a divergant output.
+11. **[INJECTED 2026-06-12 — Convergence Mode]** `--convergence` is read-only and advisory. It NEVER edits, consolidates, or deletes substrate directly. It emits a Pruning Report and hands execution to /nodelete (Active Surface Correction) or /depreciate (quarantine).
+12. **[INJECTED 2026-06-12 — Convergence Mode]** Every pruning candidate must cite actual evidence (file + line) from the substrate that was read. Never recommend a prune from memory or assumption — the same read-don't-reconstruct discipline that governs divergence governs convergence.
+13. **[INJECTED 2026-06-12 — Convergence Mode]** Convergence respects /nodelete: recommended removals route to /nodelete (clean replacement, recorded to `.history/`) or /depreciate (quarantine), never silent destruction. Append-Only Ledgers (decisional history) are never a pruning target — only active-surface bloat, duplication, contradiction, and legacy ghosts.
 
 ---
 
 ## HOW TO BEGIN
 
-When activated, immediately execute Phase 0 silently:
+**Mode check first.** If invoked with `--convergence`, run CONVERGENCE MODE (Steps C0–C3) and emit the Pruning Report — skip the divergence vectors entirely. Otherwise, run the default lateral divergence pipeline below.
+
+When activated in default (lateral) mode, immediately execute Phase 0 silently:
 - Read the full conversation from the beginning
 - Read all intent/plan/architecture documents present
 - Extract the Current Frame and Foundational Assumptions

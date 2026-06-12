@@ -2,8 +2,8 @@
 description: "Sovereign Build Agent — implements each phase of tasks.md with surgical precision, regression awareness, and a closed-loop audit gate. Run after /focus-plan and tasks.md generation."
 type: execution
 grade: Sovereign
-version: 2
-content_hash: "sha256:b274ecf7342b888c"
+version: 3
+content_hash: "sha256:6bf23c31a0f8b00c"
 last_hardened: "2026-05-07"
 strict_rule_count: 0
 phase_count: 7
@@ -13,6 +13,7 @@ dependencies:
   - "/focus-plan"
   - "/continuous-verify"
   - "/harden"
+  - "/divergence"
 triggers:
   - "/triage"
   - "/focus-plan"
@@ -267,6 +268,31 @@ This is the most critical step. Do not mark a phase complete without passing thi
     Exception: if `implementation_plan.md` does not exist, 5g cannot run — note this in the Build Receipt
     and advance. The Build Audit (5a-5f) remains the quality gate in this case.
 
+5h. **Substrate Hygiene Gate (clean-as-you-build)** — [INJECTED 2026-06-12]
+    *Invokes: `/divergence --convergence` — read-only detection, scoped to this phase's touched files.*
+
+    A build phase — especially a refactor — manufactures dead substrate: functions, imports, files,
+    and config orphaned by what this phase changed. The building agent is context-aware at exactly
+    this moment, so detect and route the dead weight now rather than letting it accumulate across the
+    project (the cross-workspace pollution /nodelete and /depreciate exist to prevent).
+
+    **5h.1 — Scope.** Gather the files this phase Created/Modified (from the Build Receipt). Run
+    convergence over that set ONLY — not the whole workspace (scope discipline; do not clean ahead).
+
+    **5h.2 — Detect.** Read `~/.claude/commands/divergence.md` and execute its CONVERGENCE MODE
+    (`--convergence`) over the touched files: surface Instruction Duplication, Context Bloat,
+    Constraint Redundancy, Active Contradiction, and Legacy Ghosts as a Pruning Report.
+
+    **5h.3 — Route (never delete here).** Convergence is read-only — it only reports. Route each
+    confirmed pruning candidate to the execution arm:
+      - a single, clearly-dead unit → `/nodelete` (surgical clean removal, recorded to `.history/`)
+      - broad / multi-file / risky dead code → `/depreciate` (staged removal with ticket + verification)
+    If the Pruning Gate finds nothing safe to remove: `Substrate Hygiene (5h): CLEAN — no dead substrate.`
+
+    **5h is advisory, not blocking.** Unlike 5g, a hygiene finding does not block the receipt — it is
+    surfaced and routed. Record the outcome in the Phase Build Receipt.
+    Exception: if `/divergence` is unavailable, note `Substrate Hygiene (5h): SKIPPED` and advance.
+
 ────────────────────────────────────────────
 ## PHASE 6 — PHASE BUILD RECEIPT
 ────────────────────────────────────────────
@@ -285,6 +311,7 @@ Emit the Phase Build Receipt:
   |  Risks Resolved: N/N identified risks cleared    |
   |  Regressions:    0 detected                      |
   |  Continuous Verify (5g): PARITY / UNVERIFIABLE   |
+  |  Substrate Hygiene (5h): CLEAN / ROUTED / SKIP   |
   |  Intent Doc:     <IMPL_PLAN or INTENT_DOC>       |
   |  Status:         PHASE COMPLETE                  |
   +--------------------------------------------------+
@@ -398,6 +425,7 @@ This workflow is designed to operate in this sequence within the broader develop
   2. [Generate tasks.md]  → Agent breaks implementation_plan.md into phased tasks.md
   3. /execute-build       → THIS WORKFLOW — implement each phase of tasks.md
      └─ Step 5g           → /continuous-verify gate runs inside each phase's Build Audit
+     └─ Step 5h           → /divergence --convergence detects dead substrate; routes to /nodelete or /depreciate
   4. /iterate-test        → Validate each built stage in isolation
   5. /harden              → Apply Diamond-level security hardening to all new scripts
   6. /soc                 → Refactor for Separation of Concerns if needed
@@ -415,3 +443,4 @@ Activation in Claude Code:
 1. **[ORIGINAL]**: `[CREATED]` Full execute-build protocol written. Established PHASE 0 workspace discovery, 7-step build loop, 6-sub-step Build Audit (5a-5f), Phase Build Receipt, STRICT RULES (14 rules), and Integration section.
 2. **2026-05-07**: `[INJECTED — /nodelete, Layer 2 Stage 4]` Step 5g — Continuous Plan Verification Gate — injected after Step 5f. Invokes `/continuous-verify` to check whether the phase just built still aligns with the full implementation plan's intent, including forward contracts to future phases. Three outcomes: PARITY (silent, advance to Step 6), MISMATCH (halt, block receipt), UNVERIFIABLE (advance with risk note). Phase Build Receipt updated to include Continuous Verify (5g) field. Integration section updated to reflect the 5g sub-step relationship.
 3. **2026-05-21**: `[PORTED — blueprint-workflows / Claude Code migration]` Merged pointer (`execute-build.md`) and payload (`execute-build/core.md`) into single file. Added frontmatter with description from pointer. Pointer/Payload architecture retired. Step 5g.2 updated: `view_file` of old Antigravity path replaced with `Read ~/.claude/commands/continuous-verify.md and execute its HOW TO BEGIN protocol`. INTEGRATION section extended with Claude Code activation note. All protocol content preserved verbatim. Old pointer and payload deleted per user direction; git history preserves full lineage.
+4. **2026-06-12**: `[INJECTED — Substrate Hygiene Gate, /nodelete]` Step 5h added after 5g: invokes `/divergence --convergence` (read-only) scoped to the phase's touched files to detect dead substrate / duplication / legacy-ghosts manufactured by the build, routing confirmed candidates to `/nodelete` (surgical) or `/depreciate` (heavy) — clean-as-you-build. Advisory, not blocking (unlike the 5g forward-contract gate). Phase Build Receipt gains a Substrate Hygiene (5h) field; INTEGRATION updated; `/divergence` added to frontmatter dependencies. Closes the detection→execution pipe into the build loop. Frontmatter: version 2→3, content_hash recomputed. Standard Version: 3.

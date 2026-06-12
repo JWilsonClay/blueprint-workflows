@@ -3,9 +3,9 @@ description: "Sovereign Workflow Hardening Protocol — Audits and elevates work
 type: meta
 grade: Sovereign
 version: 3
-content_hash: "sha256:824e230ba8e272ca"
+content_hash: "sha256:1aec1899c07558cf"
 last_hardened: "2026-05-25"
-strict_rule_count: 20
+strict_rule_count: 21
 phase_count: 13
 context_retention: high
 flags:
@@ -172,6 +172,23 @@ TICKET ARCHIVE:
 If zero tickets are archived: `TICKET ARCHIVE: No stale closed tickets found. Directory clean.`
 
 This step runs at the END of every ticket-mode session — after all hardening and closures are complete. It is a housekeeping step, not a processing step. Archived tickets retain their full content and `CLOSED_` prefix — they are moved, not deleted, per /nodelete.
+
+*Step TM-6: Suite Learning Registry pass.*
+
+**[INJECTED 2026-06-12 — Registry hook, /nodelete]**
+
+At the END of every ticket-mode session (after TM-5), run the deterministic Suite Learning Registry to aggregate the `.history/` ledgers + the ticket corpus and surface recurring fail-patterns:
+
+```bash
+python3 ~/blueprint-workflows/scripts/registry/registry.py \
+  --workspace ~/blueprint-workflows --threshold 10
+```
+
+Read the engine's verdict:
+- **`verdict: NONE`** — fewer than `--threshold` unreviewed events. No action; the registry is updated silently.
+- **`verdict: REVIEW`** — the unreviewed-event count crossed the threshold. **Ingest the registry snapshot** (`manifest/CONTRADICTION_REGISTRY.md`), judge whether a *real recurring* pattern is present (not merely volume), and if one is — file a `/helpdesk-tickets` entry for it. After reviewing, append `[REVIEWED YYYY-MM-DD]` to the registry to reset the delta.
+
+The registry write is deterministic and idempotent — the **engine**, not the LLM, authors it (no Hallucinated Success). The engine never files tickets and never judges significance; that judgment is yours. This is the learning loop that turns the per-workspace, ingestion-banned `.history/` ledgers into suite-wide pattern detection. (Built per helpdesk ticket `20260612_contradiction-registry_engine.md`.)
 
 **0b. For each target workflow: locate the command file.**
 
@@ -714,6 +731,7 @@ This phase fulfills the biology/immunology transplant: the suite now has herd im
 18. **[INJECTED 2026-05-24 — Ticket archival, /nodelete]** In ticket mode, Step TM-5 (archive stale closed tickets) is mandatory at the end of every session. Closed tickets older than 7 days are moved to `helpdesk-tickets/archive/` — never deleted. This is housekeeping, not destruction. The archive directory preserves full ticket content and `CLOSED_` prefix for historical reference.
 19. **[INJECTED 2026-05-25 — Linter gate, /nodelete]** Phase 7d (Linter Validation Gate) is mandatory before Phase 8 certification. Run `lint_workflows.py --file [name].md --quiet` and check the output. CRITICAL findings block Sovereign grade. WARNING findings must be documented in the certificate's Deferred Items. A workflow certified Sovereign with unresolved CRITICAL linter findings is grade fraud.
 20. **[INJECTED 2026-05-25 — Format standard, /nodelete]** Phase headings MUST use `## PHASE N — [Title]` format. STRICT RULES entries MUST use `N. ` numbering at line start. These are the only heading formats the suite linter recognizes. Non-standard formats (STEP, Step, # Phase) make the workflow invisible to governance tooling.
+21. **[INJECTED 2026-06-12 — Registry hook, /nodelete]** In ticket mode, Step TM-6 (Suite Learning Registry pass) runs after TM-5. Run `registry/registry.py --workspace ... --threshold 10`; on `verdict: REVIEW`, ingest `manifest/CONTRADICTION_REGISTRY.md` and judge whether a real recurring pattern warrants a `/helpdesk-tickets` entry — the engine aggregates deterministically but never files tickets or judges significance. The registry is engine-authored, never LLM-authored.
 
 ---
 
@@ -821,3 +839,4 @@ This turns the hardening process into a living evolutionary system that accelera
 8. **2026-05-21**: `[PORTED — Claude Code migration]` Pointer/Payload architecture retired. Merged into single command file at `~/blueprint-workflows/claude-commands/harden-workflow.md`. Standard Version incremented to 3. GLOSSARY: Pointer file, Payload file, Injection cap entries marked RETIRED with historical preservation per /nodelete; Command file term added; Sovereign grade criteria updated for Claude Code. Sovereign Standard grades table updated to remove P/P criterion, replace with single merged command file criterion. THE POINTER/PAYLOAD DECISION section: marked RETIRED, historical content preserved per /nodelete. Phase 0b INTAKE MANIFEST: updated to single command file architecture; Orphaned Payload Detection retired (Antigravity-specific). Phase 0c: `view_file` → Read tool. Phase 1 Assessment Card: Architecture section replaced with File Location section. Phase 2: renamed from "Structural Hardening (Pointer/Payload Conversion)" to "Structural Hardening"; P/P conversion content retired; Sovereign Scaffold Generator updated to Claude Code single-file format. Phase 3: pointer file template replaced with single command file frontmatter standard. Phase 4d: `global_workflows/` → `~/blueprint-workflows/claude-commands/`. Phase 5b: `/triage/core.md` → `~/blueprint-workflows/claude-commands/triage.md`. Phase 7: `view_file` → Read tool; pointer routing test updated to command file test. Phase 7c: `core.md` → single command file. Phase 8: Hardening Certificate template updated (no P/P fields; symlink field added). SUITE-WIDE AUDIT MODE: `list_dir` → Bash `ls`; `view_file` → Read tool; `global_workflows/claude-commands/` path; Suite Audit Table reference data marked STALE. STRICT RULES: 1, 4, 8, 9, 11, 13, 14 updated for Claude Code. HOW TO BEGIN: `view_file` → Read tool. TICKET MODE PROTOCOL: `ls` and `mv` paths updated to `~/blueprint-workflows/helpdesk-tickets/`. INTEGRATION: `global_workflows` → blueprint-workflows paths.
 9. **2026-05-24**: `[INJECTED — Ticket archival step, /nodelete]` Step TM-5 added to TICKET MODE PROTOCOL: after all tickets processed, scan for CLOSED_* files older than 7 days and move to `helpdesk-tickets/archive/`. Preserves full content and CLOSED_ prefix — move, not delete, per /nodelete. STRICT RULE 18 added (archival mandatory at end of every ticket-mode session). Standard Version: 3.
 9. **2026-05-25**: `[INJECTED — Linter integration + Format standard, /nodelete]` Three additions: (a) Format standard injected into Scaffold Generator — mandatory `## PHASE N` and `N. ` formats for linter recognition. (b) Phase 7d Linter Validation Gate — runs `lint_workflows.py` before certification; CRITICAL findings block Sovereign grade. (c) STRICT RULES 19-20 added (linter gate mandatory, format standard mandatory). Standard Version: 3.
+10. **2026-06-12**: `[INJECTED — Registry hook, /nodelete]` Wired the Suite Learning Registry into TICKET MODE: Step TM-6 (after TM-5) runs `scripts/registry/registry.py` to aggregate the `.history/` ledgers + ticket corpus into `manifest/CONTRADICTION_REGISTRY.md`, compute a reviewed-watermark delta, and emit a verdict; on REVIEW the agent ingests and may file a /helpdesk-tickets entry (engine never files tickets or judges significance — no Hallucinated Success). STRICT RULE 21 added (strict_rule_count 20→21). Implements helpdesk ticket `20260612_contradiction-registry_engine.md`. content_hash recomputed. Standard Version: 3.
