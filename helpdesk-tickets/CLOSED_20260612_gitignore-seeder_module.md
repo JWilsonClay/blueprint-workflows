@@ -51,8 +51,30 @@ The Sovereign Suite now writes local-only artifacts into every workspace it touc
 Give `/sentinel` a **gitignore-hygiene responsibility** via a dedicated, config-driven seeder module — so every workspace the suite operates on automatically receives correct, security-aware ignore coverage, written non-destructively (managed block, never overwrite) and tuned from one editable config in the governance layer. Pair it with a **detect-and-warn → `/gitclean`** handoff for secrets already in history, so the tool closes the *future*-leak gap without giving false confidence about *past* commits. This converts a recurring manual, error-prone, security-sensitive chore into an autonomous, auditable, suite-standard behavior.
 
 ---
-**Status**: **OPEN**
-**Verification**: PENDING — scoped backlog build. Closes when `scripts/gitignore/gitignore_seeder.py` + seed config exist, are invoked by the `/sentinel` flow, pass the four acceptance tests, and a live run seeds a target workspace's managed block non-destructively with the detect-and-warn handoff functioning.
+
+## 6. Resolution (2026-06-12)
+
+Built `scripts/gitignore/` as a self-contained, config-driven seeder module — a sibling of `doorway.py` / `registry.py`, following the established package shape (`__init__.py` with `__version__`, main engine, `reporter.py`, `_utils.py`).
+
+**Delivered:**
+- `gitignore/gitignore_seeder.py` — `GitignoreSeeder` engine + CLI (`--workspace`, `--config`, `--report-only`, `--output-json`, `--quiet`). Non-destructive managed-block splice (idempotent, timestamp-free), permission-preserving atomic write.
+- `gitignore/seed.toml` — the editable seed config (suite / security / noise categories; `scan_secrets = true` flags the warn set). A hardcoded `DEFAULT_SEED` in `config.py` is the fallback if the toml/`tomllib` is unavailable.
+- `gitignore/config.py` — config load + deterministic `render_block()`. `gitignore/matcher.py` — focused gitignore-semantics matcher for the detect-and-warn pass. `gitignore/_utils.py` — `atomic_write` (CWE-362/732), `safe_read` (CWE-400), `assert_within` (CWE-22). `gitignore/reporter.py` — human + JSON.
+- **Path containment**: `assert_safe_target()` refuses the filesystem root, `$HOME` root, and non-existent targets (exit 2).
+- **Detect-and-warn → /gitclean handoff**: intersects security patterns with `git ls-files`; already-tracked secrets are reported with an explicit `/gitclean --mode a` recommendation. The seeder never rewrites history and never implies past protection.
+- **`/sentinel` integration**: new **Step 1d (Gitignore Hygiene Seed)** in Phase 1 of `claude-commands/sentinel.md`; STRICT RULE 1 reconciled via a marked EXCEPTION (the `.gitignore` managed-block write is the sole authorized project-file write); STRICT RULE 8 annotated; SCRIPTS DEPENDENCY + Change Log #4 updated. All edits /nodelete-compliant.
+
+**Verification — DONE:**
+- Four acceptance tests + extras in `scripts/tests/test_gitignore.py`: **15/15 PASS**. Full suite: 151 tests, the only failure is the pre-existing, unrelated `test_core.test_import_patterns_python`.
+  1. Idempotency — two runs → byte-identical file (md5 match), single managed block. ✔
+  2. Existing-`.gitignore` preservation — user entries untouched, ahead of the block. ✔
+  3. Path-containment refusal — `/`, `$HOME`, non-existent → `ValueError`/exit 2. ✔
+  4. Detect-and-warn — planted tracked `.env`/`id_rsa` fire the warning; non-secret `app.py` does not. ✔
+- **Live runs**: temp git workspace (full create → preserve → warn → idempotent → refuse demo) and this repo (`blueprint-workflows`) — managed block seeded, secret scan clean, idempotent re-run confirmed, zero git diff (this repo's `.gitignore` is self-ignored).
+
+---
+**Status**: **CLOSED** (2026-06-12) — file renamed with `CLOSED_` prefix per suite convention.
+**Verification**: COMPLETE — module + seed config exist, invoked by `/sentinel` Step 1d, 4 acceptance tests pass (15/15 suite), live run seeded a target workspace's managed block non-destructively with the detect-and-warn → `/gitclean` handoff functioning.
 
 ---
 *Signed,*

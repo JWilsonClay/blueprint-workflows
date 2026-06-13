@@ -119,6 +119,40 @@ Extract from the JSON:
 - `metrics.created` / `metrics.repairs` — self-healing actions taken during this scan
 - `zero_finding` — boolean: true = workspace integrity verified
 
+### Step 1d — Gitignore Hygiene Seed (SILENT)
+
+**[INJECTED 2026-06-12 — ticket 20260612_gitignore-seeder_module.md]**
+
+**Objective**: Ensure the workspace carries correct, security-aware `.gitignore`
+coverage for suite-generated artifacts (`.history/`, `quarantine/`,
+`.workflow_state/`) and secrets — and warn if any secret is *already tracked*.
+
+```bash
+python3 ~/blueprint-workflows/scripts/gitignore/gitignore_seeder.py \
+  --workspace {WORKSPACE_PATH} \
+  --output-json
+```
+
+The seeder is **non-destructive and idempotent**: it writes only the clearly-marked
+managed block between its markers and never touches the user's existing entries.
+A re-run with no config change rewrites nothing.
+
+Parse the JSON:
+- `block_action` — `created` / `block-appended` / `block-updated` / `unchanged`
+- `tracked_secrets` — list of `{path, pattern}` for secret/credential files that
+  are **already tracked by git** (the gap a `.gitignore` cannot close)
+- `git_repo` — false means the secret scan was skipped (not a git repo)
+
+**If `tracked_secrets` is non-empty**: this is a security finding. Surface it in the
+Sentinel Report (Phase 3) as a HIGH-severity item and recommend **`/gitclean --mode a`** —
+a `.gitignore` prevents only *future* commits; an already-committed secret needs a
+history rewrite, which is `/gitclean`'s job. The seeder must NOT imply the secret is
+now protected, and never scrubs history itself.
+
+**On seeder failure** (non-zero exit / invalid JSON): this is non-fatal. Log
+`[SENTINEL] GITIGNORE SEED SKIPPED — seeder.py could not complete` and continue.
+Unlike the doorway scan (Rule 4), a gitignore-seed failure does not halt the session.
+
 ---
 
 ## PHASE 1.5 — AGENT BREADCRUMB POPULATION (SILENT)
@@ -365,14 +399,14 @@ workspace, then produce a unified Routing Map that covers all workspaces.
 
 ## STRICT RULES (never violate)
 
-1. **Sentinel is read-only.** The only filesystem writes permitted during Phases 0–3 are within `{workspace}/.doorway/` — the Doorway state directory. No workspace substrate files, no workflow files, no project code files may be modified. If you find yourself about to write to a project file, stop.
+1. **Sentinel is read-only.** The only filesystem writes permitted during Phases 0–3 are within `{workspace}/.doorway/` — the Doorway state directory. No workspace substrate files, no workflow files, no project code files may be modified. If you find yourself about to write to a project file, stop. **[EXCEPTION — INJECTED 2026-06-12, ticket 20260612_gitignore-seeder_module.md]** Step 1d's gitignore seeder is an explicitly authorized write channel for exactly one project file, `{workspace}/.gitignore`, and only the managed block between its markers. The write is non-destructive (the user's existing entries are never touched), additive-only, and idempotent — on par with doorway.py's README self-healing. No other project-file write is permitted.
 2. **One question rule.** If the workspace path cannot be resolved, ask exactly one question. Do not ask for additional context. The user answers; you proceed.
 3. **No autonomous downstream execution.** Sentinel surfaces the routing map and waits for the user to confirm. It does not invoke `/investigate`, `/document`, or any other workflow without explicit user acknowledgment. The exception is helpdesk ticket filing (Phase 4a) — this is always autonomous when HIGH findings are present.
 4. **Halt on scan failure.** If `doorway.py` exits non-zero or produces unparseable JSON, do not attempt to interpret the error or produce a partial report. File a helpdesk ticket and halt.
 5. **System path protection.** Refuse to scan `/etc`, `/usr`, `/bin`, `/sbin`, `/lib`, `/proc`, `/sys`, or any path that is a direct child of `/home` (i.e., `/home` itself, not a user's home directory subdirectory). Print: `[SENTINEL] Refused: system path scanning is not permitted`.
 6. **No jargon without definition.** Every technical term in the report that the user might not know must be defined inline on first use. Example: "hash-matched (meaning the directory's content fingerprint has not changed since the last scan)".
 7. **Confidence is declared.** The Sentinel Report must declare its scan confidence: HIGH (doorway.py ran successfully and produced valid JSON), MEDIUM (partial JSON, some fields missing), or LOW (doorway.py failed, report is estimated from last snapshot). A report without a confidence declaration is incomplete.
-8. **Mute Witness on all workspace files.** Even if a README is corrupt or missing in the target workspace, do not rewrite it. The `doorway.py` script's self-healing is the only authorized write channel for workspace content during a sentinel scan. If you observe corruption, report it — do not fix it yourself.
+8. **Mute Witness on all workspace files.** Even if a README is corrupt or missing in the target workspace, do not rewrite it. The `doorway.py` script's self-healing is the only authorized write channel for workspace content during a sentinel scan **(plus the gitignore seeder's managed-block write — see the Rule 1 exception)**. If you observe corruption, report it — do not fix it yourself.
 
 ---
 
@@ -418,12 +452,14 @@ Exception: the pre-flight failure halt (Phase 0b) and the scan failure halt (Pha
 
 ```
 Required: ~/blueprint-workflows/scripts/doorway/doorway.py
-Runtime:  python3 (stdlib only — hashlib, os, pathlib, json, argparse, datetime)
+Optional: ~/blueprint-workflows/scripts/gitignore/gitignore_seeder.py  (Step 1d — non-fatal if absent)
+Runtime:  python3 (stdlib only — hashlib, os, pathlib, json, argparse, datetime, tomllib, subprocess)
 Data dir: {workspace}/.doorway/ (auto-created on first scan; owner-only 0o700)
+Writes:   {workspace}/.gitignore managed block (Step 1d only; non-destructive, idempotent)
 ```
 
-If the scripts path changes: update the script path in Phase 0b (Pre-flight Validation)
-and Phase 1a (Execute the Scan).
+If the scripts path changes: update the script path in Phase 0b (Pre-flight Validation),
+Phase 1a (Execute the Scan), and Phase 1d (Gitignore Hygiene Seed).
 
 ---
 
@@ -438,3 +474,4 @@ and Phase 1a (Execute the Scan).
    (c) `README.md.template`: Removed hardcoded `.blueprints architecture` project-specific reference; replaced with neutral `Sovereign Workspace Substrate architecture`.
    (d) `breadcrumb.py:propose()`: Enhanced to enumerate and include directory file inventory (names, count, subdirectory list) in the log entry, giving the LLM agent in Phase 1.5 the structural facts it needs without an additional filesystem scan. All changes follow /nodelete discipline. Standard Version: 2.
 3. **2026-05-21**: `[PORTED — Claude Code migration]` Pointer/Payload architecture retired. Merged into single command file at `~/blueprint-workflows/claude-commands/sentinel.md`. All doorway.py paths updated: `/home/jwils/.gemini/antigravity/global_workflows/scripts/doorway/doorway.py` → `~/blueprint-workflows/scripts/doorway/doorway.py` (Phase 0b, Phase 1a, Phase 1.5c, SCRIPTS DEPENDENCY). Phase 1.5b Step 2: `view_file` → Read tool. Phase 1.5b Step 4: `run_command` → Bash tool. SCRIPTS DEPENDENCY stale-path update note reworded to drop pointer-file reference.
+4. **2026-06-12**: `[INJECTED — ticket 20260612_gitignore-seeder_module.md, /nodelete]` Gave /sentinel a gitignore-hygiene responsibility. (a) New **Step 1d (Gitignore Hygiene Seed)** in Phase 1: invokes `scripts/gitignore/gitignore_seeder.py --workspace {PATH} --output-json`, which writes a non-destructive, idempotent managed block (`.history/`, `quarantine/`, `.workflow_state/`, security + noise patterns) into the workspace `.gitignore` from an editable `seed.toml`, and runs a detect-and-warn pass intersecting security patterns with `git ls-files`. Already-tracked secrets become a HIGH finding routed to `/gitclean --mode a` (gitignore stops only *future* leaks; history rewrite is /gitclean's job). Seeder failure is non-fatal (unlike the doorway scan halt, Rule 4). (b) **STRICT RULE 1** reconciled via a marked EXCEPTION: the seeder's managed-block write to `{workspace}/.gitignore` is an explicitly authorized write channel (the only project-file write permitted), on par with doorway's README self-healing. (c) **STRICT RULE 8** annotated to acknowledge the second authorized write channel. (d) SCRIPTS DEPENDENCY updated (seeder path, `tomllib`/`subprocess` runtime, `.gitignore` write note). Standard Version: 2.

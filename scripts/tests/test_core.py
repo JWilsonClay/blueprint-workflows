@@ -40,7 +40,12 @@ class TestRefactorCore(unittest.TestCase):
         self.assertIn("from foo.bar.baz", patterns)
         self.assertIn("import foo.bar.baz", patterns)
         self.assertIn("from foo.bar", patterns)
-        self.assertIn("import foo", patterns)
+        # The bare root module is deliberately NOT generated when the path has
+        # more than one segment — see import_patterns.py:31 ("Skip the root
+        # module to avoid massive false positives"). Grepping `import foo` for a
+        # moved file under package `foo/` would match every file in the project.
+        self.assertNotIn("import foo", patterns)
+        self.assertNotIn("from foo", patterns)
 
     def test_import_patterns_javascript(self):
         patterns = path_to_import_patterns("src/utils.ts", "javascript")

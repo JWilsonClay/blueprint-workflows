@@ -1,0 +1,54 @@
+# seed.toml — Sovereign Suite gitignore seed config
+# ==================================================
+# The editable surface for the gitignore seeder. Tune these categories without
+# touching code. Each category renders, in order, into the managed block written
+# to the target workspace's .gitignore. Patterns use standard gitignore syntax.
+#
+# A category with `scan_secrets = true` is ALSO used for the detect-and-warn pass:
+# its patterns are intersected with `git ls-files` to find secrets that are
+# ALREADY TRACKED. The seeder warns and recommends /gitclean for those — it never
+# scrubs history itself.
+#
+# Category render order is the order the [categories.*] tables appear below.
+
+[categories.suite]
+title = "Suite-generated / ingestion-banned (never tracked)"
+patterns = [
+    ".history/",
+    "quarantine/",
+    ".workflow_state/",
+    "deprecated/",
+    ".doorway/",
+]
+
+[categories.security]
+title = "Security — secrets & credentials (NEVER commit)"
+scan_secrets = true
+patterns = [
+    ".env",
+    ".env.*",
+    "secrets/",
+    "*.key",
+    "*.pem",
+    "id_rsa*",
+    "*.p12",
+    "*.pfx",
+    "credentials*.json",
+    "service-account*.json",
+    ".aws/",
+]
+
+[categories.noise]
+title = "Common noise (build artifacts, caches, editor cruft)"
+patterns = [
+    "__pycache__/",
+    "*.pyc",
+    ".venv/",
+    "node_modules/",
+    "dist/",
+    "build/",
+    ".DS_Store",
+    "*.log",
+    ".idea/",
+    ".vscode/",
+]
