@@ -4,10 +4,10 @@
   "title": "Focus Triad Evidence Report",
   "description": "Structured evidence report emitted by scripts/focus/focus.py and consumed by the /focus-plan workflow. The report is the deterministic, incorruptible substitute for the per-item SEARCH EVIDENCE blocks /focus-plan formerly asked the agent to hand-write.",
   "type": "object",
-  "required": ["schema_version", "tool", "workspace", "plan_found", "items", "summary"],
+  "required": ["schema_version", "tool", "workspace", "plan_found", "items", "summary", "tasks_md"],
   "additionalProperties": false,
   "properties": {
-    "schema_version": {"type": "string", "const": "1.0"},
+    "schema_version": {"type": "string", "const": "1.1"},
     "tool": {"type": "string", "const": "focus"},
     "tool_version": {"type": "string"},
     "generated_at": {"type": "string", "format": "date-time"},
@@ -98,6 +98,49 @@
     "notes": {
       "type": "array",
       "items": {"type": "string"}
+    },
+    "tasks_md": {
+      "type": "object",
+      "description": "[schema 1.1] tasks.md + BUILD_RECEIPTS.md phase status, the mechanical fact PHASE 2 adjudication uses to tell a legitimately not-yet-built item (PENDING) apart from Ghost Logic (MISMATCH). found=false means tasks.md does not exist — the plan has no execution phases yet, so absences are presumptively PENDING.",
+      "required": ["found", "path", "receipts_file_found", "phases"],
+      "additionalProperties": false,
+      "properties": {
+        "found": {"type": "boolean"},
+        "path": {"type": ["string", "null"]},
+        "receipts_file_found": {"type": "boolean", "description": "Whether .workflow_state/receipts/BUILD_RECEIPTS.md exists. False does not penalize a phase — not every workspace uses the receipts pipeline."},
+        "phases": {
+          "type": "array",
+          "description": "One entry per 'Phase N' / 'Stage N' titled header found in tasks.md. Empty does not necessarily mean no phases exist — it can mean tasks.md uses a naming convention this parser does not recognize; treat empty as 'structure not recognized', not 'no phases'.",
+          "items": {
+            "type": "object",
+            "required": ["title", "source_line", "checkboxes", "status", "receipt_status"],
+            "additionalProperties": false,
+            "properties": {
+              "title": {"type": "string"},
+              "source_line": {"type": "integer", "description": "1-based line of the phase header in tasks.md."},
+              "checkboxes": {
+                "type": "object",
+                "required": ["done", "open", "in_progress"],
+                "properties": {
+                  "done": {"type": "integer", "minimum": 0},
+                  "open": {"type": "integer", "minimum": 0},
+                  "in_progress": {"type": "integer", "minimum": 0}
+                }
+              },
+              "status": {
+                "type": "string",
+                "enum": ["complete", "in_progress", "not_started", "no_checkboxes"],
+                "description": "Derived purely from this phase's own checkbox tally."
+              },
+              "receipt_status": {
+                "type": "string",
+                "enum": ["found_complete", "found_incomplete", "not_found", "receipts_file_absent"],
+                "description": "Cross-reference against BUILD_RECEIPTS.md by normalized phase-name match. found_complete + status=complete is the strongest 'safe to treat absence as Ghost Logic' signal. status=complete with receipt_status=not_found (checkboxes say done, no matching receipt exists despite the file being present) is a discrepancy worth flagging on its own — not an automatic verdict either way."
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

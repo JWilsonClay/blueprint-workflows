@@ -42,17 +42,20 @@ if str(_HERE.parent) not in sys.path:
 
 from focus import __version__
 from focus.anchor_scanner import AnchorScanner
+from focus.phase_status import build_phase_status_report
 from focus.plan_parser import load_and_parse, locate_plan
 from focus.reporter import FocusReporter
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
 
 _ADVISORY = (
     "verdict_hint is a mechanical signal from substrate coverage only. The "
     "/focus-plan agent makes the final GREEN/YELLOW/RED call after intent "
     "interpretation, the Negative Space Scan, and the HALT gate. An absent "
-    "anchor may be Ghost Logic OR a legitimately not-yet-built item — only "
-    "judgment can tell them apart."
+    "anchor may be Ghost Logic OR a legitimately not-yet-built item — check "
+    "tasks_md.phases for that item's phase status before classifying it. No "
+    "tasks_md ('found': false) means the plan has no execution phases yet — "
+    "treat absences as PENDING, not a failure signal."
 )
 
 
@@ -77,6 +80,7 @@ class FocusVerifier:
             "checkboxes": {"open": 0, "done": 0, "in_progress": 0},
             "items": [],
             "notes": [],
+            "tasks_md": build_phase_status_report(self.workspace).as_dict(),
         }
 
         if plan_path is None:

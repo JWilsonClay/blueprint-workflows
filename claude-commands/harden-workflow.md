@@ -1,11 +1,11 @@
 ---
-description: "Sovereign Workflow Hardening Protocol — Audits and elevates workflow .md files to the highest hardening grade using established Sovereign Suite quality patterns"
+description: "Sovereign Workflow Hardening Protocol — Audits and elevates workflow .md files to the highest hardening grade using established Sovereign Suite quality patterns. v4: ticket mode redirects SUBSTANTIVE-LOGIC tickets instead of silently discovering they're out of scope."
 type: meta
 grade: Sovereign
-version: 3
-content_hash: "sha256:1aec1899c07558cf"
-last_hardened: "2026-05-25"
-strict_rule_count: 21
+version: 4
+content_hash: "sha256:2a20b0428b047665"
+last_hardened: "2026-07-04"
+strict_rule_count: 22
 phase_count: 13
 context_retention: high
 flags:
@@ -119,7 +119,27 @@ If zero open tickets: halt. Report: `TICKET MODE: No open tickets found in helpd
 
 If one or more open tickets: list them to the user and proceed.
 
-*Step TM-2: For each open ticket — read and extract:*
+*Step TM-1.5: Check Root Cause Type before processing each ticket. [ADDED 2026-07-04, resolves helpdesk-tickets/CLOSED_20260704_ticket-remediation-authority_workflow.md]*
+
+Read the ticket's Root Cause Type field (`helpdesk-tickets.md` Phase 0a / header block — STRUCTURAL or SUBSTANTIVE-LOGIC).
+
+- **STRUCTURAL**: proceed to Step TM-2 as normal.
+- **SUBSTANTIVE-LOGIC**: do not proceed through Phase 1-8. This workflow cannot remediate it — STRICT RULE 3 excludes protocol-logic changes, and the opening line of this file excludes code. Report immediately and move to the next ticket (or halt entirely in single-ticket mode):
+  ```
+  TICKET MODE REDIRECT:
+    Ticket:            [filename]
+    Root Cause Type:   SUBSTANTIVE-LOGIC
+    /harden-workflow cannot remediate this — it hardens STRUCTURE, not logic or
+    code (see this file's opening line and STRICT RULE 3).
+    Route to: direct, quality-verified remediation (role.md "On code authority"),
+    closed via /helpdesk-tickets Phase 4's Remediation Record.
+  ```
+  This is a fast, explicit redirect — never let a SUBSTANTIVE-LOGIC ticket fall
+  through to a Phase 1 Assessment Card that only discovers the mismatch several
+  steps later, via "already Sovereign, nothing to do."
+- **No Root Cause Type declared** (ticket filed before 2026-07-04, predates this field): treat provisionally as STRUCTURAL and proceed to TM-2. If Phase 1's Assessment Card then shows the file already meets every Sovereign criterion, that is itself evidence the ticket was actually SUBSTANTIVE-LOGIC and was mis-routed — note this in the eventual certificate rather than silently halting with nothing to report.
+
+*Step TM-2: For each STRUCTURAL open ticket — read and extract:*
 - **Faulting workflow**: named explicitly in the ticket body ("Faulting workflow: /[name]" or from Subject line)
 - **Root cause**: Section 2 of the ticket — the specific structural gap
 - **Recommendations**: Section 5 of the ticket — the workflow-level structural change requested
@@ -129,6 +149,7 @@ If one or more open tickets: list them to the user and proceed.
 TICKET INTAKE MANIFEST:
   Ticket file:        [filename]
   Faulting workflow:  /[name]
+  Root Cause Type:    STRUCTURAL
   Urgency:            [level]
   Root cause:         [one-line summary]
   Recommended fix:    [one-line summary from Section 5]
@@ -732,6 +753,7 @@ This phase fulfills the biology/immunology transplant: the suite now has herd im
 19. **[INJECTED 2026-05-25 — Linter gate, /nodelete]** Phase 7d (Linter Validation Gate) is mandatory before Phase 8 certification. Run `lint_workflows.py --file [name].md --quiet` and check the output. CRITICAL findings block Sovereign grade. WARNING findings must be documented in the certificate's Deferred Items. A workflow certified Sovereign with unresolved CRITICAL linter findings is grade fraud.
 20. **[INJECTED 2026-05-25 — Format standard, /nodelete]** Phase headings MUST use `## PHASE N — [Title]` format. STRICT RULES entries MUST use `N. ` numbering at line start. These are the only heading formats the suite linter recognizes. Non-standard formats (STEP, Step, # Phase) make the workflow invisible to governance tooling.
 21. **[INJECTED 2026-06-12 — Registry hook, /nodelete]** In ticket mode, Step TM-6 (Suite Learning Registry pass) runs after TM-5. Run `registry/registry.py --workspace ... --threshold 10`; on `verdict: REVIEW`, ingest `manifest/CONTRADICTION_REGISTRY.md` and judge whether a real recurring pattern warrants a `/helpdesk-tickets` entry — the engine aggregates deterministically but never files tickets or judges significance. The registry is engine-authored, never LLM-authored.
+22. **[INJECTED 2026-07-04 — Root Cause Type redirect, /nodelete, resolves helpdesk-tickets/CLOSED_20260704_ticket-remediation-authority_workflow.md]** In ticket mode, Step TM-1.5 (Root Cause Type check) runs before TM-2. A SUBSTANTIVE-LOGIC ticket must be redirected immediately, not processed through Phase 1-8 — this workflow hardens structure, not logic or code (STRICT RULE 3, opening line), and cannot fix what it was never built to touch. A ticket with no Root Cause Type (filed before this field existed) is treated as STRUCTURAL provisionally; if Phase 1's Assessment Card then shows the file already meets every Sovereign criterion, that is itself evidence the ticket was actually SUBSTANTIVE-LOGIC and was mis-routed — note this in the certificate rather than silently halting with nothing to report.
 
 ---
 
@@ -840,3 +862,4 @@ This turns the hardening process into a living evolutionary system that accelera
 9. **2026-05-24**: `[INJECTED — Ticket archival step, /nodelete]` Step TM-5 added to TICKET MODE PROTOCOL: after all tickets processed, scan for CLOSED_* files older than 7 days and move to `helpdesk-tickets/archive/`. Preserves full content and CLOSED_ prefix — move, not delete, per /nodelete. STRICT RULE 18 added (archival mandatory at end of every ticket-mode session). Standard Version: 3.
 9. **2026-05-25**: `[INJECTED — Linter integration + Format standard, /nodelete]` Three additions: (a) Format standard injected into Scaffold Generator — mandatory `## PHASE N` and `N. ` formats for linter recognition. (b) Phase 7d Linter Validation Gate — runs `lint_workflows.py` before certification; CRITICAL findings block Sovereign grade. (c) STRICT RULES 19-20 added (linter gate mandatory, format standard mandatory). Standard Version: 3.
 10. **2026-06-12**: `[INJECTED — Registry hook, /nodelete]` Wired the Suite Learning Registry into TICKET MODE: Step TM-6 (after TM-5) runs `scripts/registry/registry.py` to aggregate the `.history/` ledgers + ticket corpus into `manifest/CONTRADICTION_REGISTRY.md`, compute a reviewed-watermark delta, and emit a verdict; on REVIEW the agent ingests and may file a /helpdesk-tickets entry (engine never files tickets or judges significance — no Hallucinated Success). STRICT RULE 21 added (strict_rule_count 20→21). Implements helpdesk ticket `20260612_contradiction-registry_engine.md`. content_hash recomputed. Standard Version: 3.
+11. **2026-07-04**: `[INJECTED — Root Cause Type redirect, resolves helpdesk-tickets/CLOSED_20260704_ticket-remediation-authority_workflow.md]` **Defect**: this workflow's own text already excluded protocol-logic and code changes (STRICT RULE 3, opening line) — correctly — but ticket mode had no way to know a ticket was out of scope *before* running the full Phase 1-8 ceremony. A SUBSTANTIVE-LOGIC ticket (root cause: wrong or missing judgment logic, sometimes requiring code) would reach Phase 1, find the target file already meets every structural Sovereign criterion, and halt on "already Sovereign, nothing to do" — technically correct, but only discoverable several steps in, with no explanation connecting the halt to the actual reason. Confirmed live against three tickets this same day (`/limitations`, `/focus-plan`, `/implementation-plan`, `/role`) that all needed direct remediation instead of this workflow. **Fix**: added Step TM-1.5 — checks the new Root Cause Type field (`helpdesk-tickets.md` v3) immediately after the open-ticket scan, before TM-2's intake. A SUBSTANTIVE-LOGIC ticket is redirected immediately with an explicit `TICKET MODE REDIRECT` block pointing to `role.md`'s "On code authority" and `/helpdesk-tickets`' Remediation Record closure — never silently processed through to a confusing halt. A ticket with no Root Cause Type (filed before this field existed) is treated as STRUCTURAL provisionally, with a note that an "already Sovereign" Phase 1 result on such a ticket is itself evidence it was mis-routed. TM-2's intake manifest gains a Root Cause Type field. STRICT RULE 22 added (21→22). No change to STRICT RULE 3 or the structure-only mandate — both were already correct; this closes the gap in *discovering* when they apply, not what they say. Frontmatter: version 3→4, `last_hardened` 2026-07-04. Companion edits: `role.md` ("On code authority" — the bounded authority this redirect assumes) and `helpdesk-tickets.md` (the Root Cause Type field and forked pipeline this redirect reads). Standard Version: 3 (this addition is a ticket-mode routing fix, not a Sovereign Standard criteria change).

@@ -23,4 +23,4 @@ Protocol that /focus-plan STRICT RULE 12 only requests).
 Architectural sibling: scripts/doorway/ (backs /sentinel the same way).
 """
 
-__version__ = "1.0"
+__version__ = "1.1"

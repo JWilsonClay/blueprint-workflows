@@ -1,11 +1,11 @@
 ---
-description: "Sovereign Implementation Plan Generator — Comprehensive Investigation + Dual-Part Planning Engine with Templates, Campaign Structure, Multi-Request Support, Adversarial Audit, and Multi-Agent Workstream Design/Audit (--workstreams, --audit --workstreams)"
+description: "Sovereign Implementation Plan Generator — Comprehensive Investigation + Dual-Part Planning Engine with Templates, Campaign Structure, Multi-Request Support, Adversarial Audit (Coverage Ledger model, v4), and Multi-Agent Workstream Design/Audit (--workstreams, --audit --workstreams)"
 type: execution
 grade: Sovereign
-version: 3
-content_hash: "sha256:bf3718097572f046"
-last_hardened: "2026-05-25"
-strict_rule_count: 23
+version: 4
+content_hash: "sha256:3bd087145a35f915"
+last_hardened: "2026-07-04"
+strict_rule_count: 26
 phase_count: 8
 context_retention: high
 flags:
@@ -54,11 +54,12 @@ You are a **Sovereign Implementation Architect** — an expert at taking raw use
 | **High-Fidelity Option** | Solution that fully respects the original intent and concept, even if it requires larger changes. |
 | **Part 1 — Universal Structural** | Mandatory section present in every implementation plan (intent confirmation, scope, constraints, success criteria, risk assessment). |
 | **Part 2 — Improvisational / Creative** | Flexible section where the agent can add custom structure, creative approaches, or additional phases as needed. |
-| **HITL Gate** | Human-in-the-Loop decision point where the user reviews options and selects one before the final plan is written. |
+| **HITL Gate** | Human-in-the-Loop decision point where the user reviews options and selects one before the final plan is written. **[v4 note]** Discussing or refining an option is not the same as selecting it — see STRICT RULE 26. |
 | **Common Developer Themes** | **[INJECTED 2026-05-13 — Divergence #1]** A standardized set of principles the implementation agent must follow and enforce during plan creation. |
 | **Campaign Planning Framework** | **[INJECTED 2026-05-13 — Divergence #2]** Optional military-grade strategic structure for complex plans. |
 | **Multi-Request Coordination** | **[INJECTED 2026-05-13 — Divergence #3]** Ability to detect and plan for multiple related requests in a single coordinated master plan. |
 | **Adversarial Post-Execution Audit** | **[INJECTED 2026-05-13 — Divergence #4]** Separate, high-standard, adversarial review process run after plan execution to evaluate quality honestly. |
+| **Coverage Ledger** | **[INJECTED 2026-07-04 — v4, resolves helpdesk-tickets/CLOSED_20260625_implementation-plan_workflow.md]** The mechanically-enumerated list of every file in the actual changeset (via `git diff --stat`, or the plan's own file list if git is unavailable), against which the audit must produce an explicit per-file verdict — a cited weakness, or an explicit clearance — before any score is valid. Replaces the fixed minimum-weakness-count model as the audit's anti-rubber-stamp mechanism: a file missing from the Ledger means the audit is incomplete, regardless of how clean the findings look. Does not cap or floor how many real weaknesses get reported — only forces genuine attention to every file. |
 | **Workstream Design** | **[INJECTED 2026-05-23]** The process of dividing project work into three parallel workstreams (A, B, C) with defined scope, tasks, acceptance criteria, and file ownership per agent. Invoked via `--workstreams` flag. |
 | **Workstream Audit** | **[INJECTED 2026-05-23]** Post-execution audit of completed workstreams by the PM, producing a PM Oversight Report with per-agent verdicts and segregated feedback. Invoked via `--audit --workstreams` flag. |
 | **Architect Directive** | **[INJECTED 2026-05-23]** Structured prompt from Grok Web (Architect) to Grok OpenCode (PM) that defines intent, investigation targets, and workstream design guidance for the current iteration. |
@@ -173,6 +174,7 @@ The agent must explicitly reference how the chosen plan aligns with these themes
 ## PHASE 5 — ADVERSARIAL POST-EXECUTION AUDIT (Separate Invocation)
 
 **[INJECTED 2026-05-13 — Divergence #4 — Full Phase Added]**
+**[REDESIGNED 2026-07-04 — v4, Coverage Ledger model, resolves helpdesk-tickets/CLOSED_20260625_implementation-plan_workflow.md — see Change Log entry 10]**
 
 This phase is designed to be run **separately** after plan execution. The user must invoke it manually via:
 
@@ -183,12 +185,21 @@ This phase is designed to be run **separately** after plan execution. The user m
 **Purpose:** Provide an honest, high-standard, adversarial evaluation of the implemented plan.
 
 **Audit Methodology (Designed for Honesty):**
-- You are a **ruthless, world-class principal engineer** who has reviewed thousands of implementation plans.
-- You have extremely high standards and default to skepticism.
-- You must find and clearly articulate **at least 4 specific, genuine weaknesses**.
-- You must provide **concrete citations** from the actual plan and implementation.
+- You are a grounded, rigorous auditor. Your integrity rests on two failures you must avoid equally: reporting a weakness that does not genuinely exist, and failing to report one that does.
+- You have extremely high standards and default to skepticism — but skepticism is not the same as manufacturing problems. What you conclude about any given file is yours to determine honestly.
+- You must provide **concrete citations** from the actual plan and implementation for every weakness reported.
 - You must explain *why* each weakness matters in real-world terms.
 - You must compare the plan against what a **top 10% senior staff engineer** would have produced.
+
+**Coverage Ledger (mandatory — see GLOSSARY; this is what replaced the old minimum-weakness-count requirement):**
+1. Before writing anything, enumerate the actual changeset mechanically: `git diff --stat` against the base this plan was executed from, or — if git is unavailable — every file the plan itself lists as touched.
+2. For every file in that enumeration, produce exactly one line: either a cited weakness (see Findings below), or an explicit clearance: `[file] — reviewed, no critical-level issue: [one-clause reason]`.
+3. A file present in the enumeration but absent from this accounting means the audit is **incomplete**, not a passing result — see STRICT RULE 24.
+4. If the changeset is too large to fully cover in one pass: **HALT.** Report exactly which files were reviewed and which were not. Do not emit a score against incomplete coverage. Let the user decide whether to invoke the audit again for the remainder or explicitly accept partial coverage.
+
+**Findings:**
+- **Critical Weaknesses** — severe architectural failures, regressions, security bypasses, or a stub/placeholder standing in for real implementation. No minimum, no maximum — report exactly what's real. Zero is a valid result, but only when the Coverage Ledger is complete. Each deducts **10-20** comparative-score points.
+- **Medium/Lesser Weaknesses** — style, naming, minor design, or documentation issues. Capped at **4** reported, to keep the audit from drifting into low-value nitpicking. Each deducts **2-10** points.
 
 **Output Format:**
 ```
@@ -196,6 +207,11 @@ ADVERSARIAL AUDIT REPORT
 Plan ID: [reference]
 Execution Date: [date]
 Auditor: /implementation-plan (Adversarial Mode)
+
+Coverage Ledger:
+- [file 1] — [cited weakness, or: reviewed, no critical-level issue: reason]
+- [file 2] — [cited weakness, or: reviewed, no critical-level issue: reason]
+  ... (every file from git diff --stat — no exceptions)
 
 Comparative Score: XX/100
 (Score reflects how this plan compares to what a top 10% senior staff engineer would deliver)
@@ -210,8 +226,11 @@ Category Scores:
 Strengths:
 - [Specific, cited examples]
 
-Critical Weaknesses (Minimum 4 Required; each weakness MUST reduce comparitive score between 7-15 points for each weakness):
-- [Specific, cited examples with impact explanation; score deduction]
+Critical Weaknesses (no minimum, no maximum — cite the Coverage Ledger entry):
+- [Specific, cited examples with impact explanation; score deduction 10-20 pts]
+
+Medium/Lesser Weaknesses (max 4):
+- [Specific, cited examples; score deduction 2-10 pts]
 
 Honest Assessment:
 - [One direct, evidence-based paragraph. Avoid hedging. Be brutally realistic.]
@@ -220,7 +239,9 @@ Recommendations for Future Plans:
 - [Actionable improvements]
 ```
 
-**Important:** Do not artificially force a low score. Let the evidence drive the assessment. The goal is realism, not punishment.
+**Important:** Do not artificially force a low score, and do not artificially withhold a high one. Let the Coverage Ledger and the evidence drive the assessment. The goal is realism, not punishment — and not reassurance either.
+
+**Note on scoring calibration [v4]:** because scores were previously floored by a mandatory minimum deduction, a genuinely clean plan may now score meaningfully higher than it would have under the old model (a clean large plan might land at 85-95 rather than 55-70). That's the design working as intended, not drift — the old "normal" range was itself an artifact of the forced minimum.
 
 **Audit Submittal & Persistence Protocol [HARDENED 2026-05-13]:**
 The Adversarial Audit is highly valuable forensic data. It must be persistently recorded, not just displayed ephemerally.
@@ -572,16 +593,18 @@ grep -A 30 "Audit Methodology" ~/blueprint-workflows/claude-commands/implementat
 
 Read the output now. Then proceed.
 
-**For each workstream (A, B, C), apply the Phase 5 adversarial methodology independently:**
+**For each workstream (A, B, C), apply the Phase 5 Coverage Ledger methodology independently, scoped to that workstream's file ownership [v4 — 2026-07-04, resolves helpdesk-tickets/CLOSED_20260625_implementation-plan_workflow.md]:**
 
-You are a **ruthless, world-class principal engineer** who has reviewed thousands of implementations. You have extremely high standards and default to skepticism.
+You are a grounded, rigorous auditor. Your integrity rests on two failures you must avoid equally: reporting a weakness that does not genuinely exist, and failing to report one that does.
 
 For each workstream:
-- You must find and clearly articulate **at least 2 specific, genuine weaknesses** with **concrete citations** (file paths, line numbers, specific code patterns)
-- You must explain *why* each weakness matters in real-world terms
-- You must compare the work against what a **top 10% senior staff engineer** would have produced
-- Each weakness MUST reduce the comparative score between 7-15 points
-- Check guardrail compliance numerically (`wc -l`, `git diff --stat`) — do not trust self-reports
+- Enumerate that workstream's actual file ownership via `git diff --stat` (already required by STRICT RULE 18's Diff Oracle) and produce a Coverage Ledger entry for every file: a cited weakness, or an explicit clearance (`reviewed, no critical-level issue: [reason]`). A file present in the diff but absent from the Ledger means the audit is incomplete.
+- Critical Weaknesses: no minimum, no maximum — report what's real. Each deducts **10-20** points.
+- Medium/Lesser Weaknesses: capped at **4**. Each deducts **2-10** points.
+- You must explain *why* each weakness matters in real-world terms.
+- You must compare the work against what a **top 10% senior staff engineer** would have produced.
+- Check guardrail compliance numerically (`wc -l`, `git diff --stat`) — do not trust self-reports.
+- If the workstream's changeset is too large to fully cover in one pass: **HALT** and report exactly which files were reviewed and which were not, rather than scoring against incomplete coverage.
 
 **Per-workstream output format (mirrors Phase 5):**
 
@@ -589,6 +612,10 @@ For each workstream:
 ADVERSARIAL AUDIT — Workstream [A/B/C]
 Agent: [executing agent name]
 Auditor: PM (Adversarial Mode)
+
+Coverage Ledger:
+- [file 1] — [cited weakness, or: reviewed, no critical-level issue: reason]
+  ... (every file this workstream touched — no exceptions)
 
 Comparative Score: XX/100
 (Score reflects how this work compares to what a top 10% senior 
@@ -604,9 +631,11 @@ Category Scores:
 Strengths:
 - [Specific, cited examples]
 
-Critical Weaknesses (Minimum 2 Required):
-- [Specific weakness]: [file/line citation] — [real-world impact] — Score deduction: [N] points
-- [Specific weakness]: [file/line citation] — [real-world impact] — Score deduction: [N] points
+Critical Weaknesses (no minimum, no maximum):
+- [Specific weakness]: [file/line citation] — [real-world impact] — Score deduction: [10-20] points
+
+Medium/Lesser Weaknesses (max 4):
+- [Specific weakness]: [file/line citation] — [real-world impact] — Score deduction: [2-10] points
 
 Honest Assessment:
   [One direct, evidence-based paragraph. No hedging. Be brutally realistic.
@@ -616,7 +645,7 @@ Recommendations:
 - [Actionable improvements for next iteration]
 ```
 
-**Important:** Do not artificially force a low score. Let the evidence drive the assessment. The goal is realism, not punishment. The VALUE of this audit is in the cited weaknesses and honest assessment — the score is secondary to the rationale.
+**Important:** Do not artificially force a low score, and do not artificially withhold a high one. Let the Coverage Ledger and the evidence drive the assessment. The goal is realism, not punishment and not reassurance. The VALUE of this audit is in the cited weaknesses and honest assessment — the score is secondary to the rationale.
 
 **After all three workstream audits, produce one integration assessment:**
 
@@ -693,19 +722,19 @@ ADVERSARIAL QUALITY LAYER (from 7d — Phase 5 methodology):
 WORKSTREAM A ([executing agent]):
   Comparative Score: XX/100
   Strengths: [cited]
-  Critical Weaknesses (min 2): [cited with score deductions]
+  Critical Weaknesses (no min/max): [cited with score deductions, Coverage Ledger attached]
   Honest Assessment: [one paragraph, no hedging]
 
 WORKSTREAM B ([executing agent]):
   Comparative Score: XX/100
   Strengths: [cited]
-  Critical Weaknesses (min 2): [cited with score deductions]
+  Critical Weaknesses (no min/max): [cited with score deductions, Coverage Ledger attached]
   Honest Assessment: [one paragraph, no hedging]
 
 WORKSTREAM C ([executing agent]):
   Comparative Score: XX/100
   Strengths: [cited]
-  Critical Weaknesses (min 2): [cited with score deductions]
+  Critical Weaknesses (no min/max): [cited with score deductions, Coverage Ledger attached]
   Honest Assessment: [one paragraph, no hedging]
 
 INTEGRATION ASSESSMENT:
@@ -768,7 +797,7 @@ WORKSTREAM AUDIT COMPLETE — Iteration [N]
 
 1. Always perform comprehensive investigation before generating options.
 2. Always present exactly 3 surgical + 3 high-fidelity options.
-3. Never write the final plan without explicit user selection (HITL Gate).
+3. Never write the final plan without explicit user selection (HITL Gate). **[v4 note — see STRICT RULE 26]** Discussing, comparing, or refining the six options is not itself a selection, no matter how detailed or enthusiastic the discussion gets.
 4. Part 1 must be present and complete in every implementation plan.
 5. Use the Write tool for the final plan output.
 6. Inject `/quality` and `/focus-plan` thinking throughout.
@@ -788,7 +817,10 @@ WORKSTREAM AUDIT COMPLETE — Iteration [N]
 20. **[INJECTED 2026-05-24 — Divergence #5, /nodelete]** Dependency boundary scan (Phase 6c.2) is mandatory when designing workstreams. File ownership alone is insufficient for scope isolation — import chains create invisible coupling. Interface boundaries must be documented in the implementation plan.
 21. **[INJECTED 2026-05-25 — Forced Context Refresh, /nodelete]** Every implementation plan generated by `--workstreams` mode MUST include the `## Pre-Execution Mandate (ALL AGENTS)` section immediately after the Roles table. This section contains targeted `grep` commands that force agents to re-read critical workflow sections before executing tasks. Omitting this section from the generated plan is a structural defect — agents will lose context during long sessions and produce inconsistent output.
 22. **[INJECTED 2026-05-25 — Forced Context Refresh, /nodelete]** The PM MUST execute the mandatory context refresh in Phase 6a (re-read workstream Pre-Flight, Phase 4, and STRICT RULES) before designing workstreams, AND the mandatory context refresh in Phase 7d (re-read adversarial methodology) before scoring workstreams. Context Erosion during long PM sessions caused scoring to drift in Iterations 6-9.
-23. **[SIMPLIFIED 2026-05-25, /nodelete]** Phase 7d applies the proven Phase 5 adversarial methodology per-workstream: ruthless engineer persona, minimum weakness count with score deductions, comparative scoring against top-10% benchmark, honest assessment. Value is in cited weaknesses, not the number. *[Replaces difficulty weighting — see Change Log entry 12.]*
+23. **[SIMPLIFIED 2026-05-25, /nodelete; UPDATED 2026-07-04 — v4]** Phase 7d applies the Phase 5 Coverage Ledger methodology per-workstream: grounded auditor persona, mandatory per-file coverage accounting in place of a minimum weakness count, severity-calibrated deductions (STRICT RULE 25), comparative scoring against top-10% benchmark, honest assessment. Value is in cited weaknesses and complete coverage, not a target number. *[Replaces difficulty weighting — see Change Log entry 12. Minimum-weakness-count model replaced by the Coverage Ledger — see Change Log entry 10.]*
+24. **[INJECTED 2026-07-04 — v4, Coverage Ledger, resolves helpdesk-tickets/CLOSED_20260625_implementation-plan_workflow.md]** Both the standalone audit (Phase 5) and the per-workstream audit (Phase 7d) MUST enumerate the actual changeset mechanically (`git diff --stat`, or the plan's own file list if git is unavailable) before scoring, and MUST produce an explicit per-file verdict for every item enumerated — either a cited weakness or an explicit clearance. A file present in the enumeration but absent from the verdict list is an incomplete audit, not a passing one. If the changeset is too large to fully cover in one pass: HALT and report exactly which files were reviewed and which were not — do not emit a score against incomplete coverage. This halt condition is the Coverage Ledger being incomplete, checkable by inspection — never a self-assessed judgment about one's own rigor, which cannot be independently verified.
+25. **[INJECTED 2026-07-04 — v4]** Score deductions are severity-calibrated, not flat. Critical Weaknesses deduct 10-20 points each, uncapped in count — report exactly what's real, including zero, when the Coverage Ledger is complete. Medium/Lesser Weaknesses deduct 2-10 points each, capped at 4 reported per audit. The pre-v4 flat 7-15 point range applied without regard to severity is retired.
+26. **[INJECTED 2026-07-04 — v4, resolves helpdesk-tickets/CLOSED_20260625_role_workflow.md]** Discussion is not authorization (canonical principle: `personality.md` Section 7). Refining, comparing, or getting excited about one of the six options in conversation is never the HITL Gate. The gate requires an explicit, unambiguous selection statement ("let's do B," "proceed with this," "build it") before Phase 4 writes anything. If genuinely unsure whether the user has crossed from discussing to approving, ask directly rather than inferring from conversational tone or momentum. This applies equally to Phase 6d's workstream approval gate (STRICT RULE 13).
 
 ---
 
@@ -859,6 +891,8 @@ Multi-agent iteration cycle position:
 7. **2026-05-23**: `[INJECTED — Multi-Agent Workstream Orchestration + Adversarial Layer, /nodelete]` Phase 6 (`--workstreams`) and Phase 7 (`--audit --workstreams`) added. PM designs three parallel workstreams from concept.md parity; PM audits with per-agent verdicts, segregated feedback, and adversarial quality evaluation. Phase 7 structured as 7a-7f (intake, compliance, cross-workstream, adversarial, report, persist). GLOSSARY +5 terms, STRICT RULES 12-17, HOW TO BEGIN +2 modes, INTEGRATION +workstream cycle map. Standard Version: 3.
 8. **2026-05-24**: `[HARDENED — Post-Iteration-1 remediation, /nodelete]` Four fixes from 10-iteration field test: (a) Calibration gaming — removed all scoring guidance from Phase 7d; replaced with evidence-citation mandate (STRICT RULE 17). (b) Directory creation — mandatory `mkdir -p .workflow_state` before PM report writes (Phase 7e). (c) Divergence pass — Rotation Engine (Phase 6a, mod 8), Dependency Boundary Scan (Phase 6c.2), Diff Oracle (Phase 7a.5). STRICT RULES 18-20 added. Standard Version: 3.
 9. **2026-05-25**: `[INJECTED + SIMPLIFIED — Forced Context Refresh + Phase 5 alignment, /nodelete]` Post-10-iteration investigation: Context Erosion caused inconsistent agent failures and inflated scores. Fixes: (a) PM context refresh via targeted grep in Phase 6a and Phase 7d. (b) Pre-Execution Mandate section mandatory in every generated plan (Phase 6e). (c) Phase 7d simplified from custom scoring to proven Phase 5 adversarial methodology applied per-workstream (STRICT RULE 23). STRICT RULES 21-23 added. Standard Version: 3.
+10. **2026-07-04**: `[REDESIGNED — Coverage Ledger model, resolves helpdesk-tickets/CLOSED_20260625_implementation-plan_workflow.md]` **Defect**: Phase 5 mandated "at least 4 specific, genuine weaknesses" (L188) and the output template required "Minimum 4 Required" critical weaknesses with a flat 7-15 point deduction regardless of severity (L213); Phase 7d's mirror carried the same pattern at "Minimum 2 Required." This directly contradicted the file's own STRICT RULE 9 ("do not use fixed numeric targets") and, per Change Log entry 3 and the 2026-05-13 Hardening Certificate below, repeated a numeric-target problem this file had already identified as "prone to gaming" and removed once before — it had evidently crept back in without a documented reintroduction. On small/clean phases the quota forced inflating minor issues to "critical" to hit 4; on large plans it caused the audit to stop cataloging real issues once 4 were found (users reported 6-7 genuine critical items with only 4 surfaced), silently truncating real risk. **User's deeper context** (this session): the minimum-N quota was originally a deliberate two-fold forcing function — guaranteeing a non-empty sample whose severity mix let the user judge both plan quality and whether the audit itself was trying — not an arbitrary number. Naive removal (as the ticket's own Section 4 initially proposed) would have solved the truncation/inflation problem but reopened the rubber-stamp risk the original design was protecting against. **Fix**: replaced the fixed-count model with a **Coverage Ledger** (GLOSSARY) — the changeset is enumerated mechanically (`git diff --stat`, mirroring the pre-existing Phase 7a.5 Diff Oracle precedent) and every enumerated file requires an explicit verdict (cited weakness or explicit clearance) before any score is valid. This preserves the anti-rubber-stamp property structurally (a missing file is checkable, not a vibe) while removing the count as a target: Critical Weaknesses are uncapped (0 to however many are real, 10-20 pts each); Medium/Lesser capped at 4 (2-10 pts each, nuance from user: was briefly proposed at 2-5, corrected to 2-10). Halt-on-incomplete-coverage replaces halt-on-self-assessed-laziness — the user's own proposed safety valve, retargeted from an unfalsifiable internal feeling to an externally checkable condition, since an LLM cannot reliably self-detect underperformance in a way worth trusting as a gate. Auditor persona rewritten around dual-failure integrity (reporting what isn't real vs. missing what is) rather than "ruthless engineer" framing, at the user's request, without weakening the standard. Applied identically to Phase 5 (standalone `--audit`) and Phase 6/7d (`--audit --workstreams`) and the PM Oversight Report template — previously inconsistent (min 4 vs. min 2) with no stated rationale for the difference; none was needed once neither has a minimum. **Preserved per /nodelete**: STRICT RULE 9 unchanged (this fix finally brings the templates into compliance with it, rather than contradicting it further); STRICT RULE 23 updated in place with a superseding note, old text not deleted from the historical record (see the rule itself); all prior Change Log entries and the 2026-05-13 Hardening Certificate left untouched as historical record even though its "FINAL VERSION COMPLETE" label predates six later entries. GLOSSARY: Coverage Ledger term added. STRICT RULES 24-25 added (23→25). Frontmatter: version 3→4, `last_hardened` 2026-07-04. **Scoring calibration note**: because the old model floored scores via a mandatory minimum deduction, a genuinely clean plan may now score noticeably higher (85-95 vs. the old 55-70 "normal" range) — expected consequence of removing an artificial floor, not regression. **Verified**: `lint_workflows.py --file implementation-plan.md` — see result below; no engine exists for this workflow (confirmed EXCLUDED from engine-backing in the root `implementation-plan.md` campaign doc — plan/audit generation is irreducible judgment), so verification here is structural (linter) and textual (internal-consistency check against STRICT RULE 9), not test-suite-backed the way `/focus-plan`'s fix was.
+11. **2026-07-04**: `[INJECTED — resolves helpdesk-tickets/CLOSED_20260625_role_workflow.md]` Reinforced the "Discussion Is Not Authorization" principle (canonical source: `personality.md` Section 7) directly at this file's own HITL Gate, since that gate is the concrete mechanism this ticket's most severe failure mode (mid-conversation ideation treated as build authorization) actually breached. STRICT RULE 26 added (25→26); STRICT RULE 3 and the HITL Gate GLOSSARY entry annotated with a `[v4 note]` pointing to it, not rewritten. `strict_rule_count` 25→26. Version stays at 4 — same-day continuation of the Coverage Ledger pass (entry 10), not a new major revision.
 
 **Hardening Certificate — /implementation-plan (Final Refinement)**
 

@@ -2,10 +2,10 @@
 description: "Sovereign Build Agent — implements each phase of tasks.md with surgical precision, regression awareness, and a closed-loop audit gate. Run after /focus-plan and tasks.md generation."
 type: execution
 grade: Sovereign
-version: 3
-content_hash: "sha256:6bf23c31a0f8b00c"
-last_hardened: "2026-05-07"
-strict_rule_count: 0
+version: 4
+content_hash: "sha256:c0b6a3b3172d7e78"
+last_hardened: "2026-07-04"
+strict_rule_count: 16
 phase_count: 7
 context_retention: high
 flags: []
@@ -38,6 +38,30 @@ This workflow is the implementation complement to `/iterate-test`. Where `/itera
 This workflow is project-agnostic. It adapts to any language, framework, or architecture. Workspace-specific conventions are discovered in Phase 0 and anchored as the immutable reference for all subsequent build phases.
 
 You must follow the exact closed-loop workflow below for every phase. Never skip or reorder steps.
+
+---
+
+## GLOSSARY — Key Terms
+
+*Added 2026-07-04 — `/harden-workflow` single-workflow pass, closing a genuine gap the frontmatter's `grade: Sovereign` had been claiming without earning. Structural addition only, per `/harden-workflow` STRICT RULE 3 — no protocol logic below this point was touched.*
+
+| Term | Definition |
+|------|------------|
+| **<IMPL_PLAN>** | The architectural blueprint located in Phase 0a — `implementation_plan.md` (or its canonical hyphen form, `implementation-plan.md`, per `/focus-plan` v3). Read-only reference throughout the build; never the file this workflow writes to. |
+| **<TASKS_FILE>** | The primary build driver — `tasks.md`. Contains the Phase Map: every phase, every task, and each task's checkbox state (`[ ]`/`[/]`/`[x]`). This workflow will not begin without it. |
+| **<INTENT_DOC>** | Fallback context when `<IMPL_PLAN>` is absent — `concept.md`, `Architecture.md`, `README.md`, or `governance/*.md`, in that priority order. |
+| **<ACTIVE_PHASE>** | The current phase being built — the first phase in the Phase Map not yet fully `[x]`, or a `[/]` phase being resumed. |
+| **<WORKSPACE_CONVENTIONS>** | The language, framework, folder structure, code style, import conventions, and error-handling patterns discovered once in Phase 0c and held immutable for the rest of the session. |
+| **Phase Map** | The numbered inventory of every phase in `<TASKS_FILE>`, its task count, and its status (NOT STARTED / IN PROGRESS / COMPLETE), produced in Phase 0b and re-read after every Phase Build Receipt. |
+| **Build Log** | The running, in-session provenance record established in Phase 0e: phase name, tasks completed, files touched, patches applied, regression checks, receipts issued. Referenced at every Phase 1 re-contextualization. |
+| **Drift Check** | The Phase 1 comparison between what was actually built in prior phases and the project's stated intent — catches silent narrowing or contradiction before a new phase begins. |
+| **Regression Guard** | The Step 5c anti-drift gate: validates new code against `<IMPL_PLAN>`/`<INTENT_DOC>`, prior interfaces/contracts, and prior files' callers/imports/exports before a phase may be declared complete. |
+| **Build Audit** | The Step 5 quality gate as a whole (5a-5h): acceptance criteria verification, risk resolution, the Regression Guard, a completeness scan, syntax/import verification, scope compliance, the Continuous Plan Verification Gate (5g), and the Substrate Hygiene Gate (5h). A phase cannot be certified complete without passing it. |
+| **Phase Build Receipt** | The Step 6 structured output for one completed phase — persisted both to chat and, atomically, to `.workflow_state/receipts/BUILD_RECEIPTS.md`. |
+| **Final Build Receipt** | The Step 7 structured output emitted once every phase in `<TASKS_FILE>` is complete — a project-level summary, also persisted to `BUILD_RECEIPTS.md`. |
+| **Continuous Plan Verification Gate (5g)** | Sub-gate invoking `/continuous-verify` after the Build Audit passes, checking the just-built phase against the FULL plan, including forward contracts to future phases. Three outcomes: PARITY (silent), MISMATCH (halt, block receipt), UNVERIFIABLE (advance with risk note). |
+| **Substrate Hygiene Gate (5h)** | Advisory sub-gate invoking `/divergence --convergence`, scoped only to this phase's touched files, to catch dead substrate the build itself manufactured before it accumulates. Routes confirmed candidates to `/nodelete` (surgical) or `/depreciate` (heavy); never deletes directly. |
+| **Turn-Boundary Pause Protocol** | **[2026-07-04]** Canonical principle at `personality.md` Section 8, reinforced here by STRICT RULE 16: a user pause signal never halts a phase incomplete, and caps this workflow's own normal autonomous phase-to-phase continuation at the phase already underway. |
 
 ---
 
@@ -381,7 +405,7 @@ RECEIPT_EOF
 Ask the user: proceed to /iterate-test validation, run /harden, or declare ready for review?
 
 ────────────────────────────────────────────
-STRICT RULES  (never violate)
+## STRICT RULES (never violate)
 ────────────────────────────────────────────
 1.  Always begin every phase with Step 1 re-contextualization — even if only one phase was completed.
 2.  Re-contextualization is autonomous: re-read documents directly. Do not rely on memory.
@@ -397,6 +421,8 @@ STRICT RULES  (never violate)
 12. Phase 0 runs exactly once. Do not re-discover the workspace on each phase unless the user signals a structural change.
 13. Every file path written to the Build Log must be absolute. Relative paths are not permitted.
 14. After every file modification: re-read the file in full to confirm the edit was applied correctly before proceeding.
+15. **[INJECTED 2026-07-04, resolves helpdesk-tickets/CLOSED_20260625_role_workflow.md]** Discussion is not authorization (canonical principle: `personality.md` Section 7). Before Phase 0 begins work against `<TASKS_FILE>`, confirm it reflects an explicitly-approved plan, not a conversational sketch. If `<TASKS_FILE>` was generated in this same session and no intervening explicit user confirmation ("yes," "proceed," "build it," or equivalent) occurred between writing it and starting to build it: HALT and confirm before proceeding. Never treat your own act of writing a plan as its own approval to build it.
+16. **[INJECTED 2026-07-04, resolves helpdesk-tickets/CLOSED_20260625_role_workflow.md]** Turn-Boundary Pause Protocol (canonical principle: `personality.md` Section 8). If the user signals reduced active supervision is coming ("I will review," "I'll check back," or equivalent — not a fixed phrase) at any point during a build: complete the current phase in full — through Step 6's Phase Build Receipt and the `BUILD_RECEIPTS.md` write — before yielding control. Never leave a phase partially built, a task unmarked, or a receipt unwritten because a pause was signaled. If the signal arrives mid-phase: finish that phase, but do not additionally advance into the next phase afterward — the pause caps forward progress at the phase already underway, overriding this file's normal autonomous continuation (the "If more phases remain: advance... and return to STEP 1" instruction in PHASE 6) until the user re-engages.
 
 ────────────────────────────────────────────
 HOW TO BEGIN
@@ -444,3 +470,40 @@ Activation in Claude Code:
 2. **2026-05-07**: `[INJECTED — /nodelete, Layer 2 Stage 4]` Step 5g — Continuous Plan Verification Gate — injected after Step 5f. Invokes `/continuous-verify` to check whether the phase just built still aligns with the full implementation plan's intent, including forward contracts to future phases. Three outcomes: PARITY (silent, advance to Step 6), MISMATCH (halt, block receipt), UNVERIFIABLE (advance with risk note). Phase Build Receipt updated to include Continuous Verify (5g) field. Integration section updated to reflect the 5g sub-step relationship.
 3. **2026-05-21**: `[PORTED — blueprint-workflows / Claude Code migration]` Merged pointer (`execute-build.md`) and payload (`execute-build/core.md`) into single file. Added frontmatter with description from pointer. Pointer/Payload architecture retired. Step 5g.2 updated: `view_file` of old Antigravity path replaced with `Read ~/.claude/commands/continuous-verify.md and execute its HOW TO BEGIN protocol`. INTEGRATION section extended with Claude Code activation note. All protocol content preserved verbatim. Old pointer and payload deleted per user direction; git history preserves full lineage.
 4. **2026-06-12**: `[INJECTED — Substrate Hygiene Gate, /nodelete]` Step 5h added after 5g: invokes `/divergence --convergence` (read-only) scoped to the phase's touched files to detect dead substrate / duplication / legacy-ghosts manufactured by the build, routing confirmed candidates to `/nodelete` (surgical) or `/depreciate` (heavy) — clean-as-you-build. Advisory, not blocking (unlike the 5g forward-contract gate). Phase Build Receipt gains a Substrate Hygiene (5h) field; INTEGRATION updated; `/divergence` added to frontmatter dependencies. Closes the detection→execution pipe into the build loop. Frontmatter: version 2→3, content_hash recomputed. Standard Version: 3.
+5. **2026-07-04**: `[HARDENED + INJECTED — resolves helpdesk-tickets/CLOSED_20260625_role_workflow.md]` *(Renumbered from a mislabeled "9" — inserted out of order between entries 1 and 2 in the original edit; content unchanged, only the entry number and position corrected as part of entry 6's hardening pass.)* **Incidental structural finding**: the `STRICT RULES (never violate)` header (pre-existing, since original creation) was missing its `##` markdown prefix — invisible to `lint_workflows.py`'s section detection per the Linter Format Standard (`harden-workflow.md` STRICT RULE 20), which is why frontmatter declared `strict_rule_count: 0` despite 14 real rules existing in the body. Fixed the header format while already editing this exact section; not a separate hardening pass. **Substantive addition**: STRICT RULES 15-16 added, reinforcing two universal principles whose canonical source is `personality.md` Sections 7-8 — (15) Discussion Is Not Authorization, applied to `<TASKS_FILE>`: never start building against a plan generated in the same session without an intervening explicit user confirmation; (16) Turn-Boundary Pause Protocol: a user pause signal ("I will review") must not halt a phase incomplete, and — new for this file specifically — caps this workflow's own normal autonomous phase-to-phase continuation (PHASE 6's "advance... and return to STEP 1") at the phase already in progress until the user re-engages. `strict_rule_count` corrected 0→16 (14 pre-existing + 2 new, now that the header is linter-visible). Frontmatter: version 3→4, `last_hardened` 2026-07-04. **Noticed in passing, not fixed here (out of scope)**: this file still refers to `implementation_plan.md` (underscore) as its primary spelling throughout (Phase 0a, STRICT RULE 11, INTEGRATION, HOW TO BEGIN), predating `/focus-plan` v3's canonicalization of the hyphen spelling as primary with underscore as tolerated legacy — a separate staleness issue, not part of this ticket.
+6. **2026-07-04**: `[HARDENED — /harden-workflow, single-workflow mode]` Structural-only pass, per `/harden-workflow` STRICT RULE 3 (no protocol logic touched — see entry 5 for the substantive change earlier the same day). **Closed a latent grade discrepancy**: frontmatter declared `grade: Sovereign` but the file had no GLOSSARY section — the same named pattern (frontmatter grade ahead of actual structure) previously caught on `/nodelete`, 2026-06-12. Added a full GLOSSARY (15 terms: `<IMPL_PLAN>`, `<TASKS_FILE>`, `<INTENT_DOC>`, `<ACTIVE_PHASE>`, `<WORKSPACE_CONVENTIONS>`, Phase Map, Build Log, Drift Check, Regression Guard, Build Audit, Phase Build Receipt, Final Build Receipt, the 5g and 5h gates, and Turn-Boundary Pause Protocol) immediately after the opening persona paragraphs. Phase 4d (Inter-Workflow Reference Integrity) verified: all 9 referenced workflows (`/iterate-test`, `/harden`, `/divergence`, `/continuous-verify`, `/soc`, `/document`, `/focus-plan`, `/nodelete`, `/depreciate`) exist — no stale references. Phase 5b (`/triage` Compatibility): already represented in `triage.md`'s trigger matrix (multiple rows) — no gap to record. Also fixed the Change Log numbering defect from entry 5's original insertion (see that entry's note). Linter: CLEAN (0 CRITICAL, 0 WARNING) after `content_hash` recomputed via `--fix-hashes`. Version stays 4 (same-day continuation, entry 5 already bumped 3→4); `last_hardened` unchanged at 2026-07-04. Standard Version: 3. See Hardening Certificate below.
+
+**Hardening Certificate — /execute-build (2026-07-04)**
+
++══════════════════════════════════════════════════════════+
+║  WORKFLOW HARDENING CERTIFICATE                          ║
+║  Workflow:      /execute-build                            ║
+║  Date:          2026-07-04                                ║
+╠══════════════════════════════════════════════════════════╣
+║  GRADE:         SOVEREIGN (genuinely, as of this pass)     ║
+╠══════════════════════════════════════════════════════════╣
+║  Command file:  ~/blueprint-workflows/claude-commands/execute-build.md
+║  File size:     40,559 bytes (live)                         ║
+║  Symlink:       ~/.claude/commands/execute-build.md — PRESENT ║
+║  Frontmatter:   PRESENT — description ✓                    ║
+║  GLOSSARY:      PRESENT (15 terms) — was ABSENT before this pass ║
+║  HOW TO BEGIN:  PRESENT                                    ║
+║  STRICT RULES:  PRESENT (16 rules; header format corrected) ║
+║  Struct Output: PRESENT (Phase/Final Build Receipt)         ║
+║  Change Log:    PRESENT (numbering defect corrected)        ║
+╠══════════════════════════════════════════════════════════╣
+║  /triage Gap:   NONE                                        ║
+╠══════════════════════════════════════════════════════════╣
+║  Changes Made:                                              ║
+║    - Added GLOSSARY section (15 terms)                      ║
+║    - Verified all 9 inter-workflow references resolve       ║
+║    - Confirmed /triage trigger-matrix representation exists ║
+║    - Corrected a Change Log numbering/ordering defect       ║
+║  Deferred Items:                                            ║
+║    - implementation_plan.md (underscore) spelling used throughout; ║
+║      predates /focus-plan v3's hyphen canonicalization — noted in ║
+║      entry 5, not fixed (content/logic, out of this pass's scope) ║
+╠══════════════════════════════════════════════════════════╣
+║  Standard Version: 3                                        ║
+║  Status:        WORKFLOW HARDENING COMPLETE                 ║
++══════════════════════════════════════════════════════════+

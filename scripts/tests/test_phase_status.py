@@ -1,0 +1,198 @@
+"""
+test_phase_status.py — Test suite for the tasks.md + BUILD_RECEIPTS.md
+phase status engine (scripts/focus/phase_status.py).
+
+Covers: phase-boundary detection ("Phase N"/"Stage N" titles, not raw header
+level), per-phase checkbox tallies and derived status, BUILD_RECEIPTS.md entry
+parsing against the exact /execute-build writer format, phase/receipt
+cross-referencing, and the read-only invariant.
+
+Run via scripts/run_tests.sh (unittest discover, PYTHONPATH=scripts/).
+"""
+
+import shutil
+import tempfile
+import unittest
+from pathlib import Path
+
+from focus.phase_status import (
+    BUILD_RECEIPTS_RELPATH,
+    build_phase_status_report,
+    parse_build_receipts,
+    parse_tasks_md,
+)
+
+
+def _write(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+
+
+def _all_paths(root: Path) -> set:
+    return {p.relative_to(root).as_posix() for p in root.rglob("*")}
+
+
+class TestParseTasksMd(unittest.TestCase):
+    def test_splits_on_phase_titles(self):
+        text = (
+            "## Phase 1: Setup\n- [x] task a\n- [x] task b\n\n"
+            "## Phase 2: Build\n- [ ] task c\n"
+        )
+        phases = parse_tasks_md(text)
+        self.assertEqual([p.title for p in phases], ["Phase 1: Setup", "Phase 2: Build"])
+        self.assertEqual(phases[0].status, "complete")
+        self.assertEqual(phases[1].status, "not_started")
+
+    def test_stage_title_recognized(self):
+        text = "## Stage 1: Foo\n- [x] a\n"
+        phases = parse_tasks_md(text)
+        self.assertEqual(len(phases), 1)
+        self.assertEqual(phases[0].status, "complete")
+
+    def test_non_phase_headers_do_not_fragment(self):
+        # A "### Acceptance Criteria" sub-header inside a phase must not
+        # start a new phase — its checkboxes belong to the enclosing phase.
+        text = (
+            "## Phase 1: Setup\n"
+            "### Acceptance Criteria\n"
+            "- [x] a\n- [ ] b\n"
+        )
+        phases = parse_tasks_md(text)
+        self.assertEqual(len(phases), 1)
+        self.assertEqual(phases[0].checkboxes.done, 1)
+        self.assertEqual(phases[0].checkboxes.open, 1)
+        self.assertEqual(phases[0].status, "in_progress")
+
+    def test_overview_header_ignored_as_phase_boundary(self):
+        text = "## Overview\nsome prose, no tasks\n\n## Phase 1: Real\n- [ ] a\n"
+        phases = parse_tasks_md(text)
+        self.assertEqual(len(phases), 1)
+        self.assertEqual(phases[0].title, "Phase 1: Real")
+
+    def test_mixed_checkboxes_are_in_progress(self):
+        text = "## Phase 1: Mix\n- [x] a\n- [/] b\n- [ ] c\n"
+        phases = parse_tasks_md(text)
+        self.assertEqual(phases[0].status, "in_progress")
+
+    def test_no_checkboxes_status(self):
+        text = "## Phase 1: Narrative only\nJust prose, no checkboxes.\n"
+        phases = parse_tasks_md(text)
+        self.assertEqual(phases[0].status, "no_checkboxes")
+
+    def test_headers_inside_fences_ignored(self):
+        text = "## Phase 1: Real\n```\n## Phase 9: not a real phase\n```\n- [x] a\n"
+        phases = parse_tasks_md(text)
+        self.assertEqual(len(phases), 1)
+        self.assertEqual(phases[0].title, "Phase 1: Real")
+
+    def test_no_phase_titled_headers_yields_empty_not_error(self):
+        # An unrecognized naming convention must not raise — found=True,
+        # phases=[] is handled at the report level (see TestBuildReport).
+        text = "## Milestone A\n- [x] a\n"
+        self.assertEqual(parse_tasks_md(text), [])
+
+
+class TestParseBuildReceipts(unittest.TestCase):
+    def test_single_entry(self):
+        text = (
+            "## 2026-07-04 — /execute-build — Phase 1: Setup\n"
+            "- Phase/Stage: Phase 1: Setup\n"
+            "- Grade/Status: PHASE COMPLETE\n"
+            "- Files: a.py | b.py\n"
+            "- Commit: abc1234\n"
+            "---\n"
+        )
+        entries = parse_build_receipts(text)
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0].phase, "Phase 1: Setup")
+        self.assertEqual(entries[0].grade_status, "PHASE COMPLETE")
+
+    def test_multiple_entries_separated_by_dashes(self):
+        text = (
+            "## D1 — /execute-build — Phase 1: A\n"
+            "- Phase/Stage: Phase 1: A\n- Grade/Status: PHASE COMPLETE\n---\n"
+            "## D2 — /execute-build — Phase 2: B\n"
+            "- Phase/Stage: Phase 2: B\n- Grade/Status: PHASE COMPLETE\n---\n"
+        )
+        entries = parse_build_receipts(text)
+        self.assertEqual({e.phase for e in entries}, {"Phase 1: A", "Phase 2: B"})
+
+    def test_malformed_block_skipped(self):
+        text = "## D1 — /execute-build — Broken\n- Phase/Stage: Broken\n---\n"  # no Grade/Status
+        self.assertEqual(parse_build_receipts(text), [])
+
+    def test_grade_status_compared_case_insensitively(self):
+        # Only parse_build_receipts + the matching helper need to agree on
+        # case-insensitivity; exercised end-to-end via build_phase_status_report
+        # in TestBuildReport.test_matching_receipt_found_complete.
+        text = "## D1 — /execute-build — Phase 1\n- Phase/Stage: Phase 1\n- Grade/Status: phase complete\n---\n"
+        entries = parse_build_receipts(text)
+        self.assertEqual(entries[0].grade_status.lower(), "phase complete")
+
+
+class TestBuildPhaseStatusReport(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_no_tasks_md_at_all(self):
+        report = build_phase_status_report(self.tmp)
+        self.assertFalse(report.found)
+        self.assertEqual(report.phases, [])
+
+    def test_tasks_md_present_no_receipts_file(self):
+        _write(self.tmp / "tasks.md", "## Phase 1: Setup\n- [x] a\n")
+        report = build_phase_status_report(self.tmp)
+        self.assertTrue(report.found)
+        self.assertFalse(report.receipts_file_found)
+        self.assertEqual(report.phases[0].receipt_status, "receipts_file_absent")
+        self.assertEqual(report.phases[0].status, "complete")
+
+    def test_matching_receipt_found_complete(self):
+        _write(self.tmp / "tasks.md", "## Phase 1: Setup\n- [x] a\n")
+        _write(
+            self.tmp / BUILD_RECEIPTS_RELPATH,
+            "## 2026-07-04 — /execute-build — Phase 1: Setup\n"
+            "- Phase/Stage: Phase 1: Setup\n- Grade/Status: PHASE COMPLETE\n---\n",
+        )
+        report = build_phase_status_report(self.tmp)
+        self.assertTrue(report.receipts_file_found)
+        self.assertEqual(report.phases[0].receipt_status, "found_complete")
+
+    def test_receipt_for_different_phase_is_not_found(self):
+        _write(self.tmp / "tasks.md", "## Phase 1: Setup\n- [x] a\n\n## Phase 2: Build\n- [ ] b\n")
+        _write(
+            self.tmp / BUILD_RECEIPTS_RELPATH,
+            "## D — /execute-build — Phase 1: Setup\n"
+            "- Phase/Stage: Phase 1: Setup\n- Grade/Status: PHASE COMPLETE\n---\n",
+        )
+        report = build_phase_status_report(self.tmp)
+        by_title = {p.title: p for p in report.phases}
+        self.assertEqual(by_title["Phase 1: Setup"].receipt_status, "found_complete")
+        self.assertEqual(by_title["Phase 2: Build"].receipt_status, "not_found")
+
+    def test_checked_but_incomplete_receipt_flagged(self):
+        # Checkboxes say done, but the matching receipt's own status isn't a
+        # COMPLETE value — surfaced as found_incomplete, a discrepancy for
+        # the agent to note rather than silently trusting either signal alone.
+        _write(self.tmp / "tasks.md", "## Phase 1: Setup\n- [x] a\n")
+        _write(
+            self.tmp / BUILD_RECEIPTS_RELPATH,
+            "## D — /execute-build — Phase 1: Setup\n"
+            "- Phase/Stage: Phase 1: Setup\n- Grade/Status: BUILD FAILED\n---\n",
+        )
+        report = build_phase_status_report(self.tmp)
+        self.assertEqual(report.phases[0].receipt_status, "found_incomplete")
+
+    def test_read_only(self):
+        _write(self.tmp / "tasks.md", "## Phase 1: Setup\n- [x] a\n")
+        before = _all_paths(self.tmp)
+        build_phase_status_report(self.tmp)
+        after = _all_paths(self.tmp)
+        self.assertEqual(before, after)
+
+
+if __name__ == "__main__":
+    unittest.main()

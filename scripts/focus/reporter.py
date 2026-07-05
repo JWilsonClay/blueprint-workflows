@@ -22,6 +22,7 @@ class FocusReporter:
 
         summary = report.get("summary", {})
         print(f"\n=== {report.get('workspace', 'workspace')} — Focus Triad Evidence ===")
+        self._render_tasks_md(report.get("tasks_md", {}))
 
         if not report.get("plan_found"):
             print("[!] NO IMPLEMENTATION PLAN FOUND.")
@@ -55,3 +56,19 @@ class FocusReporter:
 
         print(f"\nVerdict hint: {summary.get('verdict_hint', '?')} (advisory)")
         print(f"  {summary.get('advisory', '')}")
+
+    @staticmethod
+    def _render_tasks_md(tasks_md: dict) -> None:
+        if not tasks_md.get("found"):
+            print("Tasks:   tasks.md not found — no execution phases yet (absences are PENDING, not failures)")
+            return
+        receipts_note = "" if tasks_md.get("receipts_file_found") else "  [no BUILD_RECEIPTS.md]"
+        print(f"Tasks:   {tasks_md.get('path')}{receipts_note}")
+        for phase in tasks_md.get("phases", []):
+            cb = phase.get("checkboxes", {})
+            print(
+                f"    Phase (L{phase.get('source_line')}): {phase.get('title')} — "
+                f"{phase.get('status')} ({cb.get('done', 0)} done / "
+                f"{cb.get('in_progress', 0)} in-progress / {cb.get('open', 0)} open) "
+                f"— receipt: {phase.get('receipt_status')}"
+            )
