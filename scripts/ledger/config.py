@@ -42,13 +42,18 @@ DEFAULT_CONFIG = {
 def load_config(path: Path = None) -> dict:
     """
     Load the ledger config from *path* (default: the bundled ledger_config.toml).
-    Falls back to DEFAULT_CONFIG if the file is absent or tomllib is unavailable.
+    Falls back to DEFAULT_CONFIG if the file is absent, malformed, or tomllib
+    is unavailable — a hand-edited config with a syntax error must degrade the
+    same way a missing one does, not crash the monitor.
     """
     path = Path(path) if path else _DEFAULT_CONFIG_PATH
     if tomllib is None or not path.exists():
         return DEFAULT_CONFIG
-    with open(path, "rb") as fh:
-        data = tomllib.load(fh)
+    try:
+        with open(path, "rb") as fh:
+            data = tomllib.load(fh)
+    except tomllib.TOMLDecodeError:
+        return DEFAULT_CONFIG
     return data if data.get("ledgers") else DEFAULT_CONFIG
 
 

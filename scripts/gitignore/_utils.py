@@ -8,9 +8,8 @@ roll its own unsafe patterns. Mirrors the security contract used across the suit
 Security contract:
   - atomic_write()  : POSIX-atomic write via temp-file + os.replace() (CWE-362).
                       Preserves an explicit permission mode (CWE-732).
-  - safe_read()     : Bounded read; returns "" for too-large/undecodable files
-                      rather than raising, so a seed run degrades, not crashes
-                      (CWE-400).
+  - safe_read()     : Bounded read (CWE-400) — see engine_utils.safe_read,
+                      consolidated there as of 2026-07-05.
   - assert_within() : Validates a resolved path stays inside the workspace,
                       defeating symlink traversal before any write (CWE-22).
 """
@@ -46,22 +45,6 @@ def atomic_write(path: Path, content: str, encoding: str = "utf-8",
         except OSError:
             pass
         raise
-
-
-def safe_read(path: Path, encoding: str = "utf-8",
-              max_bytes: int = 5 * 1024 * 1024) -> str:
-    """
-    Read a text file only if within *max_bytes* (CWE-400 guard). Returns "" for a
-    missing, too-large, or undecodable file rather than raising — seeding an
-    unreadable/oversized .gitignore should degrade to "treat as empty", not crash.
-    """
-    path = Path(path)
-    try:
-        if path.stat().st_size > max_bytes:
-            return ""
-        return path.read_text(encoding=encoding)
-    except (OSError, UnicodeDecodeError, ValueError):
-        return ""
 
 
 def assert_within(path: Path, workspace: Path) -> None:

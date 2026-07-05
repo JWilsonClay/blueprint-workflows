@@ -16,7 +16,7 @@ import re
 from pathlib import Path
 from typing import Dict
 
-from quality._utils import safe_read
+from engine_utils import safe_read
 
 VALID_LEVELS = ("Standard", "Elevated", "Maximum")
 AUDIT_THRESHOLD = 25  # /triage fires a P3 recommendation at 25+ unreviewed entries.

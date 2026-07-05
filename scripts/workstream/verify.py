@@ -63,6 +63,12 @@ def ensure_dir(path):
 
 EXCLUDED_DIR_PARTS = ("node_modules", "__pycache__", "target", ".git")
 
+# CWE-400 guard: skip counting lines in a pathologically large matching file
+# (e.g. an accidentally-committed generated bundle) rather than spending
+# unbounded time reading it. Matches the bounded-read discipline used
+# elsewhere in this suite (engine_utils.safe_read and siblings).
+_LINE_COUNT_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
+
 
 def _line_count_violations(workspace, ext_glob, limit):
     """Native replacement for `find | wc -l | sort -rn | head -20` — no shell required."""
@@ -73,6 +79,8 @@ def _line_count_violations(workspace, ext_glob, limit):
         if not path.is_file():
             continue
         try:
+            if path.stat().st_size > _LINE_COUNT_MAX_BYTES:
+                continue
             with open(path, "r", encoding="utf-8", errors="ignore") as f:
                 loc = sum(1 for _ in f)
         except OSError:
@@ -243,8 +251,16 @@ def mode_callers(workspace, target_file):
     )
     lines = _filter_out(
         grep_out.splitlines() if grep_out else [],
-        "node_modules", "__pycache__", ".git/", "target/", safe_basename,
+        "node_modules", "__pycache__", ".git/", "target/",
     )
+    # Exclude only the target's own self-reference: an exact basename match on
+    # the extracted filepath, not a substring check against the whole line —
+    # substring containment would also drop a legitimate caller like
+    # test_target.py when the target is target.py.
+    lines = [
+        line for line in lines
+        if os.path.basename(line.split(":", 1)[0]) != safe_basename
+    ]
 
     if not lines:
         print("No callers found.")

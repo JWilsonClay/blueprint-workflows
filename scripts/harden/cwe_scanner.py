@@ -33,7 +33,8 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from harden._utils import safe_read
+from harden._utils import SAFE_READ_MAX_BYTES
+from engine_utils import safe_read
 
 CRITICAL = "CRITICAL"
 HIGH = "HIGH"
@@ -239,7 +240,7 @@ class CWEScanner:
 
     def scan_file(self, path: Path, relpath: str) -> List[Dict]:
         """Read *path* (bounded) and scan it. Returns [] for unreadable files."""
-        text = safe_read(Path(path))
+        text = safe_read(Path(path), max_bytes=SAFE_READ_MAX_BYTES)
         if not text:
             return []
         return self.scan_text(relpath, text, Path(path).suffix)

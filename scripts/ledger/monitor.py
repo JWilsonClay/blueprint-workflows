@@ -20,12 +20,12 @@ marker pointing at its successor; the new shard gets a header pointing back.
 """
 
 import re
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import date
 from pathlib import Path
 from typing import Optional
 
-from ledger._utils import safe_read
+from engine_utils import safe_read
 
 _QUARTER_OF_MONTH = {m: (m - 1) // 3 + 1 for m in range(1, 13)}
 
@@ -48,13 +48,7 @@ class LedgerStatus:
     rollover_reason: str = ""
 
     def as_dict(self) -> dict:
-        return {
-            "name": self.name, "mode": self.mode, "entries": self.entries,
-            "bytes": self.bytes, "threshold_entries": self.threshold_entries,
-            "threshold_bytes": self.threshold_bytes, "warn": self.warn,
-            "active_file": self.active_file, "rolled_over": self.rolled_over,
-            "rollover_reason": self.rollover_reason,
-        }
+        return asdict(self)
 
 
 def _count_entries(text: str, pattern: str) -> int:
@@ -120,7 +114,12 @@ def _closing_marker(next_name: str) -> str:
 
 
 def _next_same_quarter_label(active_label: str, quarter: str) -> str:
-    """First overflow within a quarter: "2026-Q3" -> "2026-Q3b". Then "b" -> "c", etc."""
+    """First overflow within a quarter: "2026-Q3" -> "2026-Q3b". Then "b" -> "c", etc.
+
+    Assumes overflow within a single quarter never exceeds a single letter
+    suffix (never reaches "z" or wraps). A realistic quarter's worth of
+    within-quarter rollovers is expected to stay in the low single digits.
+    """
     if active_label == quarter:
         return f"{quarter}b"
     return f"{active_label[:-1]}{chr(ord(active_label[-1]) + 1)}"

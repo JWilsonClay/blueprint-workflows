@@ -34,8 +34,9 @@ if str(_HERE.parent) not in sys.path:
 
 from harden import __version__
 from harden._utils import (
-    IGNORE_DIRS, assert_within, is_test_path, looks_like_script, safe_read,
+    IGNORE_DIRS, SAFE_READ_MAX_BYTES, assert_within, is_test_path, looks_like_script,
 )
+from engine_utils import safe_read
 from harden.cwe_scanner import CWEScanner, first_line_of
 from harden.grade_computer import compute_ceiling, lowest_ceiling
 from harden.reporter import HardenReporter
@@ -121,7 +122,7 @@ class HardenAuditor:
                 relpath = str(full.relative_to(self.workspace)).replace("\\", "/")
                 if is_test_path(relpath):
                     continue
-                text = safe_read(full)
+                text = safe_read(full, max_bytes=SAFE_READ_MAX_BYTES)
                 if not text:
                     continue
                 if not looks_like_script(full, first_line_of(text)):
@@ -142,7 +143,7 @@ class HardenAuditor:
         relpath = str(resolved.relative_to(self.workspace)).replace("\\", "/")
         if is_test_path(relpath):
             return
-        text = safe_read(resolved)
+        text = safe_read(resolved, max_bytes=SAFE_READ_MAX_BYTES)
         if not text or not looks_like_script(resolved, first_line_of(text)):
             return
         yield resolved, relpath, text

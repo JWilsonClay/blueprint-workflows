@@ -30,7 +30,7 @@ if str(_HERE.parent) not in sys.path:
     sys.path.insert(0, str(_HERE.parent))
 
 from quality import __version__
-from quality._utils import safe_read
+from engine_utils import safe_read
 from quality.ledger_auditor import LedgerAuditor
 from quality.reporter import QualityReporter
 from quality.smell_linter import SmellLinter

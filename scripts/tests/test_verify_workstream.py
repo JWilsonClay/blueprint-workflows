@@ -69,6 +69,21 @@ class TestLineCountViolations(unittest.TestCase):
         locs = [loc for loc, _ in results]
         self.assertEqual(locs, sorted(locs, reverse=True))
 
+    def test_skips_files_over_size_bound(self):
+        """CWE-400 regression test: a file over the size bound is skipped
+        entirely (never counted as a violation), regardless of line count."""
+        import workstream.verify as verify_module
+        big = self.root / "big.py"
+        big.write_text("x\n" * 100)  # well over the line limit, small on disk
+
+        original_bound = verify_module._LINE_COUNT_MAX_BYTES
+        verify_module._LINE_COUNT_MAX_BYTES = 10  # shrink well below big.py's real size
+        try:
+            results = _line_count_violations(self.root, "*.py", limit=1)
+        finally:
+            verify_module._LINE_COUNT_MAX_BYTES = original_bound
+        self.assertEqual(results, [])
+
 
 class TestFilterOut(unittest.TestCase):
     def test_filters_multiple_excludes(self):
@@ -170,11 +185,6 @@ class TestModeDependency(GitFixtureTestCase):
 
 class TestModeCallers(GitFixtureTestCase):
     def test_builds_caller_map(self):
-        # NOTE: deliberately not named test_target.py — mode_callers' exclusion
-        # filter does substring matching on the target's basename ("target.py"),
-        # which a name like "test_target.py" would also match and be dropped by.
-        # Pre-existing behavior (same substring match in the original `grep -v`
-        # pipeline), out of scope for this fix; not asserted on here.
         (self.root / "target.py").write_text("x = 1\n")
         (self.root / "caller.py").write_text("from target import x\n")
         (self.root / "target_spec.py").write_text("from target import x\n")
@@ -186,6 +196,22 @@ class TestModeCallers(GitFixtureTestCase):
         output = buf.getvalue()
         self.assertIn("caller.py", output)
         self.assertIn("target_spec.py", output)
+
+    def test_does_not_drop_caller_whose_name_contains_target_basename(self):
+        """Regression test: a caller file ending in the target's own basename
+        (e.g. test_target.py against target target.py) must not be excluded —
+        the exclusion is meant to drop the target's self-reference only, via
+        an exact basename match, not a substring match across the whole line."""
+        (self.root / "target.py").write_text("x = 1\n")
+        (self.root / "test_target.py").write_text("from target import x\n")
+        self._commit()
+
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            mode_callers(str(self.root), "target.py")
+        output = buf.getvalue()
+        self.assertIn("test_target.py", output)
+        self.assertNotIn("No callers found", output)
 
 
 if __name__ == '__main__':

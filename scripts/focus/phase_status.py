@@ -49,7 +49,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
 
-from focus._utils import safe_read
+from engine_utils import safe_read
 
 TASKS_MD_NAME = "tasks.md"
 BUILD_RECEIPTS_RELPATH = Path(".workflow_state") / "receipts" / "BUILD_RECEIPTS.md"

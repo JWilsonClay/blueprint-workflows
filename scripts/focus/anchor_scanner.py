@@ -27,10 +27,11 @@ from typing import Dict, List, Optional
 from focus._utils import (
     CODE_EXTENSIONS,
     IGNORE_DIRS,
+    SAFE_READ_MAX_BYTES,
     assert_within,
     is_test_path,
-    safe_read,
 )
+from engine_utils import safe_read
 
 _MAX_FILES = 8000          # Bound the index (CWE-400).
 _MAX_LOCATIONS = 5         # Locations reported per anchor.
@@ -65,7 +66,7 @@ class AnchorScanner:
                 if full.resolve() in self._exclude:
                     continue
                 relpath = str(full.relative_to(self.workspace)).replace("\\", "/")
-                text = safe_read(full)
+                text = safe_read(full, max_bytes=SAFE_READ_MAX_BYTES)
                 if not text:
                     continue
                 index.append(

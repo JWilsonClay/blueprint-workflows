@@ -19,6 +19,7 @@ from pathlib import Path
 from ledger.monitor import (
     check_shard, check_warn, quarter_label, _extract_placeholder, _next_same_quarter_label,
 )
+from ledger.config import load_config, DEFAULT_CONFIG
 
 
 def _write(path: Path, content: str) -> None:
@@ -44,6 +45,31 @@ SHARD_CFG = {
     "warn_threshold_entries": 3,
     "warn_threshold_bytes": 500,
 }
+
+
+class TestLoadConfig(unittest.TestCase):
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.root = Path(self.tmpdir)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir)
+
+    def test_missing_file_falls_back_to_default(self):
+        self.assertEqual(load_config(self.root / "nope.toml"), DEFAULT_CONFIG)
+
+    def test_malformed_file_falls_back_to_default_not_raises(self):
+        """Regression test: a hand-edited config with a syntax error must
+        degrade the same way a missing one does, not crash the monitor."""
+        bad = self.root / "bad.toml"
+        _write(bad, "this is not [ valid toml =")
+        self.assertEqual(load_config(bad), DEFAULT_CONFIG)
+
+    def test_valid_file_loads_real_content(self):
+        good = self.root / "good.toml"
+        _write(good, '[[ledgers]]\nname = "x"\nmode = "warn"\n')
+        result = load_config(good)
+        self.assertEqual(result["ledgers"][0]["name"], "x")
 
 
 class TestQuarterHelpers(unittest.TestCase):

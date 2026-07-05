@@ -33,7 +33,7 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE.parent) not in sys.path:
     sys.path.insert(0, str(_HERE.parent))
 
-from registry._utils import safe_read
+from engine_utils import safe_read
 from registry.aggregator import aggregate, collect_events
 from registry.reporter import RegistryReporter
 from registry import __version__  # resolves to the package, now loaded via the dotted imports above

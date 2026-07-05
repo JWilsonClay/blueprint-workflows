@@ -10,9 +10,9 @@ path-boundary validation. Keeping the surface this small makes the
 read-only guarantee auditable by inspection.
 
 Security contract:
-  - safe_read()    : Reads a file only after validating its size is below a
-                     caller-specified cap. Prevents memory exhaustion from
-                     unexpectedly large workspace files (CWE-400).
+  - safe_read()    : bounded read (CWE-400) — see engine_utils.safe_read,
+                     consolidated there as of 2026-07-05. This package's own
+                     2 MB per-file cap is passed explicitly at each call site.
   - assert_within(): Validates a resolved path stays inside the workspace.
                      Raises ValueError on path-traversal attempts (CWE-22).
   - is_test_path() : Classifies a relative path as test/mock/fixture scaffolding
@@ -47,36 +47,9 @@ _TEST_MARKERS = (
 _TEST_BASENAME_PREFIXES = ("test_", "spec_", "mock_", "conftest")
 _TEST_BASENAME_SUFFIXES = ("_test", "_spec", ".test", ".spec")
 
-
-def safe_read(
-    path: Path,
-    encoding: str = "utf-8",
-    max_bytes: int = 2 * 1024 * 1024,  # 2 MB per-file cap for scanning.
-) -> str:
-    """
-    Read a text file only if its size is within *max_bytes*.
-
-    Bounded to prevent memory exhaustion from unexpectedly large files in the
-    target workspace (CWE-400). Returns the empty string for files that cannot
-    be decoded as text — scanning continues rather than crashing on binaries.
-
-    Args:
-        path:      Path to the file to read.
-        encoding:  Character encoding.
-        max_bytes: Maximum file size in bytes. Files larger than this are
-                   skipped (return "") rather than raising — a giant generated
-                   file should not abort a verification run.
-
-    Returns:
-        File content as a string, or "" if the file is too large or not text.
-    """
-    path = Path(path)
-    try:
-        if path.stat().st_size > max_bytes:
-            return ""
-        return path.read_text(encoding=encoding)
-    except (OSError, UnicodeDecodeError, ValueError):
-        return ""
+# This package's own tuned bound for engine_utils.safe_read (2 MB per-file cap
+# for scanning) — defined once here so call sites don't repeat the literal.
+SAFE_READ_MAX_BYTES = 2 * 1024 * 1024
 
 
 def assert_within(path: Path, workspace: Path) -> Path:

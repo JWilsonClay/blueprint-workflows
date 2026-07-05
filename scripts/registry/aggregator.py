@@ -16,7 +16,7 @@ Sources:
 import re
 from pathlib import Path
 
-from registry._utils import safe_read
+from engine_utils import safe_read
 
 # Canonical named failure patterns (the Sovereign failure vocabulary). Matched
 # case-insensitively as substrings; normalized to the canonical label.

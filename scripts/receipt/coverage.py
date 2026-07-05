@@ -42,7 +42,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 
-from receipt._utils import safe_read
+from engine_utils import safe_read
 
 _HERE = Path(__file__).resolve().parent
 if str(_HERE.parent) not in sys.path:
@@ -103,6 +103,16 @@ def parse_receipt_records(text: str) -> List[ReceiptRecord]:
         if target and grade_status:
             records.append(ReceiptRecord(target=target, grade_status=grade_status, files=files))
     return records
+
+
+def _load_receipt_records(workspace: Path, relpath: Path) -> tuple:
+    """Read one receipt file and parse its records. Returns (present, records) —
+    consolidates the read/bool-check/parse-or-empty sequence that was
+    previously repeated once per receipt dimension (Build/Validation/Harden/Docs)."""
+    text = safe_read(workspace / relpath)
+    present = bool(text)
+    records = parse_receipt_records(text) if present else []
+    return present, records
 
 
 def _phase_body_text(lines: List[str], phase, phases_sorted) -> str:
@@ -171,18 +181,10 @@ def compute_coverage(workspace: Path) -> dict:
     phases = parse_tasks_md(tasks_text)
     lines = tasks_text.splitlines()
 
-    build_text = safe_read(workspace / BUILD_RECEIPTS)
-    validation_text = safe_read(workspace / VALIDATION_RECEIPTS)
-    harden_text = safe_read(workspace / HARDEN_GRADES)
-    docs_text = safe_read(workspace / DOCS_RECEIPTS)
-
-    build_present, validation_present = bool(build_text), bool(validation_text)
-    harden_present, docs_present = bool(harden_text), bool(docs_text)
-
-    build_records = parse_receipt_records(build_text) if build_present else []
-    validation_records = parse_receipt_records(validation_text) if validation_present else []
-    harden_records = parse_receipt_records(harden_text) if harden_present else []
-    docs_records = parse_receipt_records(docs_text) if docs_present else []
+    build_present, build_records = _load_receipt_records(workspace, BUILD_RECEIPTS)
+    validation_present, validation_records = _load_receipt_records(workspace, VALIDATION_RECEIPTS)
+    harden_present, harden_records = _load_receipt_records(workspace, HARDEN_GRADES)
+    docs_present, docs_records = _load_receipt_records(workspace, DOCS_RECEIPTS)
 
     checkable_dims = 0
     covered_dims = 0

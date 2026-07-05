@@ -21,7 +21,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from focus._utils import CODE_EXTENSIONS, safe_read
+from focus._utils import CODE_EXTENSIONS
+from engine_utils import safe_read
 
 # Canonical plan filename (what /implementation-plan produces) and the legacy
 # underscore spelling tolerated for backward compatibility.

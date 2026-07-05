@@ -40,7 +40,8 @@ if str(_HERE.parent) not in sys.path:
     sys.path.insert(0, str(_HERE.parent))
 
 from gitignore import __version__
-from gitignore._utils import assert_within, atomic_write, safe_read
+from gitignore._utils import assert_within, atomic_write
+from engine_utils import safe_read
 from gitignore.config import (
     BLOCK_END,
     BLOCK_START,

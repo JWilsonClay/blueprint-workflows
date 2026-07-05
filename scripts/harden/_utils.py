@@ -10,7 +10,10 @@ Keeping the surface this small makes the read-only guarantee auditable by
 inspection.
 
 Security contract:
-  - safe_read()        : Bounded read (CWE-400) — skips files above a size cap.
+  - safe_read()        : Bounded read (CWE-400) — see engine_utils.safe_read,
+                         consolidated there as of 2026-07-05. This package's own
+                         2 MB per-file cap (SAFE_READ_MAX_BYTES below) is passed
+                         explicitly at each call site.
   - assert_within()    : Path-traversal guard (CWE-22) — a resolved path must
                          stay inside the declared workspace.
   - is_test_path()     : Classifies a path as test/spec/mock/fixture scaffolding.
@@ -56,25 +59,9 @@ _TEST_MARKERS = (
 _TEST_BASENAME_PREFIXES = ("test_", "spec_", "mock_", "conftest")
 _TEST_BASENAME_SUFFIXES = ("_test", "_spec", ".test", ".spec")
 
-
-def safe_read(
-    path: Path,
-    encoding: str = "utf-8",
-    max_bytes: int = 2 * 1024 * 1024,  # 2 MB per-file cap for scanning.
-) -> str:
-    """
-    Read a text file only if its size is within *max_bytes* (CWE-400).
-
-    Returns "" for files that are too large or cannot be decoded as text, so a
-    scan degrades rather than crashing on a binary or a giant generated file.
-    """
-    path = Path(path)
-    try:
-        if path.stat().st_size > max_bytes:
-            return ""
-        return path.read_text(encoding=encoding)
-    except (OSError, UnicodeDecodeError, ValueError):
-        return ""
+# This package's own tuned bound for engine_utils.safe_read (2 MB per-file cap
+# for scanning) — defined once here so call sites don't repeat the literal.
+SAFE_READ_MAX_BYTES = 2 * 1024 * 1024
 
 
 def assert_within(path: Path, workspace: Path) -> Path:
