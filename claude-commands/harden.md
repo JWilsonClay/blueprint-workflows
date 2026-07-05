@@ -3,7 +3,7 @@ description: "Hardening and securing selected script files — Universal Securit
 type: audit
 grade: Sovereign
 version: 3
-content_hash: "sha256:a946afdba554f8f6"
+content_hash: "sha256:2275daafefe83ae1"
 last_hardened: "2026-06-02"
 strict_rule_count: 15
 phase_count: 4
@@ -279,7 +279,7 @@ git commit -m "security: harden <filename> -- <Grade> status -- <key fix summary
 ```
 
 **[INJECTION — 2026-05-11] /nodelete Compliance — Session Record:**
-The hardening summary above is **append-only**. If a prior hardening session record exists in `WORKFLOW_MANIFEST.md` or any receipt file for this script:
+The hardening summary above is **append-only**. If a prior hardening session record exists in `manifest/SUITE_HEALTH.md` **[RETARGETED 2026-07-04, was WORKFLOW_MANIFEST.md — see helpdesk-tickets/CLOSED_20260704_workflow-manifest-growth_workflow.md]** or any receipt file for this script:
 - Do not overwrite it.
 - Append the new session record below it, marked with the current date.
 - A script hardened twice has two records. Both are preserved. The most recent grade is authoritative; the prior grade is historical.

@@ -1,11 +1,11 @@
 ---
-description: "Surgical Scope & Contradiction Protocol — act only on what was expressly said, freeze the rest, and resolve contradictions by clean replacement. (Name is historical; this is NOT 'never delete'.)"
+description: "Surgical Scope & Contradiction Protocol — act only on what was expressly said, freeze the rest, and resolve contradictions by clean replacement. (Name is historical; this is NOT 'never delete'.) v5: adds user-invoked Archival Mode (Pillar 6) for graduating completed, non-contradicted history off active surfaces."
 type: behavioral-modifier
 grade: Sovereign
-version: 4
-content_hash: "sha256:e19c57efd1c95b7b"
-last_hardened: "2026-06-12"
-strict_rule_count: 13
+version: 5
+content_hash: "sha256:88d0de847419dd59"
+last_hardened: "2026-07-04"
+strict_rule_count: 14
 phase_count: 0
 context_retention: low
 flags: []
@@ -73,6 +73,8 @@ The user will frequently be unaware that he is being ambiguous. Assume he means 
 | **Procedural gate** | A mandatory checkpoint executed regardless of the agent's confidence, designed to protect against agents (and moments) that misread intent and stay silent. |
 | **Legacy ghost** | Residue of the old "never delete" doctrine left on surfaces across workspaces: `<!-- QUARANTINED -->` tags, "superseded / x used to = z" notes, contradictions left inline. The target of Remediation on Contact. |
 | **Remediation on Contact** | Healing a legacy ghost when an agent touches the surface — clean it if the resolution is unambiguous, surface it (Intent-Mismatch Gate) if the resolution is lost. The bounded exception to "never clean up the unmentioned." |
+| **Archival Mode** | **[ADDED 2026-07-04]** The user-invoked (`/nodelete --archive`), never-autonomous procedure (Pillar 6) that moves a verified-complete, non-contradicted unit from an active surface into `.history/archive/`. Distinct from every contradiction-handling mechanism above — nothing is wrong with the archived content; it is simply finished. |
+| **Archival Ledger** | **[ADDED 2026-07-04]** `.history/archive/<filename>.ledger.md` — an Append-Only Ledger (not ingestion-banned, unlike the Quarantined Change Ledger) holding completed history moved off an active surface by Archival Mode. |
 
 ---
 
@@ -185,6 +187,38 @@ When you encounter a legacy ghost while working a surface, remediate it — **gr
 
 ---
 
+## PILLAR 6 — Archival Mode (user-invoked graduation of completed history)
+
+**[ADDED 2026-07-04, resolves helpdesk-tickets/CLOSED_20260704_nodelete_workflow.md]**
+
+Every pillar above governs one thing: what to do when new information **contradicts** what is already on a surface. None of them cover the equally legitimate, entirely different case where nothing is wrong — a phase is simply *finished*, and the user wants it off the active surface so only forward-looking work remains visible. That is not a contradiction. Treating it as one (routing it through Pillar 3's Quarantined Change Ledger) would be a category error: the ledger exists to prevent a deleted *contradiction* from walking back into context, but completed, non-contradicted work carries no such risk. Archival Mode is the sixth, distinct concern this protocol was missing.
+
+**Invocation — strictly user-invoked, never autonomous:**
+
+```
+/nodelete --archive
+```
+
+This is an explicit flag, not an inferred intent — matching the suite's existing convention for named sub-modes (`/divergence --convergence`, `/depreciate --mode a/c`). You do not enter Archival Mode because a surface *looks* done; you enter it because the user typed this, or the unambiguous equivalent in prose ("archive the completed phases," "clean this up, everything through Phase 2 is done"). If you cannot tell whether an instruction is asking for Archival Mode or something else, this is the Pillar 2 decision tree's "target unclear" branch — ask, do not guess.
+
+**The verification gate — do not trust that a surface merely *looks* complete.** An agent asked to archive "everything that's done" and left to judge this from checkbox appearance alone can be fooled by a phase that was checked off but never actually verified — the exact shape of failure this suite calls Ghost Logic, now happening *because* of the archival action rather than in spite of it.
+
+- **For a `tasks.md` phase specifically:** before archiving, consult `scripts/focus/phase_status.py`'s receipt-cross-referenced status (it derives this from `.workflow_state/receipts/BUILD_RECEIPTS.md`, matching phase names exactly as `/execute-build` wrote them — see that script's own module docstring). A phase whose derived status is one of `_COMPLETE_STATUSES` (`"phase complete"`, `"project build complete"`) may be archived. A phase reporting anything else — `not_started`, no matching receipt, or `tasks.md`/receipts absent entirely — is **not** archived; fire the Intent-Mismatch Gate (Pillar 4) instead: restate what you understood, surface the mismatch between "the user said archive this" and "the receipt trail doesn't confirm it's done," propose *not* archiving as the minimal repair, and ask.
+- **For a Composed Artifact with no receipt infrastructure** (no `tasks.md`, or a document type `phase_status.py` has no opinion about): fall back to a surface-level check — no open checkboxes (`[ ]`, `[/]`, `[~]`), no `TODO`/`FIXME` markers, remain in the named unit. If any are present, same Intent-Mismatch Gate response as above.
+
+**The action, once the gate clears:** move the named, verified-complete unit's content **verbatim** into `.history/archive/<filename>.ledger.md` as a new dated entry, then strip it from the active surface. Everything not named — adjacent phases, unrelated sections, forward-looking work — is frozen exactly per the Safety Rail (Pillar 1). Archiving three phases when the user named three phases is N=N (the Spine); archiving a fourth because it also looked done is a scope violation.
+
+**Where it lives — `.history/` gains a second subdirectory, distinct in kind from both existing "quarantine" concepts:**
+
+- **`.history/quarantine/<filename>.ledger.md`** — the existing **Quarantined Change Ledger** (Pillar 3), relocated one level deeper. Semantics unchanged: write-only at runtime, ingestion-banned (STRICT RULE 9), holds *removed contradictions*. **This is not the same thing as the bare `quarantine/` directory** `/depreciate` uses for in-flight staging (reversible, ticketed, pending verified replacement, at the workspace root) — different path, different lifecycle, different purpose. Don't conflate them because both contain the word.
+- **`.history/archive/<filename>.ledger.md`** (new) — the **Archival Ledger**. Holds completed, non-contradicted history moved off an active surface by explicit user invocation. Human-readable, **not** ingestion-banned — there is no contradiction to leak back in. Retention Contract: **Append-Only Ledger** (Pillar 1) — entries accumulate as things are archived; a prior entry is never edited or removed.
+
+**Migration note (one-time, already executed as part of this ticket):** the one real file that existed at the old flat `.history/<filename>.ledger.md` location, `.history/depreciate.md.ledger.md`, moved to `.history/quarantine/depreciate.md.ledger.md`. Nothing in it changed; only its path did. Every place in the suite that referenced the flat path for the quarantine ledger specifically has been retargeted — see the Change Log entry for this pillar for the full list.
+
+**Transparency, same discipline as Pillar 3:** summarize the archival conversationally in your reply ("archived Phase 1 and 2 to `.history/archive/tasks.md.ledger.md`, Phase 3 onward left active") — never as an inline "archived / moved" ghost note on the surface you just cleaned.
+
+---
+
 ## PRESERVED ORIGINAL DOCTRINE — the OG charter and surviving principles
 
 This protocol began as the user's own rule, preserved verbatim because the rework restores it rather than replacing it:
@@ -231,6 +265,7 @@ The former mandatory "Archive / Superseded Information" section is retired for a
 11. Procedural gates over judgment. Every clarification, restatement, and surfacing requirement here is mandatory procedure, not a judgment call. Execute the gate even when you believe you understand — the gates catch the cases where you do not, and protect against agents that misread intent silently.
 12. Leniency is bounded. Lean constrained (ask; touch nothing extra) for hard-to-regenerate artifacts, single-source surfaces, and precise instructions. Lean lenient (follow a strong implication without asking) only to prevent provable breakage, or under explicit delegation. When in doubt, constrained.
 13. Remediate legacy ghosts on contact (Pillar 5): a `<!-- QUARANTINED -->` tag, a "superseded" note, or an inline contradiction left by the old doctrine is cleaned when its resolution is unambiguous, or surfaced via the Intent-Mismatch Gate when the resolution is lost — never guessed. This bounded exception covers legacy ghosts only; it is never a license for speculative cleanup of unmentioned content.
+14. **[ADDED 2026-07-04, resolves helpdesk-tickets/CLOSED_20260704_nodelete_workflow.md]** Archival Mode (Pillar 6) is strictly user-invoked (`/nodelete --archive` or its unambiguous prose equivalent) — never entered because a surface merely looks complete. For a `tasks.md` phase, verify completion via `scripts/focus/phase_status.py`'s receipt-cross-referenced status before archiving; anything short of a confirmed-complete phase fires the Intent-Mismatch Gate instead of proceeding. Archived content moves verbatim to `.history/archive/<filename>.ledger.md` — an Append-Only Ledger, not ingestion-banned, distinct from the Quarantined Change Ledger now at `.history/quarantine/`. Never archive a unit the user did not name, per the same Safety Rail that governs every other pillar.
 
 ---
 
@@ -244,9 +279,10 @@ INTEGRATION WITH OTHER WORKFLOWS
   /nodelete     → THIS PROTOCOL — scope discipline + contradiction resolution for all document/config/code work
   All other workflows operate within the frame these set.
 
-  /depreciate   → the heavy-deletion arm. /nodelete handles the routine case (a single contradicted value, cleanly replaced). When a contradiction spans many files, or a value must be quarantined and verified before replacement across a substrate, hand off to /depreciate. *(Relationship to be refined in a dedicated session — see Change Log entry 4.)*
+  /depreciate   → the heavy-deletion arm. /nodelete handles the routine case (a single contradicted value, cleanly replaced). When a contradiction spans many files, or a value must be quarantined and verified before replacement across a substrate, hand off to /depreciate. **[RESOLVED 2026-07-04 — the "dedicated session" this note asked for happened: see `depreciate.md` Change Log entry 4, which re-grounded it as exactly this heavy execution arm. Note preserved as historical record of the ask, not because it's still open.]**
   /divergence --convergence → the detection arm. It surfaces a Pruning Report of duplication/bloat/contradiction on active surfaces; /nodelete (clean replacement) and /depreciate (quarantine) execute the prunes safely.
   /provenance   → the legitimate reader of Quarantined Change Ledgers, on explicit invocation (decision archaeology).
+  /execute-build → the source of Phase Build Receipts (`BUILD_RECEIPTS.md`) that Pillar 6's verification gate reads via `scripts/focus/phase_status.py`, to confirm a `tasks.md` phase is genuinely complete before Archival Mode moves it. **[ADDED 2026-07-04]**
 
 /triage trigger: none of its own. Invoked intentionally, or layered automatically, to keep all integration scope-disciplined and contradiction-clean.
 
@@ -255,8 +291,12 @@ HOW TO BEGIN
 ────────────────────────────────────────────
 When activated, execute silently:
   Step 1: Read this entire protocol fully — including the reframe banner. The name says "nodelete"; the protocol says "delete contradictions cleanly, preserve the unmentioned absolutely."
-  Step 2: Internalize the Spine, the four Pillars, and the STRICT RULES.
+  Step 2: Internalize the Spine, the six Pillars, and the STRICT RULES.
   Step 3: Apply them to every correction, edit, and integration for the rest of the session.
+
+**Two distinct invocation paths [UPDATED 2026-07-04]:**
+- Standard invocation (implicit, every session): the scope-and-contradiction discipline (Pillars 1-5) governs all integration of information, as above.
+- **`/nodelete --archive`** (explicit, user-invoked only): enters Archival Mode (Pillar 6) — graduates verified-complete, non-contradicted history off an active surface into `.history/archive/`. Never entered without this explicit flag or its unambiguous prose equivalent.
 
 Do not announce activation. Do not summarize. Operate under it from this point forward — diff not respec, silence is assent, contradictions replaced cleanly, the unmentioned frozen, breakage surfaced.
 
@@ -271,3 +311,4 @@ You are now live. The Surgical Scope & Contradiction Protocol is active.
 4. **2026-06-12**: `[REWORKED — /harden-workflow + /quality, user-directed redesign]` Full rework from "universal preservation" to the **Surgical Scope & Contradiction Protocol**, restoring fidelity to the original user charter ("use delete only if a contradiction is present"). Root problem corrected: the protocol had hardened into an absolute "never delete anything," causing agents to hoard contradictory values behind "superseded" notes (`x=y but superseded; x used to = z`) — polluting active prompt/voice surfaces and degrading LLM output, while *also* (the original complaint) over-scoping narrow corrections into full rewrites. **Added:** the Spine (diff-not-respec; silence=assent; N items=N changes); Pillar 1 (three Retention Contracts — Append-Only Ledger / Live-State / Composed Artifact — each with its deletion policy); Pillar 2 (same-slot contradiction test; Expressed-Scope Default; decision tree; **Productive Dissent** teach-back path for bare dissatisfaction; leniency spectrum); Pillar 3 (**Quarantined Change Ledger** — write-only at runtime, ingestion-banned to prevent re-pollution, cold-swept, non-blocking); Pillar 4 (**Intent-Mismatch Gate** — breakage triggers mandatory restate-intent → surface → minimal-repair → discuss; a procedural gate robust to weak agents). **Cleanly replaced (direct contradiction, per the protocol's own rule):** the "keep original + add new + Resolution Note" contradiction mechanic and the universal five-section output mandate (re-scoped to living documents only). This supersedes and replaces the Tier-1/Tier-2 "Active Surface Correction Protocol" injected earlier on 2026-06-12 (entry 3) — the three-contract model is its corrected successor; entry 3 is retained as history. **Preserved per the new doctrine:** the OG user charter (verbatim), Minimal Intervention, no-silent-loss, never-assume-cleanup, append-new-info; all prior Change Log entries. Reframe banner added to neutralize the now-counterintuitive name (user chose to keep the OG name; Option 1). Frontmatter: description rewritten, version 3→4, strict_rule_count 8→12, content_hash recomputed, last_hardened 2026-06-12. Grade: Sovereign. Standard Version: 3. **Deferred (user-flagged):** /depreciate relationship refinement, next session.
 5. **2026-06-12**: `[REFINED — user feedback, /nodelete + /quality]` Two changes. (a) The Quarantined Change Ledger is promoted from recommended example to **standard**: every workspace uses a `.history/<filename>.ledger.md`, created if absent and used for all ledgered deletions; the former non-blocking framing is narrowed to the genuine read-only-context edge case (Pillar 3 + STRICT RULE 9; frontmatter `platform_requirements.file_write` false→true to reflect that the protocol now creates ledger files). (b) Added **THE COMPACT** — the protocol's unifying rationale, capturing the user's framing that original `/nodelete` protected the human's working model (his sanity) and the rework protects the agent's context integrity (its sanity); neither half's integrity is spent for the other's — an idealistic compact aggressive toward inequality between the two systems. Prior content preserved; appended per the Append-Only Ledger contract. content_hash recomputed. Standard Version: 3.
 6. **2026-06-12**: `[ADDED — Remediation on Contact, /quality + user-directed]` Added **Pillar 5 — Remediation on Contact**: the suite's legacy "never delete" residue (`<!-- QUARANTINED -->` tags, "superseded" notes, inline contradictions) heals incrementally wherever an agent touches a surface — cleaned autonomously when the correct resolution is unambiguous (ledgered to `.history/`, flagged reconstructed-from-context), surfaced via the Intent-Mismatch Gate when the resolution is lost (never guessed). This is the single bounded exception to "never clean up the unmentioned" (Pillar 2 / Preserved Doctrine) and covers legacy ghosts only. GLOSSARY: "Legacy ghost" and "Remediation on Contact" added. STRICT RULE 13 added (strict_rule_count 12→13). Pairs with /divergence --convergence (proactive ghost scan) and /depreciate (broad ghost removal). content_hash recomputed. Standard Version: 3.
+7. **2026-07-04**: `[ADDED — Pillar 6, Archival Mode, resolves helpdesk-tickets/CLOSED_20260704_nodelete_workflow.md]` The original ticket (filed by a prior session, "Missing User-Invoked Archival Mode for Completed History") named a real, distinct gap: every existing pillar governs *contradictions*; none covered the equally legitimate case of a user wanting completed, non-contradicted work graduated off an active surface for focus. Routing that through Pillar 3's Quarantined Change Ledger would have been a category error — that ledger exists to prevent a deleted contradiction from leaking back into context, a risk completed work doesn't carry. **Added Pillar 6 — Archival Mode**: explicit `/nodelete --archive` invocation (never inferred, matching `/divergence --convergence`'s and `/depreciate --mode`'s existing flag convention); a verification gate requiring `scripts/focus/phase_status.py`'s receipt-cross-referenced status before archiving a `tasks.md` phase (a checkbox that merely *looks* done is not enough — anything short of confirmed-complete fires the Intent-Mismatch Gate instead); `.history/` split into `.history/quarantine/` (the existing Quarantined Change Ledger, relocated, semantics unchanged) and new `.history/archive/` (the Archival Ledger — Append-Only, not ingestion-banned, since archived content carries no contradiction-leak risk). GLOSSARY +2 (Archival Mode, Archival Ledger). STRICT RULE 14 added (13→14). HOW TO BEGIN documents the two invocation paths explicitly; also corrected a stale "four Pillars" count to "six" while already in that text. INTEGRATION's stale "(Relationship to be refined in a dedicated session)" parenthetical about `/depreciate` — dangling since 2026-06-12 even though that refinement happened the same day (see `depreciate.md` Change Log entry 4) — cleared as a Remediation-on-Contact catch, not a new decision; new `/execute-build` INTEGRATION line added (source of the receipts Pillar 6's gate reads). **One-time migration executed as part of this ticket, not scripted** (a one-time, human-supervised action): `.history/depreciate.md.ledger.md` moved to `.history/quarantine/depreciate.md.ledger.md` — the only real file affected. Companion code fix, same ticket: `scripts/registry/aggregator.py`'s `collect_history_events` call retargeted from `.history` to `.history/quarantine` (its flat, non-recursive glob would otherwise silently stop finding any quarantine ledger, undercounting the Suite Learning Registry with no error — exactly the shape of failure this suite calls Ghost Logic), with a new test in `test_registry.py` proving both the retargeted find and that `.history/archive/` content is correctly excluded from contradiction aggregation. Cross-file reference sweep: `depreciate.md`, `harden-workflow.md`, `divergence.md`, `execute-build.md` retargeted wherever they meant the quarantine ledger specifically (historical Change Log entries left untouched — they correctly describe state at the time). `sentinel.md` and `.gitignore` needed no change — the bare `.history/` trailing-slash pattern already covers both new subdirectories. Root Cause Type: STRUCTURAL (a missing protocol section) with one small, necessary code dependency riding along, per this workspace's own established fork model. Frontmatter: version 4→5, strict_rule_count 13→14, content_hash recomputed via `lint_workflows.py`'s printed output (`--fix-hashes` does not persist — see `helpdesk-tickets/20260704_lint-fix-hashes-gap_workflow.md`).

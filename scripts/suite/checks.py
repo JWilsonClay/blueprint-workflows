@@ -178,13 +178,40 @@ def check_symlinks(workflow_name, workspace_root, report):
             report.add("CRITICAL", workflow_name, "symlink",
                         f"Symlink points to {target}, expected {expected}")
 
-    opencode_link = Path(OPENCODE_DIR) / workflow_name
-    if not opencode_link.exists():
-        report.add("WARNING", workflow_name, "pointer", f"OpenCode pointer missing: {opencode_link}")
+    # [RETARGETED 2026-07-05, resolves helpdesk-tickets/20260705_opencode-to-grok-build-transition_workflow.md]
+    # Only check individual pointer files when the runtime's directory exists at
+    # all. A wholly-absent directory means the runtime itself isn't installed —
+    # that is a single fact (see check_runtime_availability, called once per
+    # scan), not 32 near-identical per-file gaps. This distinguishes "the
+    # runtime was never set up / was removed" from "one specific new file is
+    # missing its pointer" — a real, different finding from the same signal.
+    if Path(OPENCODE_DIR).is_dir():
+        opencode_link = Path(OPENCODE_DIR) / workflow_name
+        if not opencode_link.exists():
+            report.add("WARNING", workflow_name, "pointer", f"OpenCode pointer missing: {opencode_link}")
 
-    antigravity_link = Path(ANTIGRAVITY_DIR) / workflow_name
-    if not antigravity_link.exists():
-        report.add("WARNING", workflow_name, "pointer", f"Antigravity pointer missing: {antigravity_link}")
+    if Path(ANTIGRAVITY_DIR).is_dir():
+        antigravity_link = Path(ANTIGRAVITY_DIR) / workflow_name
+        if not antigravity_link.exists():
+            report.add("WARNING", workflow_name, "pointer", f"Antigravity pointer missing: {antigravity_link}")
+
+
+def check_runtime_availability(report):
+    """
+    [ADDED 2026-07-05, resolves helpdesk-tickets/20260705_opencode-to-grok-build-transition_workflow.md]
+    Run once per scan (not per file). Reports whether each pointer-runtime
+    directory exists at all, as a single INFO-level note — not a WARNING,
+    since a runtime being absent may be a deliberate choice (a tool retired
+    and replaced), not a defect. check_symlinks skips its per-file checks for
+    whichever runtime is reported unavailable here, so the two never double-warn.
+    """
+    for label, directory in (("OpenCode", OPENCODE_DIR), ("Antigravity", ANTIGRAVITY_DIR)):
+        if not Path(directory).is_dir():
+            report.add("INFO", "(suite)", "runtime",
+                       f"{label} runtime directory not found at {directory} — "
+                       f"skipping per-file pointer checks for this runtime. "
+                       f"If retired/replaced intentionally, no action needed; "
+                       f"if unexpected, verify the runtime is installed.")
 
 
 def check_content_hash(content, fm, workflow_name, report):

@@ -3,7 +3,7 @@ description: "Sovereign Onboarding Agent — reads workspace state and produces 
 type: meta
 grade: Sovereign
 version: 3
-content_hash: "sha256:38a981bccec884b4"
+content_hash: "sha256:e2aad35ce0278e92"
 last_hardened: "2026-05-25"
 strict_rule_count: 8
 phase_count: 4
@@ -22,7 +22,7 @@ consumes:
   - "tasks.md"
   - ".workflow_state/HANDOFF.md"
   - ".workflow_state/issues/OPEN.md"
-  - "~/blueprint-workflows/manifest/WORKFLOW_MANIFEST.md"
+  - "~/blueprint-workflows/manifest/SUITE_HEALTH.md"
   - "~/blueprint-workflows/manifest/dependency_graph.json"
 platform_requirements:
   file_write: false
@@ -102,7 +102,7 @@ Extract: current branch, recent activity level, uncommitted changes.
 ls ~/blueprint-workflows/claude-commands/*.md 2>/dev/null | wc -l
 ```
 
-If the Sovereign Suite is available: note the workflow count and read `~/blueprint-workflows/manifest/WORKFLOW_MANIFEST.md` for suite health. If not: note that no governance suite is detected.
+If the Sovereign Suite is available: note the workflow count and read `~/blueprint-workflows/manifest/SUITE_HEALTH.md` **[RETARGETED 2026-07-04, was WORKFLOW_MANIFEST.md]** for suite health. If not: note that no governance suite is detected.
 
 ---
 
@@ -253,3 +253,4 @@ Cross-platform invocation:
 
 ### Change Log
 1. **2026-05-25**: `[CREATED]` Built via Sovereign Scaffold Generator (/harden-workflow --generator). Origin: workspace-level Divergence #2 (The Sovereign Onboarding Agent) — approved 2026-05-25, deferred until linter and dependency graph were built (both now complete). Designed as a read-only, situation-aware orientation tool that produces a concise startup brief from observable workspace state. Standard Version: 3.
+2. **2026-07-04**: `[RETARGETED — WORKFLOW_MANIFEST.md split, resolves helpdesk-tickets/CLOSED_20260704_workflow-manifest-growth_workflow.md]` `consumes:` and the suite-health read instruction retargeted to `manifest/SUITE_HEALTH.md` (the Live-State half of the former combined file) — this workflow only ever needed current grades, never the session narrative, so nothing else changes. Content_hash recomputed.

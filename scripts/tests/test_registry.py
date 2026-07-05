@@ -1,10 +1,13 @@
 """
 test_registry.py — Test suite for the Suite Learning Registry engine.
 
-Covers: event collection from tickets + .history ledgers, pattern/workflow/source
-aggregation, registry-file creation (snapshot block + append-only event log),
-idempotency (no duplicate events on re-run), reviewed-watermark delta + threshold
-verdict, the --report-only read-only invariant, and graceful empty-workspace.
+Covers: event collection from tickets + .history/quarantine/ ledgers, pattern/
+workflow/source aggregation, registry-file creation (snapshot block + append-only
+event log), idempotency (no duplicate events on re-run), reviewed-watermark delta +
+threshold verdict, the --report-only read-only invariant, graceful empty-workspace,
+and the .history/quarantine/ vs .history/archive/ split (/nodelete Pillar 6,
+2026-07-04) — the retargeted path is found, archive/ is excluded, the pre-split flat
+path is confirmed no longer scanned.
 
 Run via scripts/run_tests.sh (unittest discover, PYTHONPATH=scripts/).
 """
@@ -42,7 +45,9 @@ class TestAggregator(unittest.TestCase):
         self.ws = Path(tempfile.mkdtemp())
         _write(self.ws / "helpdesk-tickets" / "20260101_alpha_workflow.md", TICKET_A)
         _write(self.ws / "helpdesk-tickets" / "20260102_beta_workflow.md", TICKET_B)
-        _write(self.ws / ".history" / "foo.md.ledger.md", HISTORY)
+        # [RETARGETED 2026-07-04, /nodelete Pillar 6] .history/ split into quarantine/
+        # (scanned) and archive/ (deliberately not scanned — see TestArchiveExclusion).
+        _write(self.ws / ".history" / "quarantine" / "foo.md.ledger.md", HISTORY)
 
     def tearDown(self):
         shutil.rmtree(self.ws, ignore_errors=True)
@@ -66,11 +71,50 @@ class TestAggregator(unittest.TestCase):
         self.assertEqual(sorted(e.date for e in events), ["2026-01-01", "2026-01-02"])
 
 
+class TestQuarantineArchiveSplit(unittest.TestCase):
+    """[ADDED 2026-07-04, resolves helpdesk-tickets/CLOSED_20260704_nodelete_workflow.md]
+    /nodelete Pillar 6 split .history/ into quarantine/ (contradiction history — a
+    legitimate registry input) and archive/ (Archival Mode's completed, non-contradicted
+    history — never a contradiction signal). Proves both halves of that split explicitly:
+    the retargeted path is actually found, and archive/ is actually excluded, not just
+    coincidentally absent.
+    """
+
+    def setUp(self):
+        self.ws = Path(tempfile.mkdtemp())
+
+    def tearDown(self):
+        shutil.rmtree(self.ws, ignore_errors=True)
+
+    def test_quarantine_ledger_found_at_new_path(self):
+        _write(self.ws / ".history" / "quarantine" / "foo.md.ledger.md", HISTORY)
+        events = collect_events(self.ws)
+        self.assertEqual(len(events), 2)  # both history sections found
+        self.assertEqual({e.source for e in events}, {"history"})
+
+    def test_archive_content_excluded_from_aggregation(self):
+        _write(self.ws / ".history" / "quarantine" / "foo.md.ledger.md", HISTORY)
+        # Archive content uses the identical ledger format/patterns — if it were
+        # accidentally scanned too, these Ghost Logic mentions would double the count.
+        _write(self.ws / ".history" / "archive" / "tasks.md.ledger.md", HISTORY)
+        events = collect_events(self.ws)
+        self.assertEqual(len(events), 2)  # unchanged — archive/ contributed nothing
+        agg = aggregate(events)
+        self.assertEqual(agg["by_pattern"]["Ghost Logic"], 1)  # not doubled to 2
+
+    def test_flat_history_no_longer_scanned(self):
+        # The pre-split flat path — confirms this is a real retarget, not a superset.
+        _write(self.ws / ".history" / "foo.md.ledger.md", HISTORY)
+        events = collect_events(self.ws)
+        self.assertEqual(len(events), 0)
+
+
 class TestRegistryWrite(unittest.TestCase):
     def setUp(self):
         self.ws = Path(tempfile.mkdtemp())
         _write(self.ws / "helpdesk-tickets" / "20260101_alpha_workflow.md", TICKET_A)
-        _write(self.ws / ".history" / "foo.md.ledger.md", HISTORY)
+        # [RETARGETED 2026-07-04, /nodelete Pillar 6 — was .history/foo.md.ledger.md]
+        _write(self.ws / ".history" / "quarantine" / "foo.md.ledger.md", HISTORY)
         self.rpath = self.ws / "manifest" / "CONTRADICTION_REGISTRY.md"
 
     def tearDown(self):

@@ -1,15 +1,16 @@
 ---
-description: "Receipt Coverage Map — Project Quality Observability Baseline. Reads BUILD, VALIDATION, HARDEN, and DOCS receipt files to produce a coverage gap analysis."
+description: "Receipt Coverage Map — Project Quality Observability Baseline. Engine-backed (v3, scripts/receipt/): cross-references tasks.md completed phases against BUILD/VALIDATION/HARDEN receipts and wires Quality-Process directly, computing a gap percentage the agent can no longer hallucinate."
 type: audit
-grade: Hardened
-version: 2
-content_hash: "sha256:37577f471124415f"
-last_hardened: "2026-05-07"
-strict_rule_count: 8
+grade: Sovereign
+version: 3
+content_hash: "sha256:006b771f425cda3c"
+last_hardened: "2026-07-05"
+strict_rule_count: 11
 phase_count: 5
 context_retention: low
 flags: []
-dependencies: []
+dependencies:
+  - "scripts/receipt/"
 triggers:
   - "/triage"
   - "/secretary"
@@ -28,6 +29,8 @@ platform_requirements:
 *"A receipt not written is a build not recorded. A build not recorded is a project not understood."*
 
 You are a **Sovereign Coverage Auditor** — a read-only, non-destructive analysis tool that maps which components of the current project have been Built, Validated, Hardened, and Documented, and which have not. You produce a single structured Coverage Map and surface every gap with precision.
+
+**[ENGINE-BACKED 2026-07-05, resolves helpdesk-tickets/CLOSED_20260704_hallucinated-success-recurrence_workflow.md, Verification-Spine Campaign QUEUE #11]** The "coverage is sufficient" verdict was previously produced by the agent reading each receipt file and eyeballing a match — a receipt file existing was never mechanically confirmed to actually cover a specific completed phase, and the Quality-Process dimension was called as a separate manual step the agent could skip. `scripts/receipt/receipt_audit.py` now performs the whole cross-reference deterministically in one pass, including the Quality-Process subprocess call, and returns a structured coverage report with a computed gap percentage. The agent's job narrows to interpreting that report and deciding what matters — it can no longer silently skip the check or misread which phase a receipt actually belongs to.
 
 This workflow does NOT:
 - Build, test, harden, or document anything
@@ -53,8 +56,43 @@ This workflow is the **observability baseline** for Layer 2. It is the first wor
 | **Gap** | Any component that has a Build Receipt but is missing a Validation, Harden, or Document receipt — or a component in tasks.md with no Build Receipt at all. |
 | **Modified-after-harden** | A file that has a Harden Receipt but whose git modification timestamp is newer than the receipt date. The harden grade no longer applies to the current state. |
 | **Receipt infrastructure** | The Layer 1 workflows must be configured to write receipt files. If they are not, this workflow will find empty or missing receipt directories and report that fact explicitly. |
+| **Receipt Coverage Engine** | **[ADDED 2026-07-05]** `scripts/receipt/receipt_audit.py` — the deterministic engine that parses `tasks.md`, cross-references its completed phases against BUILD/VALIDATION/HARDEN receipts, and wires the Quality-Process dimension via a direct call to `quality_audit.py`. Read-only; writes nothing. |
+| **Gap percent** | **[ADDED 2026-07-05]** The engine's computed metric: of all *checkable* dimension-checks (a completed phase × a receipt file that actually exists), what fraction are missing. A not-yet-built phase contributes nothing to this count — it is PENDING, not a gap (the same distinction `/focus-plan` v4 established for its own absent-anchor problem; this engine reuses that workflow's `phase_status.py` phase parser directly rather than re-deriving the logic). |
+| **Existence-only dimension** | **[ADDED 2026-07-05]** The Documented dimension specifically: `DOCS_RECEIPTS.md`'s real-world "Phase/Stage" value is a fixed constant ("Journal Update") in every entry this workspace has ever written — there is no per-phase key to match against. The engine reports only whether documentation activity exists at all, and never claims a per-phase match for this one dimension. |
+| **File-mention heuristic (Hardened dimension)** | **[ADDED 2026-07-05]** Because `HARDEN_GRADES.md` is keyed by file path, not phase name, the engine infers which files belong to a phase by scanning that phase's own `tasks.md` body text for path-shaped tokens. This is a heuristic, not an exact match — a phase naming no files is reported `unverifiable_no_file_list`, never silently marked covered. A surprising "found" or "missing" result is worth a spot-check, not blind trust. |
 
 ---
+
+## EXECUTION MODEL — Engine-Backed (primary path)
+
+**[ADDED 2026-07-05]** Run the Receipt Coverage Engine once, at session start for this workflow:
+
+```bash
+python3 ~/blueprint-workflows/scripts/receipt/receipt_audit.py \
+  --workspace {workspace_root} --output-json
+```
+
+Read the structured report. It already contains, in one pass:
+- `tasks_md_found` — if `false`, treat as STRICT RULE 3's HALT condition (no Component List to check against).
+- `receipt_files_present` — which of the four receipt files exist at all (feeds PHASE 4's infrastructure status, below).
+- `phases` — per completed phase, `built`/`validated`/`hardened` status (`found` / `missing` / `receipts_file_absent` / `unverifiable_no_file_list`), and `not_applicable_pending` for any phase not yet claimed complete.
+- `documented_dimension` — existence-only, per the Glossary entry above; never a per-phase claim.
+- `checkable_dimensions` / `covered_dimensions` / `gap_percent` — the mechanical coverage metric.
+- `quality_process` — the Quality-Process verdict, already fetched; no separate manual step needed.
+
+Your job, consuming this report:
+1. **Render PHASE 3's Coverage Map** (below) directly from the report's `phases` list — one row per phase, translating `found`→✅, `missing`→❌, `receipts_file_absent`→ABSENT, `not_applicable_pending`→PENDING, `unverifiable_no_file_list`→UNVERIFIABLE.
+2. **Render PHASE 4's Infrastructure Status** directly from `receipt_files_present` and `documented_dimension`.
+3. **Judgment that stays yours**: which gaps matter most given the project's actual priorities, whether a stale-harden check (still requires the `git log` comparison below — the engine doesn't compute this) is worth flagging loudly, and how to phrase the Gap Summary for the user. The engine supplies facts; it does not prioritize or narrate them.
+4. A `missing` result is a real, mechanically confirmed gap — treat it as such, not as a suggestion to re-verify manually. A `unverifiable_no_file_list` or `receipts_file_absent` result is explicitly *not* a gap — do not silently upgrade it to one.
+
+If the engine is unavailable (script missing, exits non-zero, or emits unparseable JSON): fall back to **Manual Fallback Mode** — Phases 0 through 4 below, executed exactly as originally designed, by hand.
+
+---
+
+## MANUAL FALLBACK MODE (engine unavailable)
+
+*Everything from here through PHASE 4 is the original, pre-engine procedure — preserved verbatim per /nodelete, not deleted. Use it only when the Receipt Coverage Engine cannot run.*
 
 ## PHASE 0 — INTAKE
 
@@ -229,23 +267,24 @@ RECEIPT INFRASTRUCTURE STATUS:
 6. Stale Harden Grades (🔄) must be flagged visually in the Coverage Map and listed explicitly in the Gap Summary. A stale grade is not the same as no grade — but it is not reliable coverage either.
 7. The Documentation dimension may be UNVERIFIABLE if the project has no DevJournal or git convention for tagging documentation commits. State UNVERIFIABLE explicitly rather than ❌.
 8. Never produce a Coverage Map without a Gap Summary. Even if gaps = NONE, the Gap Summary section must appear explicitly.
+9. **[ADDED 2026-07-05]** Prefer the Receipt Coverage Engine (EXECUTION MODEL) over Manual Fallback Mode whenever `scripts/receipt/receipt_audit.py` is available and returns valid JSON. Do not manually re-derive what the engine already computed — that reintroduces the exact unverified-attestation risk this hardening pass closed.
+10. **[ADDED 2026-07-05]** A `missing` dimension result from the engine is a confirmed gap; a `receipts_file_absent` or `unverifiable_no_file_list` result is explicitly not one. Never collapse these into the same Gap Summary bucket — infrastructure absence, an unmatchable heuristic, and a real gap are three different findings with three different remediations.
+11. **[ADDED 2026-07-05]** The Hardened dimension's file-mention match is a heuristic, not a guarantee (see GLOSSARY). Treat a `found` result as strong evidence, not infallible proof — if a result looks surprising given what you know about the project, say so and suggest a manual spot-check rather than reporting it with false certainty.
 
 ---
 
 ────────────────────────────────────────────
 HOW TO BEGIN
 ────────────────────────────────────────────
-When activated:
-  Step 0a: Establish workspace root — locate tasks.md
-  Step 0b: Read all three receipt files using the Read tool (or note them as ABSENT)
-  Step 0c: Parse tasks.md to build the Component List
-
-Then execute Phase 1 (parse receipts), Phase 2 (map coverage), Phase 3 (Coverage Map), Phase 4 (infrastructure status).
+**[UPDATED 2026-07-05]** When activated:
+  Step 1: Run the Receipt Coverage Engine (EXECUTION MODEL) — `scripts/receipt/receipt_audit.py --workspace {workspace_root} --output-json`.
+  Step 2: If it returns valid JSON — render PHASE 3 (Coverage Map) and PHASE 4 (Infrastructure Status) directly from the report; apply judgment per EXECUTION MODEL step 3.
+  Step 3: If the engine is unavailable — fall back to MANUAL FALLBACK MODE, Phases 0 through 4, executed by hand exactly as originally designed.
 
 Report the Coverage Map and Gap Summary to the user.
 Await instruction — the user decides which gaps to address and in what order.
 
-You are now live. Begin Phase 0.
+You are now live. Begin.
 
 ────────────────────────────────────────────
 INTEGRATION WITH OTHER WORKFLOWS
@@ -271,6 +310,8 @@ Receipt file location (all projects):
   - "Which files need to be hardened?" → /receipt-check (Hardened column)
   - "Which stages are missing validation?" → /receipt-check (Validated column)
 
+**[ADDED 2026-07-05]** `scripts/receipt/receipt_audit.py` reuses `scripts/focus/phase_status.py`'s `parse_tasks_md` directly (same phase-boundary detection `/focus-plan` v4 already proved out) rather than re-deriving it — a second real transfer of that engine's logic, recorded in `manifest/SUITE_PHYLOGENY.md`. It also calls `scripts/quality/quality_audit.py` as a subprocess to fold the Quality-Process dimension into the same unified pass.
+
 **[DEPENDENCY NOTE — 2026-05-07, RESOLVED 2026-05-15]**: The receipt-writing sub-steps in
 /execute-build, /iterate-test, /harden, and /document (Stage 1a) have been implemented.
 All four workflows now write atomic-append entries to `{workspace_root}/.workflow_state/receipts/`
@@ -290,3 +331,4 @@ Divergence report.
 3. **2026-05-15**: `[STAGE 1a COMPLETE — /focus-plan + /implementation-plan + /quality, /nodelete]` All four receipt-writing sub-steps implemented. /execute-build Step 6+7 now writes to BUILD_RECEIPTS.md. /iterate-test Step 6 now writes to VALIDATION_RECEIPTS.md. /harden Phase 2f now writes to HARDEN_GRADES.md. /document Phase 2 now writes to DOCS_RECEIPTS.md. All injections use atomic `cat >>` append with `mkdir -p` guard and non-blocking failure handling. /secretary Phase 3 updated with escalation gate: auto-files helpdesk ticket after 2+ consecutive RECEIPT INFRASTRUCTURE NOT INITIALIZED sessions. STRICT RULE 16 added to /secretary. Dependency note in INTEGRATION section retired. Stage 1a is now operational. Source: helpdesk ticket 20260512_receipt-check_workflow.md.
 4. **2026-05-21**: `[PORTED — Claude Code migration]` Pointer/Payload architecture retired. Merged into single command file at `~/blueprint-workflows/claude-commands/receipt-check.md`. Phase 0b updated: `view_file` commands replaced with Read tool.
 5. **2026-06-02**: `[INJECTED — /quality Option-F wiring, /nodelete]` Added the **Quality-Process** observability dimension (the fifth): sourced from `.workflow_state/quality_witness.log` via `scripts/quality/quality_audit.py`. GLOSSARY source row, INTAKE read step, and Phase 2 dimension-table row added; "four dimensions" → "five". All prior content preserved per /nodelete. Standard Version: 3.
+6. **2026-07-05**: `[ENGINE-BACKED — v3, resolves helpdesk-tickets/CLOSED_20260704_hallucinated-success-recurrence_workflow.md, Verification-Spine Campaign QUEUE #11]` **Defect**: the "coverage is sufficient" verdict — and specifically whether a given receipt actually covered a given completed phase — was produced entirely by the agent reading receipt files and matching them by eye; the Quality-Process dimension required a separate manual `quality_audit.py` invocation the agent could skip. Both are the same class of gap the campaign already closed in `/focus-plan`, `/harden`, and `/iterate-test`: a verification guarantee enforced by instruction rather than mechanism. **Built**: `scripts/receipt/` (`receipt_audit.py` CLI + `coverage.py` + `reporter.py` + `_utils.py`) — parses `tasks.md` (reusing `focus.phase_status.parse_tasks_md` directly, not re-derived), cross-references BUILD/VALIDATION receipts by phase-name match, HARDEN receipts by a file-mention heuristic (disclosed as a heuristic, not a guarantee — GLOSSARY, STRICT RULE 11), treats DOCS_RECEIPTS.md honestly as existence-only (its real "Phase/Stage" value is a fixed constant in every entry this workspace has ever written, confirmed against the actual file, not assumed), and wires Quality-Process via a direct `quality_audit.py` subprocess call. Computes a `gap_percent` that explicitly excludes `receipts_file_absent` and `not_applicable_pending` (PENDING) phases from the checkable count — reusing `/focus-plan` v4's exact PENDING-is-not-a-gap distinction rather than reintroducing the bug that fix closed. 15 new unit tests (`scripts/tests/test_receipt.py`), including a live `quality_audit.py` subprocess test against this suite itself. **Re-hardened**: new EXECUTION MODEL section makes the engine the primary path; the original five-phase manual procedure is preserved verbatim as MANUAL FALLBACK MODE, not deleted, per /nodelete — used only if the engine is unavailable. GLOSSARY +4, STRICT RULES 9-11 added (8→11). Frontmatter: grade Hardened→Sovereign, version 2→3, `dependencies` gains `scripts/receipt/`, content_hash recomputed. **Phylogeny Disposition**: a second real transfer of `focus.phase_status.parse_tasks_md` into another engine (the first was internal to `/focus-plan`; this is the first *other* engine reusing it) — recorded in `manifest/SUITE_PHYLOGENY.md`, not defaulted to NO TRANSFER.

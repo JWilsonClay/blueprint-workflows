@@ -8,6 +8,8 @@ Responsibility: Centralize execution of git commands and verification gates.
 """
 
 import subprocess
+import shlex
+import time
 from pathlib import Path
 from core.console import out
 
@@ -39,13 +41,20 @@ def _get_safe_env() -> dict[str, str]:
 
 # SECURITY: Block obvious destructive patterns in shell gates
 DANGEROUS_PATTERNS = re.compile(
-    r"(rm\s+-rf\s+/)|(>\s+/dev/sd)|(mkfs)|(dd\s+if=)|(rm\s+-rf\s+\.\.)", 
+    r"(rm\s+-rf\s+/)|(>\s+/dev/sd)|(mkfs)|(dd\s+if=)|(rm\s+-rf\s+\.\.)",
     re.IGNORECASE
 )
 
 def _is_dangerous_command(cmd_str: str) -> bool:
     """Return True if the command contains known catastrophic patterns."""
     return bool(DANGEROUS_PATTERNS.search(cmd_str))
+
+# SECURITY: run_gate no longer invokes a shell at all (CWE-78 / harden_audit.py STRICT
+# RULE 8 flags shell invocation unconditionally, regardless of mitigation). && composition
+# is supported by splitting into sequential argv commands; anything else that depends on
+# shell interpretation (pipes, redirects, subshells, backgrounding, variable expansion)
+# is rejected explicitly rather than silently mis-executed as a literal argument.
+UNSUPPORTED_SHELL_SYNTAX = re.compile(r"[|<>;`&()$\n]")
 
 def run_cmd(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess:
     """
@@ -83,48 +92,81 @@ def run_cmd(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess:
 
 def run_gate(gate_cmd: str, root: Path) -> bool:
     """
-    Run the verification gate command (shell string) with safety filters and environment isolation.
+    Run the verification gate command with safety filters and environment isolation.
+    Supports sequential composition via && (stops at the first failure, matching shell
+    && semantics). Does not invoke a shell: pipes, redirects, subshells, backgrounding,
+    and variable expansion are not supported and are rejected explicitly rather than
+    silently mis-executed. Shell globbing (*, ?, ~) is likewise not expanded — no
+    verification_gate example in this suite's manifests, fixtures, or tests uses it.
     """
     if not gate_cmd or not gate_cmd.strip():
         out("⚠️ ", "Empty verification gate — skipping.")
         return True
 
     sanitized_gate = _sanitize_log(gate_cmd)
-    
-    # SECURITY: Destructive command filtering
+
+    # SECURITY: Destructive command filtering (checked on the full string, before
+    # segmenting, so it still catches attempts spanning multiple && segments)
     if _is_dangerous_command(gate_cmd):
         out("🛑", "SECURITY ALERT: Destructive command pattern detected in gate!")
         out("🛑", f"  Blocked command: {sanitized_gate}")
         return False
 
-    out("🔬", f"Running verification gate: {sanitized_gate}")
-    
-    try:
-        safe_root = root.resolve()
-        if not safe_root.exists():
-            out("❌", f"Gate directory does not exist: {safe_root}")
+    segments = [seg.strip() for seg in gate_cmd.split("&&")]
+    if any(not seg for seg in segments):
+        out("❌", "Verification gate has an empty && segment — check for a stray or trailing &&.")
+        return False
+
+    argv_segments = []
+    for seg in segments:
+        if UNSUPPORTED_SHELL_SYNTAX.search(seg):
+            out("❌", f"Verification gate uses unsupported shell syntax (no shell is invoked — "
+                       f"CWE-78): {_sanitize_log(seg)}")
+            return False
+        try:
+            argv_segments.append(shlex.split(seg))
+        except ValueError as e:
+            out("❌", f"Could not parse verification gate segment: {e}")
             return False
 
-        result = subprocess.run(
-            gate_cmd, 
-            shell=True, 
-            cwd=str(safe_root),
-            timeout=GATE_TIMEOUT,
-            env=_get_safe_env() # SECURITY: Environment isolation
-        )
-        if result.returncode == 0:
-            out("✅", "Verification gate PASSED.")
-            return True
-        else:
+    out("🔬", f"Running verification gate: {sanitized_gate}")
+
+    safe_root = root.resolve()
+    if not safe_root.exists():
+        out("❌", f"Gate directory does not exist: {safe_root}")
+        return False
+
+    deadline = time.monotonic() + GATE_TIMEOUT
+    for argv in argv_segments:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            out("❌", f"Verification gate TIMED OUT after {GATE_TIMEOUT}s.")
+            return False
+        try:
+            result = subprocess.run(
+                argv,
+                shell=False,
+                cwd=str(safe_root),
+                timeout=remaining,
+                env=_get_safe_env()  # SECURITY: Environment isolation
+            )
+        except subprocess.TimeoutExpired:
+            out("❌", f"Verification gate TIMED OUT after {GATE_TIMEOUT}s.")
+            return False
+        except FileNotFoundError as e:
+            out("❌", f"Verification gate command not found: {e}")
+            return False
+        except Exception as e:
+            # SECURITY: Ensure the exception message itself doesn't leak sensitive context
+            out("❌", f"Gate execution error: {type(e).__name__}")
+            return False
+
+        if result.returncode != 0:
             out("❌", f"Verification gate FAILED (exit code {result.returncode}).")
             return False
-    except subprocess.TimeoutExpired:
-        out("❌", f"Verification gate TIMED OUT after {GATE_TIMEOUT}s.")
-        return False
-    except Exception as e:
-        # SECURITY: Ensure the exception message itself doesn't leak sensitive context
-        out("❌", f"Gate execution error: {type(e).__name__}")
-        return False
+
+    out("✅", "Verification gate PASSED.")
+    return True
 
 def check_git_status(root: Path) -> bool:
     """

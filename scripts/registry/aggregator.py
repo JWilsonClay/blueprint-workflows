@@ -5,8 +5,12 @@ Mines free-form markdown by regex against a KNOWN vocabulary rather than a stric
 schema, so it is resilient to the prose variation of real ledgers and tickets.
 
 Sources:
-  * helpdesk-tickets/**/*.md  → one Event per ticket file
-  * .history/*.ledger.md      → one Event per dated `## YYYY-MM-DD — title` section
+  * helpdesk-tickets/**/*.md         → one Event per ticket file
+  * .history/quarantine/*.ledger.md  → one Event per dated `## YYYY-MM-DD — title`
+                                       section [RETARGETED 2026-07-04 — was
+                                       .history/*.ledger.md before /nodelete Pillar 6
+                                       split .history/ into quarantine/ and archive/;
+                                       archive/ is deliberately never scanned here]
 """
 
 import re
@@ -113,7 +117,13 @@ def collect_events(workspace):
     workspace = Path(workspace)
     events = []
     events += collect_ticket_events(workspace / "helpdesk-tickets")
-    events += collect_history_events(workspace / ".history")
+    # [RETARGETED 2026-07-04, resolves helpdesk-tickets/CLOSED_20260704_nodelete_workflow.md]
+    # .history/ split into quarantine/ (the Quarantined Change Ledger — contradiction
+    # history, legitimate registry input) and archive/ (Archival Mode's completed,
+    # non-contradicted history — NOT a contradiction signal, deliberately excluded).
+    # collect_history_events does a flat, non-recursive glob, so it must be pointed at
+    # the quarantine subdirectory specifically now, or it would silently find nothing.
+    events += collect_history_events(workspace / ".history" / "quarantine")
     return events
 
 

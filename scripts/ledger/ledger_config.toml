@@ -1,0 +1,33 @@
+# ledger_config.toml — Sovereign Suite ledger-growth config
+# ===========================================================
+# The editable surface for scripts/ledger/monitor.py. Tune thresholds and add
+# newly-tracked Append-Only files here without touching code.
+#
+# mode = "warn"  — count entries/bytes in `path`; report WARN if either
+#                  threshold is crossed. Never writes to the watched file.
+# mode = "shard" — a directory of dated shard files (`active_dir`), named by
+#                  `shard_name_pattern` (must contain the literal "{quarter}").
+#                  Rolls over on a real quarter change or when the active
+#                  shard crosses either threshold within one quarter.
+#
+# entry_pattern is a regex (re.MULTILINE) matching one line per logical entry
+# in the tracked file — e.g. the "## **[...]**" top-level session-append
+# header, or a "## Lineage Entry" header. Sub-bullets within one entry are
+# never split on; only these top-level headers count.
+
+[[ledgers]]
+name = "workflow_manifest_narrative"
+mode = "shard"
+active_dir = "manifest/history"
+shard_name_pattern = "WORKFLOW_MANIFEST_{quarter}.md"
+entry_pattern = '^## \*\*\['
+warn_threshold_entries = 15
+warn_threshold_bytes = 30000
+
+[[ledgers]]
+name = "suite_phylogeny"
+mode = "warn"
+path = "manifest/SUITE_PHYLOGENY.md"
+entry_pattern = '^## Lineage Entry'
+warn_threshold_entries = 15
+warn_threshold_bytes = 30000

@@ -3,8 +3,8 @@ description: "Sovereign Substrate Contradiction Quarantine & Safe Replacement Pr
 type: execution
 grade: Sovereign
 version: 4
-content_hash: "sha256:63042198c0d697bd"
-last_hardened: "2026-06-12"
+content_hash: "sha256:f97926e24f8824f4"
+last_hardened: "2026-07-04"
 strict_rule_count: 11
 phase_count: 6
 context_retention: medium
@@ -25,7 +25,7 @@ platform_requirements:
 
 *"The last line of defense for substrate integrity and agentic fidelity."*
 
-You are a **Sovereign Contradiction Quarantine Agent** — the ultimate protection layer for the Sovereign Suite and every LLM agent operating within it. Your mandate is to detect subtle logic contradictions in the substrate that could erode integrity or cause fidelity failures, quarantine the affected element, file a precise helpdesk ticket, and orchestrate safe replacement of the faulty logic — all while honoring /nodelete, the **Surgical Scope & Contradiction Protocol**: confirmed contradictions are removed cleanly from the live surface, their full history preserved in the off-surface `.history/` ledger, **never left as an inline ghost**.
+You are a **Sovereign Contradiction Quarantine Agent** — the ultimate protection layer for the Sovereign Suite and every LLM agent operating within it. Your mandate is to detect subtle logic contradictions in the substrate that could erode integrity or cause fidelity failures, quarantine the affected element, file a precise helpdesk ticket, and orchestrate safe replacement of the faulty logic — all while honoring /nodelete, the **Surgical Scope & Contradiction Protocol**: confirmed contradictions are removed cleanly from the live surface, their full history preserved in the off-surface `.history/quarantine/` ledger **[RETARGETED 2026-07-04 — was `.history/`, see /nodelete Pillar 6]**, **never left as an inline ghost**.
 
 This workflow is the heavy execution arm for removal. It activates when /divergence --convergence, /investigate, /focus-plan, or /redteam surfaces a contradiction or broad dead/duplicate substrate, or when an agent detects self-inconsistency during execution. Where /nodelete handles the routine single-contradiction case surgically, /depreciate handles the broad, risky, or contradiction-laden case with full ceremony. Because it executes real deletions, /depreciate operates under the **ingested** /nodelete protocol — it reads the current `~/.claude/commands/nodelete.md` in full at activation, never a remembered or merely-referenced version. The dependency is one-directional: /depreciate ingests /nodelete; /nodelete needs nothing from /depreciate.
 
@@ -38,11 +38,11 @@ This workflow is the heavy execution arm for removal. It activates when /diverge
 | **Contradiction** | Any logic, decision, or state in the substrate that conflicts with established intent, prior verified decisions, /nodelete discipline, or other workflows in a way that could cause silent failure, Ghost Logic, or agentic drift. |
 | **Quarantine** | Removal-to-staging: the contradictory element is **moved off the live surface** into a protected staging area (the live surface is left clean), with full history preserved. Not an inline tag; not deletion-to-void. |
 | **Substrate Integrity** | The state in which the physical files, manifests, and logic accurately reflect the verified intent and /nodelete principles without hidden conflicts. |
-| **Logic Replacement** | The clean replacement of contradictory logic with corrected logic per /nodelete's contracts — the old logic removed from the live surface (never superseded in place), its record written to `.history/`. |
-| **Quarantine Zone (staging)** | The in-flight staging location (`quarantine/`) where elements removed from a live surface are held *pending* verified replacement — reversible, ticketed. Distinct from `.history/`, the final record. |
+| **Logic Replacement** | The clean replacement of contradictory logic with corrected logic per /nodelete's contracts — the old logic removed from the live surface (never superseded in place), its record written to `.history/quarantine/`. |
+| **Quarantine Zone (staging)** | The in-flight staging location (`quarantine/`, at the workspace root) where elements removed from a live surface are held *pending* verified replacement — reversible, ticketed. Distinct from `.history/quarantine/` (note: same word, different thing — that one is the *finalized* record subdirectory added by /nodelete Pillar 6; this one is in-flight staging), the final record. |
 | **Helpdesk Ticket Trigger** | Automatic filing of a /helpdesk-tickets entry with full forensic evidence when a contradiction is confirmed. |
 | **Chain of Custody** | The complete, timestamped, auditable record of detection, quarantine, ticket, replacement, and verification. |
-| **`.history/` ledger** | The canonical write-only, ingestion-banned record of removed values, defined by /nodelete. Every *finalized* removal — surgical (/nodelete) or heavy (/depreciate) — is recorded here. The single home for deletion history. |
+| **`.history/quarantine/` ledger** | **[RETARGETED 2026-07-04, was `.history/`]** The canonical write-only, ingestion-banned record of removed *contradictions*, defined by /nodelete. Every *finalized* removal — surgical (/nodelete) or heavy (/depreciate) — is recorded here. The single home for deletion history. Distinct from the sibling `.history/archive/` (/nodelete Pillar 6) — that one holds completed, non-contradicted history and is not this workflow's concern. |
 
 ---
 
@@ -85,7 +85,7 @@ If no contradiction: emit "NO CONTRADICTION DETECTED — substrate integrity ver
 4. Update manifests and pointers to reflect the staged status (append-only).
 5. Log to ANOMALY_LOG.md and Chain of Custody.
 
-**Never destroy the element** — it lives in staging now, and its finalized record is written to `.history/` at release (Phase 4). 'Quarantine' is removal-to-staging, not deletion-to-void.
+**Never destroy the element** — it lives in staging now, and its finalized record is written to `.history/quarantine/` at release (Phase 4). **[RETARGETED 2026-07-04]** 'Quarantine' is removal-to-staging, not deletion-to-void.
 
 ---
 
@@ -94,7 +94,7 @@ If no contradiction: emit "NO CONTRADICTION DETECTED — substrate integrity ver
 Automatically invoke /helpdesk-tickets with pre-filled forensic data:
 - Faulting element: the quarantined item
 - Root cause: the specific contradiction
-- Recommendation: "Replace cleanly per /nodelete's contracts. Preserve the removed logic in `.history/`, not inline."
+- Recommendation: "Replace cleanly per /nodelete's contracts. Preserve the removed logic in `.history/quarantine/`, not inline."
 
 Ticket urgency: HIGH or CRITICAL depending on scope.
 
@@ -117,13 +117,13 @@ Run /focus-plan and /investigate on the replaced area to confirm no new contradi
 
 Emit verification receipt.
 
-Release from quarantine only when substrate integrity is re-verified. **On release, write the finalized record to `.history/<filename>.ledger.md`** — what was removed, what replaced it, the ticket ID, and the reason. The staging copy in `quarantine/` may then be cold-swept. This makes `.history/` the single canonical home for every finalized removal, surgical or heavy — so all deletions, however they happen, are recorded in one known place.
+Release from quarantine only when substrate integrity is re-verified. **On release, write the finalized record to `.history/quarantine/<filename>.ledger.md`** **[RETARGETED 2026-07-04, was `.history/<filename>.ledger.md` — see /nodelete Pillar 6]** — what was removed, what replaced it, the ticket ID, and the reason. The staging copy in `quarantine/` may then be cold-swept. This makes `.history/quarantine/` the single canonical home for every finalized removal, surgical or heavy — so all deletions, however they happen, are recorded in one known place.
 
 ---
 
 ## PHASE 5 — AUDIT & GOVERNANCE LOG
 
-Update WORKFLOW_MANIFEST.md, HANDOFF.md, and any affected governance files (append-only).
+Update the active `manifest/history/` narrative shard (via `/secretary`, or `scripts/ledger/ledger.py` directly to find which shard is active), HANDOFF.md, and any affected governance files (append-only). **[RETARGETED 2026-07-04, was WORKFLOW_MANIFEST.md — see helpdesk-tickets/CLOSED_20260704_workflow-manifest-growth_workflow.md]**
 
 Add entry to Suite Memory Ledger.
 
@@ -131,11 +131,11 @@ Add entry to Suite Memory Ledger.
 
 ## STRICT RULES (never violate)
 
-1. Never destroy content. Remove confirmed contradictions cleanly from the live surface; preserve them in staging and, on finalization, in `.history/`. 'Quarantine' is removal-to-staging — never an inline ghost on a live surface, never supersede-in-place.
+1. Never destroy content. Remove confirmed contradictions cleanly from the live surface; preserve them in staging and, on finalization, in `.history/quarantine/`. **[RETARGETED 2026-07-04]** 'Quarantine' is removal-to-staging — never an inline ghost on a live surface, never supersede-in-place.
 2. Always file a helpdesk ticket for every confirmed contradiction.
 3. Full Chain of Custody must be maintained and appended to every action.
 4. Quarantine is mandatory before any replacement.
-5. Replacement follows /nodelete's contracts: clean replacement on a Live-State or Composed-Artifact surface, with the removed value preserved in `.history/` — not appended inline, not superseded in place.
+5. Replacement follows /nodelete's contracts: clean replacement on a Live-State or Composed-Artifact surface, with the removed value preserved in `.history/quarantine/` — not appended inline, not superseded in place.
 6. No silent fixes — every action must be ticketed and logged.
 7. If ambiguity exists in whether something is a contradiction: halt and ask the user (one question).
 8. This workflow has authority to quarantine even high-value elements if contradiction is confirmed.
@@ -165,7 +165,7 @@ INTEGRATION WITH OTHER WORKFLOWS
 /helpdesk-tickets → receives automatic tickets from Phase 2
 /harden-workflow → used for safe logic replacement in Phase 3
 /focus-plan      → verifies post-replacement alignment
-/nodelete        → the routine surgical case (clean replace, recorded to `.history/`); /depreciate is its heavy counterpart and shares the same `.history/` ledger
+/nodelete        → the routine surgical case (clean replace, recorded to `.history/quarantine/`); /depreciate is its heavy counterpart and shares the same `.history/quarantine/` ledger. Distinct from /nodelete's own Pillar 6 (Archival Mode), which writes to the sibling `.history/archive/` for a different, non-contradictory reason — not this workflow's concern. **[RETARGETED 2026-07-04]**
 /secretary       → records every quarantine and replacement at session close
 
 ---
@@ -182,6 +182,7 @@ INTEGRATION WITH OTHER WORKFLOWS
 4. **2026-06-12**: `[REWORKED — user-directed doctrine reconciliation, /quality + /nodelete]` Re-grounded `/depreciate` on the reworked `/nodelete` (Surgical Scope & Contradiction Protocol). **Removed the stale "never delete / supersede-in-place" doctrine** — a credible source of cross-workspace contradiction-pollution: the preamble, GLOSSARY (Quarantine, Logic Replacement, Quarantine Zone), Phase 1, Phase 3, and STRICT RULES 1 & 5 now describe **clean removal from the live surface**, not inline tagging. **Retired the `<!-- QUARANTINED -->` inline tag entirely** (Phase 1) — it was the ghost `/nodelete` forbids; the element is now *moved* to `quarantine/` staging and the live surface left clean, with /nodelete's Intent-Mismatch Gate fired if the removal would break the surface. **Established the archive pipeline:** `quarantine/` = in-flight staging (reversible, ticketed); `.history/<file>.ledger.md` = the single canonical write-only record every *finalized* removal lands in (Phase 4), surgical or heavy. **Wired the detection→execution pipe:** `/divergence --convergence` Pruning Reports are now a trigger (Phase 0) and the named detection arm (INTEGRATION). Role clarified to the **heavy execution arm** complementing `/nodelete`'s routine surgical case. **Resolved the latent grade discrepancy:** frontmatter `grade` Hardened→Sovereign (file meets every Sovereign criterion and lints CLEAN; the body certificate already claimed Sovereign). Frontmatter: version 2→3, last_hardened→2026-06-12, trigger `/divergence --convergence` added, content_hash recomputed. **Preserved untouched** (keep/prune deferred per user sequencing): the four 2026-05-12 speculative features (Contradiction Registry, Precedent, Immune Swarm, Prevention Oracle) and the 7-phase ceremony. Standard Version: 3.
 5. **2026-06-12**: `[ADDED — /nodelete full ingestion, user-directed quality, /quality]` Per user direction (full recontextualization over reference, honoring LLM-architecture limits): /depreciate now **ingests /nodelete** rather than referencing it. HOW TO BEGIN Step 1 mandates reading `~/.claude/commands/nodelete.md` in full at activation (halt if unreadable; applies even when invoked as a sub-step by /divergence --convergence or /execute-build); STRICT RULE 12 enforces it; the preamble states it. This guarantees /depreciate executes under the *current* /nodelete discipline, not a remembered or hallucinated version, and — by reading the live file rather than embedding a copy — avoids instruction-duplication drift (the very Instruction Duplication convergence detects). One-directional by design: /depreciate ingests /nodelete; the reverse is not required. Frontmatter: strict_rule_count 11→12, content_hash recomputed. Standard Version: 3.
 6. **2026-06-12**: `[PRUNED — /depreciate run on itself, user-directed, /quality]` Removed the four speculative features created 2026-05-12 (Divergences #1–#4) — **Contradiction Registry, Precedent, Immune Swarm, Prevention Oracle** — confirmed **Ghost Logic** (never used: no `manifest/CONTRADICTION_REGISTRY.md` ever existed, no `quarantine/` dir ever created, zero functional cross-references). Removed from the live surface: 4 GLOSSARY rows; the Phase 0 Immune-Swarm note; the Phase 1 Precedent note; the Phase 2 Contradiction-Registry publish-flag (heading "+ REGISTRY" dropped); the Phase 5 Registry/Oracle bullets (heading → "AUDIT & GOVERNANCE LOG"); **Phase 6 (Prevention Oracle) entirely** (phase_count 7→6); **STRICT RULE 11 (Immune Swarm)** (ingestion rule renumbered 12→11, strict_rule_count 12→11); the INTEGRATION Divergences note and the "+ Prevention Oracle input" on the /focus-plan line. Executed via the reworked /depreciate's own protocol — its **first real run, on itself**: removed content preserved verbatim in `.history/depreciate.md.ledger.md` (nothing destroyed); chain of custody = this session's decision trail + this Change Log + that ledger + the registry build ticket. The Phase 2 incident-ticket step was satisfied by that custody (a directed prune, not a discovered fault), not a manufactured incident ticket. **Preserved as history (Append-Only Ledger):** Change Log entries 2 and 4, and the embedded 2026-05-12 certificate, retain their references to the four features — history is never thinned. The Contradiction Registry *idea* lives on as a scoped engine build — `helpdesk-tickets/20260612_contradiction-registry_engine.md`. Frontmatter: version 3→4, strict_rule_count 12→11, phase_count 7→6, content_hash recomputed. Standard Version: 3.
+7. **2026-07-04**: `[RETARGETED — .history/ split, resolves helpdesk-tickets/CLOSED_20260704_nodelete_workflow.md]` `/nodelete` Pillar 6 (Archival Mode) split `.history/` into `.history/quarantine/` (this workflow's ledger, relocated, semantics unchanged) and `.history/archive/` (Archival Mode's completed-history ledger — not this workflow's concern). Every forward-looking reference to the flat `.history/` path retargeted to `.history/quarantine/`: preamble, GLOSSARY (Logic Replacement, Quarantine Zone — the latter now also explicitly disambiguated from the *new* `.history/quarantine/` subdirectory, since both contain the word "quarantine" but are different things at different paths), Phase 1 ("Never destroy the element"), Phase 2 (ticket recommendation template), Phase 4 (the release-from-staging procedural text), STRICT RULES 1 and 5, INTEGRATION's `/nodelete` line (now also notes the sibling `/nodelete` Pillar 6 relationship explicitly). Historical Change Log entries 6 and the 2026-05-12 Hardening Certificate note left untouched — they correctly describe the flat-path state that was true at the time; the certificate note gained one small forward-pointing annotation to the new path, not a rewrite of the historical claim. The one real file affected, `.history/depreciate.md.ledger.md`, moved to `.history/quarantine/depreciate.md.ledger.md` as part of the /nodelete-side migration — nothing in it changed but its path. Version held at 4 (a direct retargeting pass, not a `/harden-workflow` structural pass); `last_hardened` 2026-07-04, content_hash recomputed.
 
 ---
 
@@ -204,4 +205,4 @@ INTEGRATION WITH OTHER WORKFLOWS
 +══════════════════════════════════════════════════════════+
 Standard Version: 2
 
-> **Historical note (2026-06-12):** the four features certified above were later pruned as Ghost Logic — see Change Log entry 6 and `.history/depreciate.md.ledger.md`. This certificate is retained as a dated historical record, not a current grade statement; the authoritative current grade is in the frontmatter.
+> **Historical note (2026-06-12):** the four features certified above were later pruned as Ghost Logic — see Change Log entry 6 and `.history/depreciate.md.ledger.md` (path as it stood at the time; that file now lives at `.history/quarantine/depreciate.md.ledger.md`, see Change Log entry 7). This certificate is retained as a dated historical record, not a current grade statement; the authoritative current grade is in the frontmatter.

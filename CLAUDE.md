@@ -100,7 +100,7 @@ Legacy workflows use Pointer/Payload architecture (a `<name>.md` pointer at root
 | `divergence/core.md` | Six-vector lateral thinking engine *(pending port)* |
 | `nodelete.md` | The core preservation doctrine *(pending port)* |
 | `scripts/doorway/` | Python workspace drift detector powering `/sentinel` |
-| `manifest/` | Suite-wide append-only ledgers (WORKFLOW_MANIFEST.md, FOCUS-MEMORY-LEDGER.md, CONTRADICTION_REGISTRY.md) |
+| `manifest/` | `SUITE_HEALTH.md` (Live-State suite index, mandatory session-start read) + `history/*.md` (Append-Only narrative, sharded by quarter — was one file, `WORKFLOW_MANIFEST.md`, split 2026-07-04) + `CONTRADICTION_REGISTRY.md`. Growth of both `history/` shards and `SUITE_PHYLOGENY.md` is monitored by `scripts/ledger/`. (Note: FOCUS-MEMORY-LEDGER.md, previously listed here, does not exist in the repo — pre-existing drift, not addressed by this edit.) |
 
 ## Scripts Directory Structure
 

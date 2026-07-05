@@ -35,6 +35,7 @@ from suite.checks import (
     parse_frontmatter, compute_content_hash,
     check_frontmatter, check_structure, check_cross_references,
     check_symlinks, check_content_hash, check_glossary_usage,
+    check_runtime_availability,
 )
 from suite.graph import generate_dependency_graph
 from suite.report import print_report
@@ -149,6 +150,7 @@ def main():
         sys.exit(0)
 
     report = LintReport()
+    check_runtime_availability(report)  # once per scan, not per file — see docstring
 
     if args.file:
         target = args.file if args.file.endswith(".md") else args.file + ".md"

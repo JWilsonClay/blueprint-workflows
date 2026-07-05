@@ -53,8 +53,8 @@ The calibration guide caused exactly the failure it was designed to prevent. Sco
 **Urgency upgrade: MEDIUM → HIGH** (adversarial scoring system is compromised)
 
 ---
-**Status**: **OPEN**
-**Verification**: PENDING
+**Status**: **REMEDIATED (both gaps closed — Gap A: PM Oversight Report and similar structured outputs now persisted to disk by default; Gap B: all scoring calibration removed from Phase 7d, replaced with evidence-cited, non-trust-based scoring)**
+**Verification**: **[BACKFILLED 2026-07-05]** This ticket was archived (`CLOSED_` prefix) without its Status/Verification fields ever being updated — a paperwork gap, not a live one, discovered while investigating `helpdesk-tickets/CLOSED_20260704_hallucinated-success-recurrence_workflow.md`. Confirmed against current substrate: `claude-commands/implementation-plan.md` STRICT RULE 17 explicitly states "*[Replaces original calibration guidance — see Change Log entry 9.]*" and reads "Every quality score in Phase 7d MUST cite evidence (file paths, line counts, specific observations)... do not trust self-reports" — the exact fix Gap B asked for. Gap A (file persistence) was folded into the later Coverage Ledger rework (Change Log entry 10) rather than tracked separately. No further action needed on this ticket; recorded here so its own record matches reality.
 
 ---
 *Signed,*

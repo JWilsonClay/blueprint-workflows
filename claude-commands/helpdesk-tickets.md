@@ -2,10 +2,10 @@
 description: "Sovereign Workflow Failure Ticket Protocol — forensic incident reporter and ticket lifecycle manager with structured root cause analysis and remediation tracking. v3: forked closure pipeline (Structural vs Substantive/Logic tickets)."
 type: execution
 grade: Sovereign
-version: 3
-content_hash: "sha256:4a7dc794fe118c50"
+version: 4
+content_hash: "sha256:fb2ba300ff551ce1"
 last_hardened: "2026-07-04"
-strict_rule_count: 11
+strict_rule_count: 12
 phase_count: 5
 context_retention: medium
 flags: []
@@ -17,6 +17,7 @@ triggers:
   - "/workstream"
 produces:
   - "~/blueprint-workflows/helpdesk-tickets/*.md"
+  - "~/blueprint-workflows/manifest/SUITE_PHYLOGENY.md (conditional — Step 4a.5, when Phylogeny Disposition is not NO TRANSFER)"
 consumes: []
 platform_requirements:
   file_write: true
@@ -55,6 +56,7 @@ This workflow does NOT fix failures. It documents them with sufficient forensic 
 | **Structural ticket** | **[ADDED 2026-07-04]** A ticket whose root cause is a missing scaffold element — GLOSSARY, STRICT RULES, Change Log, HOW TO BEGIN, or similar. Routes to `/harden-workflow --ticket`, unchanged. |
 | **Substantive/Logic ticket** | **[ADDED 2026-07-04]** A ticket whose root cause is wrong or missing judgment/decision-logic in the workflow's actual protocol steps, sometimes requiring supporting code under `scripts/`. `/harden-workflow` cannot remediate these — its own STRICT RULE 3 excludes protocol-logic changes, and it halts without modification on an already-Sovereign file (its Phase 1) rather than touching the real defect. Routes to direct, quality-verified remediation instead — see `role.md` "On code authority." |
 | **Remediation Record** | **[ADDED 2026-07-04]** The Substantive/Logic path's closure artifact — parallel to `/harden-workflow`'s Hardening Certificate: what was verified (tests, linter), what changed, what's deferred. Required before a Substantive/Logic ticket's Status line reads REMEDIATED. |
+| **Phylogeny Disposition** | **[ADDED 2026-07-04, resolves helpdesk-tickets/20260704_registry-phylogeny-gap_workflow.md]** A mandatory ticket field, declared PENDING at filing, that must resolve to CONFIRMED — either `NO TRANSFER` or a reference to a `manifest/SUITE_PHYLOGENY.md` lineage entry — before Phase 4 may close the ticket, via *either* closure path. Exists because `/harden-workflow`'s Phase 9 (Phylogeny) only fires on the STRUCTURAL closure path and is structurally skipped by a Substantive/Logic closure's TM-1.5 redirect — the path that has closed every ticket since 2026-06-25. Unlike the Suite Learning Registry (mechanically recoverable at any time from ticket text), a phylogeny judgment not captured at the moment of the fix cannot be reconstructed later with the same fidelity — so this one is a hard gate, not an advisory step. |
 
 ---
 
@@ -115,6 +117,7 @@ Write the ticket file to `helpdesk-tickets/[filename from Phase 0b]` using the f
 **Subject**: [One-sentence summary of the failure and which workflow is implicated]
 **Urgency**: [CRITICAL (Architectural) / HIGH / MEDIUM / LOW]
 **Root Cause Type**: [STRUCTURAL / SUBSTANTIVE-LOGIC] — **[ADDED 2026-07-04]**
+**Phylogeny Disposition**: PENDING — **[ADDED 2026-07-04]**
 
 ---
 
@@ -177,6 +180,7 @@ TICKET VALIDATION:
   [ ] File written to correct directory (helpdesk-tickets/)
   [ ] All 5 sections present and non-empty
   [ ] Root Cause Type declared: STRUCTURAL / SUBSTANTIVE-LOGIC — [ADDED 2026-07-04]
+  [ ] Phylogeny Disposition declared as PENDING — [ADDED 2026-07-04]
   [ ] Root cause names a specific structural gap in the faulting workflow
   [ ] Section 3 has at least 2 forensic citations with file:/// links
   [ ] Section 5 names a specific workflow-level improvement (not project-specific)
@@ -201,6 +205,7 @@ Ticket:          [filename]
 Location:        helpdesk-tickets/[filename]
 Faulting workflow: /[name]
 Root Cause Type: STRUCTURAL / SUBSTANTIVE-LOGIC
+Phylogeny Disposition: PENDING
 Urgency:         [level]
 Failure class:   [class]
 Status:          OPEN / REMEDIATED
@@ -229,6 +234,17 @@ mv helpdesk-tickets/[YYYYMMDD]_[workflow]_workflow.md \
 ```
 
 Execute this as an actual shell command. Do not simulate the rename or update a status field inside the file — the filesystem rename is the closure mechanism. The `CLOSED_` prefix is what `/harden-workflow --ticket` uses to distinguish open from closed tickets.
+
+**4a.5. Phylogeny Disposition Gate — mandatory, both paths. [ADDED 2026-07-04, resolves helpdesk-tickets/20260704_registry-phylogeny-gap_workflow.md]**
+
+Before 4b may set the Status line to REMEDIATED, resolve the Phylogeny Disposition field from `PENDING` to one of:
+
+- **`NO TRANSFER`** — this remediation touched one workflow file, or touched several with no shared structural pattern (a STRICT RULE template, a decision scaffold, shared vocabulary, a gate mechanism) moving between them. State this plainly; no further action needed.
+- **`[lineage entry added — reference]`** — this remediation introduced or moved a structural pattern between two or more workflow files (the way the two-path ticket model itself just propagated across `role.md`, `harden-workflow.md`, and this file in one session). Write the lineage entry to `manifest/SUITE_PHYLOGENY.md` now, then reference it here.
+
+**A ticket cannot close — via either path — with Phylogeny Disposition still PENDING.** This is the one gate in this workflow that applies uniformly regardless of which path closes the ticket. It lives here, not inside `/harden-workflow`'s Phase 9, precisely because Phase 9 only runs on the STRUCTURAL path and is structurally skipped by every Substantive/Logic closure (see `harden-workflow.md`'s Step TM-1.5 redirect) — the path that has closed every ticket since 2026-06-25.
+
+Unlike the Suite Learning Registry (mechanically recoverable at any time — see the companion fix in `/secretary` Phase 1), this judgment is not recoverable after the fact. If genuinely unsure whether a transfer occurred: describe the candidate pattern and say so, rather than defaulting to `NO TRANSFER`. A false `NO TRANSFER` is a silent, undetectable loss; an over-cautious lineage entry costs a few lines in a file built to hold exactly that.
 
 **4b. Update the Status line — the path depends on Root Cause Type. [Forked 2026-07-04, resolves helpdesk-tickets/CLOSED_20260704_ticket-remediation-authority_workflow.md]**
 
@@ -288,6 +304,7 @@ Closed by:       /harden-workflow --ticket / [agent name, direct remediation]
 9. Urgency is set by impact scope: CRITICAL if the failure affects multiple workflows or has been observed more than once; HIGH if single workflow, reproducible; MEDIUM if intermittent or behavioral; LOW if cosmetic.
 10. The ticket filename uses the date of the failure event, not the date of writing (usually the same, but matters for retroactive tickets).
 11. **[ADDED 2026-07-04, resolves helpdesk-tickets/CLOSED_20260704_ticket-remediation-authority_workflow.md]** Every ticket must declare a Root Cause Type — STRUCTURAL or SUBSTANTIVE-LOGIC — at filing time (Phase 0a). This determines the closure path: STRUCTURAL closes via `/harden-workflow --ticket` and a Hardening Certificate (unchanged); SUBSTANTIVE-LOGIC closes via direct, quality-verified remediation and a Remediation Record (Phase 4). Misclassifying a Logic ticket as Structural sends it to a tool that will halt without fixing it — see `harden-workflow.md`'s own early redirect check for this exact case.
+12. **[ADDED 2026-07-04, resolves helpdesk-tickets/20260704_registry-phylogeny-gap_workflow.md]** Every ticket declares a Phylogeny Disposition field (PENDING at filing, Phase 1 header block). Before Phase 4 may set Status to REMEDIATED — via either closure path — this field must be resolved to CONFIRMED: either `NO TRANSFER` or a reference to a `manifest/SUITE_PHYLOGENY.md` lineage entry this remediation produced (Step 4a.5). This exists because `/harden-workflow`'s Phase 9 (Phylogeny) only fires on the STRUCTURAL closure path and is structurally skipped by Substantive/Logic closures — the path that, in practice, has closed every ticket since 2026-06-25. Unlike the Suite Learning Registry, a missed phylogeny judgment cannot be recovered later; this gate is mandatory, not advisory.
 
 ---
 
@@ -314,6 +331,7 @@ INTEGRATION WITH OTHER WORKFLOWS
   /role.md             → "On code authority" — the bounded authority SUBSTANTIVE-LOGIC remediation runs under
   /retrospective       → reads closed tickets as evidence of resolved regressions
   /process_learnings   → receives the failure pattern as a new ledger entry after ticket is closed
+  manifest/SUITE_PHYLOGENY.md → written directly by Step 4a.5 when Phylogeny Disposition is not NO TRANSFER — the one output of this workflow that follows /nodelete's Append-Only Ledger contract [ADDED 2026-07-04]
 
 Standard position in the failure response pipeline — **forked 2026-07-04, resolves
 helpdesk-tickets/CLOSED_20260704_ticket-remediation-authority_workflow.md:**
@@ -351,3 +369,4 @@ path that was already happening.
 1. **2026-05-08**: `[CREATED — Sovereign Scaffold Generator, /harden-workflow + /focus-plan + /quality]` Built via Generator mode from blank pointer (helpdesk-tickets.md, 22 bytes). Origin: user intent to formalize the helpdesk-tickets/ directory (3 existing CLOSED tickets) into a Sovereign-grade Pointer/Payload workflow. Failure taxonomy (GLOSSARY) derived from existing tickets and PROCESS_LEARNINGS.md patterns. Ticket lifecycle (OPEN → CLOSED_ prefix rename) derived from existing file naming in helpdesk-tickets/. Integration with /harden-workflow --ticket mode documented as the forward connection. Four phases: Intake (0), Ticket Body (1), Validation (2), Report (3), Closure (4). Ten STRICT RULES. Standard Version: 2.
 2. **2026-05-21**: `[PORTED — Claude Code migration]` Pointer/Payload architecture retired. Merged into single command file at `~/blueprint-workflows/claude-commands/helpdesk-tickets.md`. Phase 0b ticket location updated from Antigravity path to `~/blueprint-workflows/helpdesk-tickets/`.
 3. **2026-07-04**: `[FORKED — Two-path ticket model, resolves helpdesk-tickets/CLOSED_20260704_ticket-remediation-authority_workflow.md]` **Defect**: the documented pipeline had exactly one closure path — `/harden-workflow --ticket` — for every ticket, regardless of root cause. This worked for tickets whose root cause was a missing scaffold element (the 2026-06-12 `/nodelete` and `/divergence` tickets), but silently failed for tickets whose root cause was a logic defect or required code: `/harden-workflow` excludes both by its own text (STRICT RULE 3, opening line) and halts without modification on an already-Sovereign file rather than fixing the real defect. Three tickets closed this same day (`/limitations`, `/focus-plan`, `/implementation-plan`, `/role`) all needed the undocumented path — closure via this workflow's own Phase 4 "or by the creating agent" clause, which had always been legitimate but was never the advertised default. **Fix**: added Root Cause Type (STRUCTURAL / SUBSTANTIVE-LOGIC) as a mandatory Phase 0a intake field and Section-2 header declaration (STRICT RULE 11, GLOSSARY: Structural ticket, Substantive/Logic ticket). Forked "Standard position in the failure response pipeline" (INTEGRATION) and Phase 4 closure accordingly: STRUCTURAL unchanged (`/harden-workflow --ticket` → Hardening Certificate); SUBSTANTIVE-LOGIC now has its own formal closure artifact, the **Remediation Record** (GLOSSARY, Phase 4b) — parallel rigor to a Hardening Certificate (what was verified, what changed, what's deferred) without copying fields that don't apply to a logic fix (no "grade"). Phase 3's report block and Phase 4's closure record both updated to carry Root Cause Type through. Companion edits: `role.md` ("On code authority" — the bounded authority this fork assumes) and `harden-workflow.md` (an early TICKET MODE check that redirects a Logic-tagged ticket immediately rather than letting it silently discover the mismatch via "already Sovereign, nothing to do"). Frontmatter: version 2→3, `last_hardened` 2026-07-04, `strict_rule_count` 10→11. HOW TO BEGIN updated to "seven FAILURE INTAKE questions" (was six).
+4. **2026-07-04**: `[INJECTED — Phylogeny Disposition gate, resolves helpdesk-tickets/20260704_registry-phylogeny-gap_workflow.md]` **Defect discovered same-day, by the fork above**: the two-path model just added (entry 3) solved ticket-closure routing but had an uncaptured side effect — `/harden-workflow`'s Phase 9 (Phylogeny Archive) and Step TM-6 (Suite Learning Registry) both only fire inside `--ticket` mode, and every Substantive/Logic closure now structurally bypasses that workflow entirely (TM-1.5's redirect, added the same session). Confirmed live: `manifest/SUITE_PHYLOGENY.md` and `manifest/CONTRADICTION_REGISTRY.md` had both been frozen since 2026-06-12, across five real ticket closures. **Fix, asymmetric by design**: the Registry's underlying data is mechanically recoverable at any time (`scripts/registry/aggregator.py`'s `collect_ticket_events` mines it from ticket text/filename with no dedicated field needed) — so that gap is closed by decoupling it from `/harden-workflow` entirely, via a new unconditional step in `/secretary` (see that file's own Change Log). Phylogeny's editorial judgment has no such fallback — a transfer not noted at the time of the fix cannot be reconstructed later with real fidelity — so it gets the hard mechanism: a mandatory **Phylogeny Disposition** field (GLOSSARY), PENDING at filing (Phase 1 header block, Phase 2 validation, Phase 3 report), gated to CONFIRMED before either closure path may set Status to REMEDIATED (new **Step 4a.5**, between 4a and 4b — inserted as an X.5 step rather than renumbering, matching the precedent `harden-workflow.md`'s own TM-1.5 just set). STRICT RULE 12 added (11→12). `produces:` gains a conditional `manifest/SUITE_PHYLOGENY.md` entry. Frontmatter: version 3→4, content_hash recomputed via `lint_workflows.py --fix-hashes`. The general lesson, recorded in the new ticket's Section 5: when a pipeline is forked into two legitimate paths, audit everything that assumed the old path was the only one in, not just the routing logic itself.

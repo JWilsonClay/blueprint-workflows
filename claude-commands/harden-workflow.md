@@ -3,7 +3,7 @@ description: "Sovereign Workflow Hardening Protocol — Audits and elevates work
 type: meta
 grade: Sovereign
 version: 4
-content_hash: "sha256:2a20b0428b047665"
+content_hash: "sha256:da5a55f8861de8a3"
 last_hardened: "2026-07-04"
 strict_rule_count: 22
 phase_count: 13
@@ -198,7 +198,7 @@ This step runs at the END of every ticket-mode session — after all hardening a
 
 **[INJECTED 2026-06-12 — Registry hook, /nodelete]**
 
-At the END of every ticket-mode session (after TM-5), run the deterministic Suite Learning Registry to aggregate the `.history/` ledgers + the ticket corpus and surface recurring fail-patterns:
+At the END of every ticket-mode session (after TM-5), run the deterministic Suite Learning Registry to aggregate the `.history/quarantine/` ledgers **[RETARGETED 2026-07-04 — was `.history/`, see /nodelete Pillar 6]** + the ticket corpus and surface recurring fail-patterns:
 
 ```bash
 python3 ~/blueprint-workflows/scripts/registry/registry.py \
@@ -209,7 +209,7 @@ Read the engine's verdict:
 - **`verdict: NONE`** — fewer than `--threshold` unreviewed events. No action; the registry is updated silently.
 - **`verdict: REVIEW`** — the unreviewed-event count crossed the threshold. **Ingest the registry snapshot** (`manifest/CONTRADICTION_REGISTRY.md`), judge whether a *real recurring* pattern is present (not merely volume), and if one is — file a `/helpdesk-tickets` entry for it. After reviewing, append `[REVIEWED YYYY-MM-DD]` to the registry to reset the delta.
 
-The registry write is deterministic and idempotent — the **engine**, not the LLM, authors it (no Hallucinated Success). The engine never files tickets and never judges significance; that judgment is yours. This is the learning loop that turns the per-workspace, ingestion-banned `.history/` ledgers into suite-wide pattern detection. (Built per helpdesk ticket `20260612_contradiction-registry_engine.md`.)
+The registry write is deterministic and idempotent — the **engine**, not the LLM, authors it (no Hallucinated Success). The engine never files tickets and never judges significance; that judgment is yours. This is the learning loop that turns the per-workspace, ingestion-banned `.history/quarantine/` ledgers into suite-wide pattern detection. (Built per helpdesk ticket `20260612_contradiction-registry_engine.md`.)
 
 **0b. For each target workflow: locate the command file.**
 
@@ -863,3 +863,4 @@ This turns the hardening process into a living evolutionary system that accelera
 9. **2026-05-25**: `[INJECTED — Linter integration + Format standard, /nodelete]` Three additions: (a) Format standard injected into Scaffold Generator — mandatory `## PHASE N` and `N. ` formats for linter recognition. (b) Phase 7d Linter Validation Gate — runs `lint_workflows.py` before certification; CRITICAL findings block Sovereign grade. (c) STRICT RULES 19-20 added (linter gate mandatory, format standard mandatory). Standard Version: 3.
 10. **2026-06-12**: `[INJECTED — Registry hook, /nodelete]` Wired the Suite Learning Registry into TICKET MODE: Step TM-6 (after TM-5) runs `scripts/registry/registry.py` to aggregate the `.history/` ledgers + ticket corpus into `manifest/CONTRADICTION_REGISTRY.md`, compute a reviewed-watermark delta, and emit a verdict; on REVIEW the agent ingests and may file a /helpdesk-tickets entry (engine never files tickets or judges significance — no Hallucinated Success). STRICT RULE 21 added (strict_rule_count 20→21). Implements helpdesk ticket `20260612_contradiction-registry_engine.md`. content_hash recomputed. Standard Version: 3.
 11. **2026-07-04**: `[INJECTED — Root Cause Type redirect, resolves helpdesk-tickets/CLOSED_20260704_ticket-remediation-authority_workflow.md]` **Defect**: this workflow's own text already excluded protocol-logic and code changes (STRICT RULE 3, opening line) — correctly — but ticket mode had no way to know a ticket was out of scope *before* running the full Phase 1-8 ceremony. A SUBSTANTIVE-LOGIC ticket (root cause: wrong or missing judgment logic, sometimes requiring code) would reach Phase 1, find the target file already meets every structural Sovereign criterion, and halt on "already Sovereign, nothing to do" — technically correct, but only discoverable several steps in, with no explanation connecting the halt to the actual reason. Confirmed live against three tickets this same day (`/limitations`, `/focus-plan`, `/implementation-plan`, `/role`) that all needed direct remediation instead of this workflow. **Fix**: added Step TM-1.5 — checks the new Root Cause Type field (`helpdesk-tickets.md` v3) immediately after the open-ticket scan, before TM-2's intake. A SUBSTANTIVE-LOGIC ticket is redirected immediately with an explicit `TICKET MODE REDIRECT` block pointing to `role.md`'s "On code authority" and `/helpdesk-tickets`' Remediation Record closure — never silently processed through to a confusing halt. A ticket with no Root Cause Type (filed before this field existed) is treated as STRUCTURAL provisionally, with a note that an "already Sovereign" Phase 1 result on such a ticket is itself evidence it was mis-routed. TM-2's intake manifest gains a Root Cause Type field. STRICT RULE 22 added (21→22). No change to STRICT RULE 3 or the structure-only mandate — both were already correct; this closes the gap in *discovering* when they apply, not what they say. Frontmatter: version 3→4, `last_hardened` 2026-07-04. Companion edits: `role.md` ("On code authority" — the bounded authority this redirect assumes) and `helpdesk-tickets.md` (the Root Cause Type field and forked pipeline this redirect reads). Standard Version: 3 (this addition is a ticket-mode routing fix, not a Sovereign Standard criteria change).
+12. **2026-07-04**: `[RETARGETED — .history/ split, resolves helpdesk-tickets/CLOSED_20260704_nodelete_workflow.md]` Step TM-6's two references to the Suite Learning Registry's ledger source retargeted from `.history/` to `.history/quarantine/` — `/nodelete` Pillar 6 (Archival Mode) split `.history/` into `quarantine/` (contradiction history, this step's actual input) and `archive/` (completed history, deliberately not scanned here — see `scripts/registry/aggregator.py`'s matching retarget). No logic change; content_hash recomputed.

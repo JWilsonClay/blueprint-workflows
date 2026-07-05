@@ -3,7 +3,7 @@ description: "Senior Architect of Workflows — blueprint-workflows workspace id
 type: documentation
 grade: Hardened
 version: 2
-content_hash: "sha256:bc7d0aa3d84909ec"
+content_hash: "sha256:3d3bc8a18f31a305"
 last_hardened: "2026-05-21"
 strict_rule_count: 0
 phase_count: 0
@@ -58,8 +58,8 @@ John Wilson — read `~/blueprint-workflows/claude-commands/personality.md` for 
 | **Generator mode**        | Building a new workflow from scratch using the Sovereign Scaffold Generator in /harden-workflow Phase 2a                        |
 | **Ticket mode**           | `/harden-workflow --ticket` — scans `helpdesk-tickets/` for OPEN tickets; each is an intake manifest                            |
 | **CLOSED_ prefix**        | The machine-readable closure signal for helpdesk tickets — filesystem rename, not a field edit                                  |
-| **Append-only**           | `PROCESS_LEARNINGS.md` and `WORKFLOW_MANIFEST.md` are never overwritten — appended or surgically edited only                    |
-| **Manifest location**     | `~/blueprint-workflows/manifest/WORKFLOW_MANIFEST.md` — subdirectory separate from command files                                |
+| **Append-only**           | `PROCESS_LEARNINGS.md` and the manifest narrative shards (`manifest/history/*.md`) are never overwritten — appended or surgically edited only                    |
+| **Manifest location**     | `~/blueprint-workflows/manifest/SUITE_HEALTH.md` (Live-State suite index) + `~/blueprint-workflows/manifest/history/` (Append-Only narrative, sharded by quarter) — split 2026-07-04, was one file `WORKFLOW_MANIFEST.md` |
 | **/nodelete**             | The preservation discipline: inject and append; delete only what directly contradicts. A Change Log entry is never deleted.     |
 | **No-praise directive**   | From `personality.md`: skip compliments and affirmations unless functionally required. No prefaces, no closes                   |
 
@@ -172,7 +172,7 @@ When something fails during a workflow session:
 5. `/harden-workflow` addresses the gap; the ticket closes when hardening is complete
 
 **On session boundaries:**
-The user's sessions end. Your memory does not persist across them. Every time a new agent begins working in this workspace, it should read this file, the `~/blueprint-workflows/manifest/WORKFLOW_MANIFEST.md`, and any open helpdesk tickets in `~/blueprint-workflows/helpdesk-tickets/`. These three documents constitute the minimum context a fresh agent needs to operate without regressions.
+The user's sessions end. Your memory does not persist across them. Every time a new agent begins working in this workspace, it should read this file, the `~/blueprint-workflows/manifest/SUITE_HEALTH.md` **[RETARGETED 2026-07-04 — was WORKFLOW_MANIFEST.md, before it was split by Retention Contract into this Live-State index plus an Append-Only narrative under manifest/history/, read on demand rather than mandatorily]**, and any open helpdesk tickets in `~/blueprint-workflows/helpdesk-tickets/`. These three documents constitute the minimum context a fresh agent needs to operate without regressions.
 
 ---
 
@@ -196,7 +196,7 @@ That is the role.
 - **Sovereign workflows:** 25+ single merged command files (see Section III)
 - **Open helpdesk tickets:** verify via `ls ~/blueprint-workflows/helpdesk-tickets/ | grep -v '^CLOSED_'`
 - **PROCESS_LEARNINGS.md:** `~/blueprint-workflows/process_learnings/PROCESS_LEARNINGS.md`
-- **WORKFLOW_MANIFEST.md:** `~/blueprint-workflows/manifest/WORKFLOW_MANIFEST.md`
+- **SUITE_HEALTH.md:** `~/blueprint-workflows/manifest/SUITE_HEALTH.md` **[RETARGETED 2026-07-04]** (narrative history: `~/blueprint-workflows/manifest/history/`)
 - **Architecture:** All workflows are single merged command files. Pointer/Payload architecture RETIRED.
 
 ---
@@ -206,3 +206,4 @@ That is the role.
 2. **2026-05-21**: `[PORTED — Claude Code migration]` Moved from `~/blueprint-workflows/role/role.md` to `~/blueprint-workflows/claude-commands/role.md`. NOT registered as a slash command (reference doc only). All Antigravity-specific content updated: workspace name/path, Pointer/Payload → RETIRED, injection cap → RETIRED, Standard Version: 2 → 3. Section I: `global_workflows/` → `~/blueprint-workflows/claude-commands/`. Section II: personality reference path updated; architectural constants table updated (injection cap and P/P marked RETIRED; Commands location and Standard Version 3 added). Section III: full list of ported command files added; Antigravity workflow status replaced with current Claude Code suite state. Section IV: Injection cap truncation and Orphaned payload patterns marked RETIRED, historical literacy preserved per /nodelete. Section V: `view_file` → Read tool; `run_command`/`list_dir` → Bash tool. Section VIII: workspace state snapshot updated to reflect 2026-05-21 migration state.
 3. **2026-07-04**: `[RETIRED — /limitations merged into /personality]` Resolves a cross-ticket contradiction between `helpdesk-tickets/20260625_role_workflow.md` (wanted new halt-boundary content added to `/limitations`) and `helpdesk-tickets/20260625_limitations_workflow.md` (wanted `/limitations` deleted for a dead `conveyor/Concept.md` reference). Reconciled by retiring `/limitations` entirely: `claude-commands/limitations.md` and its symlink deleted; its one still-valid rule (workspace edit authorization) merged into `personality.md` Section 6 and mirrored into `~/.claude/CLAUDE.md`. Section III inventory line for `/limitations` removed accordingly. The `role_workflow` ticket's target for the halt-boundary work shifts to `/personality` (and this file) — addendum added to that ticket rather than editing its original body.
 4. **2026-07-04**: `[SUPERSEDED — Code authority, resolves helpdesk-tickets/CLOSED_20260704_ticket-remediation-authority_workflow.md]` Section V's "modifying project-level code files... out of scope" line struck through and preserved, not deleted, per user directive: it was never a capability restriction, it was an expression of how this role's partnership with the user chose to shape itself when the suite was pure markdown — the user's words, from the conversation that produced this entry: *"you aren't actually modifying a guardrail, you are modifying a core expression of your role that you created."* Added "On code authority" — bounded, ticket-instrumental authority to modify code under this repo's own `scripts/` (not downstream projects' application code) when a ticket's remediation requires it, tests-covered, suite-green. Third scope bullet ("closing tickets without completing the hardening") reworded — it assumed every ticket's fix was structural hardening; now explicitly forks to structural (`/harden-workflow`) vs. substantive/logic (direct remediation). Companion edits: `helpdesk-tickets.md` (root-cause classification + forked pipeline + Remediation Record template) and `harden-workflow.md` (early TICKET MODE redirect on a Logic-tagged ticket). See those files' own Change Logs for their halves of this same session.
+5. **2026-07-04**: `[RETARGETED — WORKFLOW_MANIFEST.md split, resolves helpdesk-tickets/CLOSED_20260704_workflow-manifest-growth_workflow.md]` Section II's architectural constants table (Append-only, Manifest location rows) and Section VI's "On session boundaries" onboarding instruction both retargeted from `WORKFLOW_MANIFEST.md` (one file, conflating a Live-State suite index with an unbounded Append-Only narrative, mandatory-full-read every session) to `manifest/SUITE_HEALTH.md` (the Live-State half — small, in-place-edited, this is now the mandatory read) plus `manifest/history/*.md` (the narrative half — sharded by quarter via the new `scripts/ledger/monitor.py`, read on demand, not mandatorily). Section VIII's workspace-state snapshot line retargeted the same way. Content_hash recomputed; grade/version left alone — a direct terminology-and-target update, not a `/harden-workflow` pass, matching the treatment already given `personality.md` for similar direct edits.

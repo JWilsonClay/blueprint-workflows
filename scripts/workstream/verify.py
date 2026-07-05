@@ -45,19 +45,47 @@ from pathlib import Path
 
 
 def _sanitize_for_shell(value):
-    """Strip shell metacharacters from values interpolated into commands."""
+    """Strip shell/regex metacharacters from values interpolated into grep patterns."""
     return re.sub(r'[;&|`$(){}!\[\]<>\'"\\]', '', str(value))
 
 
 def run_cmd(cmd, cwd=None):
+    """Run an argv list with no shell (CWE-78 / harden_audit.py STRICT RULE 8)."""
     result = subprocess.run(
-        cmd, shell=True, capture_output=True, text=True, cwd=cwd
+        cmd, shell=False, capture_output=True, text=True, cwd=cwd
     )
     return result.stdout.strip(), result.stderr.strip(), result.returncode
 
 
 def ensure_dir(path):
     os.makedirs(path, exist_ok=True)
+
+
+EXCLUDED_DIR_PARTS = ("node_modules", "__pycache__", "target", ".git")
+
+
+def _line_count_violations(workspace, ext_glob, limit):
+    """Native replacement for `find | wc -l | sort -rn | head -20` — no shell required."""
+    results = []
+    for path in Path(workspace).rglob(ext_glob):
+        if any(part in EXCLUDED_DIR_PARTS for part in path.parts):
+            continue
+        if not path.is_file():
+            continue
+        try:
+            with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                loc = sum(1 for _ in f)
+        except OSError:
+            continue
+        if loc > limit:
+            results.append((loc, str(path.relative_to(workspace))))
+    results.sort(reverse=True)
+    return results[:20]
+
+
+def _filter_out(lines, *excludes):
+    """Native replacement for a chain of `| grep -v X` calls."""
+    return [line for line in lines if not any(ex in line for ex in excludes)]
 
 
 # ---------------------------------------------------------------------------
@@ -67,7 +95,7 @@ def mode_preflight(workspace, limit):
     print(f"PRE-FLIGHT MANIFEST — {workspace}")
     print("━" * 50)
 
-    git_out, _, rc = run_cmd("git status --short", cwd=workspace)
+    git_out, _, rc = run_cmd(["git", "status", "--short"], cwd=workspace)
     dirty_count = len(git_out.splitlines()) if git_out else 0
     git_status = "CLEAN" if dirty_count == 0 else f"DIRTY — {dirty_count} files"
     print(f"Git working tree:    {git_status}")
@@ -79,29 +107,17 @@ def mode_preflight(workspace, limit):
     pkg_json = os.path.join(workspace, "package.json")
     cargo_toml = os.path.join(workspace, "Cargo.toml")
     if os.path.exists(pkg_json):
-        _, _, rc = run_cmd("npm run lint 2>&1 | tail -5", cwd=workspace)
+        _, _, rc = run_cmd(["npm", "run", "lint"], cwd=workspace)
         build_status = "PASS" if rc == 0 else f"FAIL (exit {rc})"
     elif os.path.exists(cargo_toml):
-        _, _, rc = run_cmd("cargo check 2>&1 | tail -5", cwd=workspace)
+        _, _, rc = run_cmd(["cargo", "check"], cwd=workspace)
         build_status = "PASS" if rc == 0 else f"FAIL (exit {rc})"
     print(f"Build status:        {build_status}")
 
     violations = []
     extensions = ("*.ts", "*.tsx", "*.py", "*.rs", "*.js", "*.jsx")
     for ext in extensions:
-        find_out, _, _ = run_cmd(
-            f"find . -name '{ext}' ! -path '*/node_modules/*' ! -path '*/__pycache__/*' "
-            f"! -path '*/target/*' ! -path '*/.git/*' -exec wc -l {{}} + 2>/dev/null "
-            f"| sort -rn | head -20",
-            cwd=workspace,
-        )
-        for line in find_out.splitlines():
-            parts = line.strip().split()
-            if len(parts) >= 2 and parts[0].isdigit():
-                loc = int(parts[0])
-                fpath = parts[1]
-                if loc > limit and fpath != "total":
-                    violations.append((loc, fpath))
+        violations.extend(_line_count_violations(workspace, ext, limit))
 
     violations.sort(reverse=True)
     if violations:
@@ -125,22 +141,25 @@ def mode_diff_oracle(workspace, since):
     print(f"DIFF ORACLE — {workspace}")
     print("━" * 50)
 
-    git_out, _, _ = run_cmd("git status --short", cwd=workspace)
+    git_out, _, _ = run_cmd(["git", "status", "--short"], cwd=workspace)
     uncommitted = len(git_out.splitlines()) if git_out else 0
     print(f"Uncommitted files:    {uncommitted}")
 
     diff_out, _, _ = run_cmd(
-        f'git log --oneline --since="{since}"', cwd=workspace
+        ["git", "log", "--oneline", f"--since={since}"], cwd=workspace
     )
     commits = diff_out.splitlines() if diff_out else []
     print(f"Commits since {since}: {len(commits)}")
 
     if commits:
         first_hash = commits[-1].split()[0]
-        stat_out, _, _ = run_cmd(
-            f"git diff --stat {first_hash}^..HEAD 2>/dev/null || git diff --stat {first_hash}..HEAD",
-            cwd=workspace,
+        stat_out, _, rc = run_cmd(
+            ["git", "diff", "--stat", f"{first_hash}^..HEAD"], cwd=workspace,
         )
+        if rc != 0:
+            stat_out, _, _ = run_cmd(
+                ["git", "diff", "--stat", f"{first_hash}..HEAD"], cwd=workspace,
+            )
         print(f"\nFiles changed (git):")
         for line in stat_out.splitlines():
             print(f"  {line}")
@@ -162,15 +181,20 @@ def mode_dependency(workspace, files):
         print(f"\n  Target: {target}")
         print(f"  Basename: {safe_basename}")
 
+        pattern = f"import.*{safe_basename}|from.*{safe_basename}|require.*{safe_basename}"
         grep_out, _, _ = run_cmd(
-            f'grep -rn "import.*{safe_basename}\\|from.*{safe_basename}\\|require.*{safe_basename}" '
-            f'--include="*.ts" --include="*.tsx" --include="*.py" --include="*.rs" '
-            f'--include="*.js" . 2>/dev/null | grep -v node_modules | grep -v __pycache__ '
-            f'| grep -v ".git/" | grep -v target/',
+            [
+                "grep", "-rnE", pattern,
+                "--include=*.ts", "--include=*.tsx", "--include=*.py",
+                "--include=*.rs", "--include=*.js", ".",
+            ],
             cwd=workspace,
         )
-        if grep_out:
-            importers = grep_out.splitlines()
+        importers = _filter_out(
+            grep_out.splitlines() if grep_out else [],
+            "node_modules", "__pycache__", ".git/", "target/",
+        )
+        if importers:
             print(f"  Imported by: {len(importers)} files")
             for imp in importers[:20]:
                 print(f"    {imp}")
@@ -210,19 +234,24 @@ def mode_callers(workspace, target_file):
     safe_stem = _sanitize_for_shell(stem)
     safe_basename = _sanitize_for_shell(basename)
     grep_out, _, _ = run_cmd(
-        f'grep -rn "{safe_stem}" --include="*.ts" --include="*.tsx" --include="*.py" '
-        f'--include="*.rs" --include="*.js" --include="*.jsx" . 2>/dev/null '
-        f'| grep -v node_modules | grep -v __pycache__ | grep -v ".git/" '
-        f'| grep -v "target/" | grep -v "{safe_basename}"',
+        [
+            "grep", "-rn", safe_stem,
+            "--include=*.ts", "--include=*.tsx", "--include=*.py",
+            "--include=*.rs", "--include=*.js", "--include=*.jsx", ".",
+        ],
         cwd=workspace,
     )
+    lines = _filter_out(
+        grep_out.splitlines() if grep_out else [],
+        "node_modules", "__pycache__", ".git/", "target/", safe_basename,
+    )
 
-    if not grep_out:
+    if not lines:
         print("No callers found.")
         print("━" * 50)
         return 0
 
-    for line in grep_out.splitlines():
+    for line in lines:
         lower = line.lower()
         filepath = line.split(":")[0] if ":" in line else ""
 
