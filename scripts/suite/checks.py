@@ -14,6 +14,7 @@ from pathlib import Path
 from suite.models import (
     LintReport, V1_REQUIRED_FIELDS, VALID_TYPES, VALID_GRADES,
     VALID_RETENTION, SYMLINK_DIR, OPENCODE_DIR, ANTIGRAVITY_DIR, COMMANDS_DIR,
+    GROK_BUILD_DIR,
 )
 
 try:
@@ -195,6 +196,13 @@ def check_symlinks(workflow_name, workspace_root, report):
         if not antigravity_link.exists():
             report.add("WARNING", workflow_name, "pointer", f"Antigravity pointer missing: {antigravity_link}")
 
+    # Dir existence handling (generalized) + Grok runtime note: is_dir gate
+    # + single INFO. [pr-05-01a per PILLAR_05]
+    if Path(GROK_BUILD_DIR).is_dir():
+        grok_link = Path(GROK_BUILD_DIR) / workflow_name
+        if not grok_link.exists():
+            report.add("WARNING", workflow_name, "pointer", f"Grok Build pointer missing: {grok_link}")
+
 
 def check_runtime_availability(report):
     """
@@ -205,7 +213,7 @@ def check_runtime_availability(report):
     and replaced), not a defect. check_symlinks skips its per-file checks for
     whichever runtime is reported unavailable here, so the two never double-warn.
     """
-    for label, directory in (("OpenCode", OPENCODE_DIR), ("Antigravity", ANTIGRAVITY_DIR)):
+    for label, directory in (("OpenCode", OPENCODE_DIR), ("Antigravity", ANTIGRAVITY_DIR), ("Grok Build", GROK_BUILD_DIR)):
         if not Path(directory).is_dir():
             report.add("INFO", "(suite)", "runtime",
                        f"{label} runtime directory not found at {directory} — "

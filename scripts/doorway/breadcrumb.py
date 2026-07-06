@@ -90,6 +90,7 @@ class BreadcrumbManager:
         subdir_list = ", ".join(subdirs) if subdirs else "none"
 
         log_entry = (
+            f"--- PROPOSAL\n"
             f"Folder: {folder_path}\n"
             f"Proposed breadcrumb: [PENDING AGENT SUMMARIZATION]\n"
             f"Reason: {reason}\n"

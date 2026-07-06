@@ -1,9 +1,9 @@
 """
 coverage.py — Receipt coverage computation
 =============================================
-Cross-references tasks.md's completed phases against the four receipt
-dimensions (Built/Validated/Hardened/Documented) and the Quality-Process
-dimension, computing a gap percentage. Read-only; writes nothing.
+Cross-references tasks.md's completed phases against the receipt
+dimensions (Built/Validated/Hardened/Documented + DESIGN/TRIAGE v3 skeleton)
+and the Quality-Process dimension, computing a gap percentage. Read-only; writes nothing.
 
 Dimension matching is honestly scoped by what each receipt file actually keys
 on — confirmed against the real receipt files this workspace already writes,
@@ -55,6 +55,8 @@ BUILD_RECEIPTS = RECEIPTS_DIR / "BUILD_RECEIPTS.md"
 VALIDATION_RECEIPTS = RECEIPTS_DIR / "VALIDATION_RECEIPTS.md"
 HARDEN_GRADES = RECEIPTS_DIR / "HARDEN_GRADES.md"
 DOCS_RECEIPTS = RECEIPTS_DIR / "DOCS_RECEIPTS.md"
+DESIGN_RECEIPTS = RECEIPTS_DIR / "DESIGN_RECEIPTS.md"
+TRIAGE_RECEIPTS = RECEIPTS_DIR / "TRIAGE_RECEIPTS.md"
 QUALITY_AUDIT_PATH = _HERE.parent / "quality" / "quality_audit.py"
 
 _RECEIPT_SPLIT_RE = re.compile(r"^\s*---\s*$", re.MULTILINE)
@@ -185,6 +187,8 @@ def compute_coverage(workspace: Path) -> dict:
     validation_present, validation_records = _load_receipt_records(workspace, VALIDATION_RECEIPTS)
     harden_present, harden_records = _load_receipt_records(workspace, HARDEN_GRADES)
     docs_present, docs_records = _load_receipt_records(workspace, DOCS_RECEIPTS)
+    design_present, design_records = _load_receipt_records(workspace, DESIGN_RECEIPTS)
+    triage_present, triage_records = _load_receipt_records(workspace, TRIAGE_RECEIPTS)
 
     checkable_dims = 0
     covered_dims = 0
@@ -198,6 +202,7 @@ def compute_coverage(workspace: Path) -> dict:
                 "title": phase.title, "checkbox_status": phase.status,
                 "built": "not_applicable_pending", "validated": "not_applicable_pending",
                 "hardened": "not_applicable_pending",
+                "designed": "not_applicable_pending", "triaged": "not_applicable_pending",
             })
             continue
 
@@ -205,8 +210,10 @@ def compute_coverage(workspace: Path) -> dict:
         validated = _matched_status(phase.title, validation_records) if validation_present else "receipts_file_absent"
         body = _phase_body_text(lines, phase, phases)
         hardened = _hardened_status(body, harden_records) if harden_present else "receipts_file_absent"
+        designed = _matched_status(phase.title, design_records) if design_present else "receipts_file_absent"
+        triaged = _matched_status(phase.title, triage_records) if triage_present else "receipts_file_absent"
 
-        for dim_status in (built, validated, hardened):
+        for dim_status in (built, validated, hardened, designed, triaged):
             if dim_status in ("found", "missing"):
                 checkable_dims += 1
                 covered_dims += (dim_status == "found")
@@ -214,6 +221,7 @@ def compute_coverage(workspace: Path) -> dict:
         phase_reports.append({
             "title": phase.title, "checkbox_status": phase.status,
             "built": built, "validated": validated, "hardened": hardened,
+            "designed": designed, "triaged": triaged,
         })
 
     gap_percent = round(100 * (1 - covered_dims / checkable_dims), 1) if checkable_dims else None
@@ -223,6 +231,7 @@ def compute_coverage(workspace: Path) -> dict:
         "receipt_files_present": {
             "build": build_present, "validation": validation_present,
             "harden": harden_present, "docs": docs_present,
+            "design": design_present, "triage": triage_present,
         },
         "documented_dimension": {
             "note": "DOCS_RECEIPTS.md's real-world Phase/Stage value is a fixed "

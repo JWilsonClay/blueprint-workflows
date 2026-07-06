@@ -10,6 +10,17 @@ COMMANDS_DIR = "claude-commands"
 SYMLINK_DIR = os.path.expanduser("~/.claude/commands")
 OPENCODE_DIR = os.path.expanduser("~/.opencode/commands")
 ANTIGRAVITY_DIR = os.path.expanduser("~/.gemini/antigravity/global_workflows")
+LINT_EXCLUDE_FILES = frozenset({"README.md"})
+# GROK_BUILD_DIR: location for Grok Build pointers (active only when user
+# activates Grok Build runtime). Generalized dir-existence handling applies
+# (see checks.py). Per PILLAR_05 §4.3 / pr-05-01a / opencode-to-grok-build
+# ticket: "Do not build tooling against an interface neither the user nor
+# the agent has learned yet." Single runtime note emitted when absent.
+GROK_BUILD_DIR = os.path.expanduser("~/.grok/commands")
+
+# P1 stabilization (pr-01-00): exclude navigation READMEs (e.g. claude-commands/README.md)
+# which intentionally lack workflow frontmatter to avoid linter CRITICAL / Grade Fraud.
+LINT_EXCLUDE_FILES = frozenset({"README.md"})
 
 V1_REQUIRED_FIELDS = [
     "description", "type", "grade", "version", "content_hash",

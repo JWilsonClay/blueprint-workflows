@@ -5,6 +5,8 @@ import tempfile
 import shutil
 from pathlib import Path
 import yaml
+import json  # for substrate_index test (PR 01-01)
+import re    # for robust json extraction from mixed stdout logs
 
 class TestIntegration(unittest.TestCase):
     def setUp(self):
@@ -84,6 +86,45 @@ class TestIntegration(unittest.TestCase):
         # 4. Verify no files were created
         target_path = self.root / "src/core/moved.py"
         self.assertFalse(target_path.exists())
+
+    def test_doorway_substrate_index_emission(self):
+        """Basic test for PR 01-01: substrate_index.json emission + CLI + JSON fields."""
+        # Reuse self.root (minimal ws with py + git); doorway is workspace-agnostic.
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(self.scripts_dir)
+        # Use -m to run as package (avoids direct-script sys.path[0]=doorway/ shadowing 'doorway' package import)
+        cmd = [
+            "python3", "-m", "doorway.doorway",
+            "--workspace", str(self.root),
+            "--output-json",
+        ]
+        res = subprocess.run(cmd, capture_output=True, text=True, env=env)
+        self.assertEqual(res.returncode, 0, f"doorway failed: {res.stderr}")
+        # Parse emitted JSON (stdout may contain prior [ERROR]/[DOORWAY] logs; use regex for top-level object)
+        m = re.search(r"(\{.*\})", res.stdout, re.DOTALL)
+        payload = json.loads(m.group(1)) if m else json.loads(res.stdout)
+        self.assertIn("substrate_index", payload)
+        idx = payload["substrate_index"]
+        self.assertEqual(idx.get("schema_version"), "1.0")
+        self.assertIn("directories", idx)
+        self.assertIn(".", idx["directories"])
+        self.assertIn("owner_ref", idx["directories"]["."])
+        self.assertIn("content_hash", idx["directories"]["."])
+        self.assertTrue(idx.get("zero_finding_candidate") in (True, False))
+        # Also verify .doorway/substrate_index.json was written (atomic)
+        idx_file = self.root / ".doorway" / "substrate_index.json"
+        self.assertTrue(idx_file.exists())
+        with open(idx_file) as f:
+            on_disk = json.load(f)
+        self.assertEqual(on_disk.get("schema_version"), "1.0")
+        # context-only path (minimal)
+        cmd2 = cmd + ["--context-only"]
+        res2 = subprocess.run(cmd2, capture_output=True, text=True, env=env)
+        self.assertEqual(res2.returncode, 0)
+        m2 = re.search(r"(\{.*\})", res2.stdout, re.DOTALL)
+        p2 = json.loads(m2.group(1)) if m2 else json.loads(res2.stdout)
+        self.assertIn("substrate_index", p2)
+        self.assertNotIn("drift", p2)  # minimal omits full
 
 if __name__ == '__main__':
     unittest.main()

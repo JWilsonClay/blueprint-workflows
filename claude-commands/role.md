@@ -3,7 +3,7 @@ description: "Senior Architect of Workflows — blueprint-workflows workspace id
 type: documentation
 grade: Hardened
 version: 2
-content_hash: "sha256:3d3bc8a18f31a305"
+content_hash: "sha256:75ec89b929b9eac6"
 last_hardened: "2026-05-21"
 strict_rule_count: 0
 phase_count: 0
@@ -54,7 +54,7 @@ John Wilson — read `~/blueprint-workflows/claude-commands/personality.md` for 
 | **Standard Version**      | 3 — current Sovereign Standard under which all workflows are certified (v3: Claude Code migration, single-file commands, 2026-05-21) |
 | **Commands location**     | `~/blueprint-workflows/claude-commands/` — symlinked to `~/.claude/commands/` for slash command registration                     |
 | **Injection cap**         | **RETIRED** — was ~12,000 bytes for Antigravity platform. Claude Code has no injection cap.                                      |
-| **Pointer/Payload**       | **RETIRED** — was the architectural response to the injection cap. All commands are now single merged files.                     |
+| **Pointer/Payload**       | **RETIRED** (for command delivery) — was the architectural response to the injection cap. All commands are now single merged files. REVIVED 2026-07 (P5 pr-05-01b) for focused cross-engine delegation contract in Sovereign Redesign Cluster (see below). |
 | **Generator mode**        | Building a new workflow from scratch using the Sovereign Scaffold Generator in /harden-workflow Phase 2a                        |
 | **Ticket mode**           | `/harden-workflow --ticket` — scans `helpdesk-tickets/` for OPEN tickets; each is an intake manifest                            |
 | **CLOSED_ prefix**        | The machine-readable closure signal for helpdesk tickets — filesystem rename, not a field edit                                  |
@@ -62,6 +62,19 @@ John Wilson — read `~/blueprint-workflows/claude-commands/personality.md` for 
 | **Manifest location**     | `~/blueprint-workflows/manifest/SUITE_HEALTH.md` (Live-State suite index) + `~/blueprint-workflows/manifest/history/` (Append-Only narrative, sharded by quarter) — split 2026-07-04, was one file `WORKFLOW_MANIFEST.md` |
 | **/nodelete**             | The preservation discipline: inject and append; delete only what directly contradicts. A Change Log entry is never deleted.     |
 | **No-praise directive**   | From `personality.md`: skip compliments and affirmations unless functionally required. No prefaces, no closes                   |
+
+**Pointer/Payload Contract (P5 pr-05-01b central doc, per PILLAR_05 §4.4):** Revived for formula-in-formula (Sovereign outer + Grok inner engines). One canonical focused payload (transient or .workflow_state/*-payloads/). Emission: ID, Content-Hash: sha256:<h>, Instructions, Use-Only-This, Do-Not-Edit. Consumption always re-verifies hash + Mute Witness. Do not edit delegated Grok /design or /execute-plan.
+
+```
+# POINTER/PAYLOAD
+ID: <phase-or-design-id>
+Content-Hash: sha256:<h>
+Instructions: "Respect /quality (Maximum). Current unbuilt items only. Produce canonical Phase Build Receipt / DESIGN_RECEIPT format exactly (see execute-build.md:330-360 or design-orchestrator). Layer native post-gates (5g/5h/quality). Update tasks.md. Do not mutate delegated engine."
+Use-Only-This: "The payload at <path> is the sole source of truth for this delegation. Do not re-read full workflow files unless explicitly instructed in payload."
+Do-Not-Edit: "Never propose changes to Grok /design or /execute-plan SKILL.md. Native owns Sovereign spine + gates + receipts."
+```
+
+Revival precedent: DevJournal pointer history (one canonical, multiple delivery). Used in P2/P3.
 
 ---
 

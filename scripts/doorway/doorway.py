@@ -17,10 +17,12 @@ Optional:
     --auto-apply        Apply approved breadcrumb proposals from the update log.
     --output-json       Emit results as JSON to stdout (for workflow consumption).
     --quiet             Suppress all output except errors and JSON.
+    --context-only      Emit minimal {substrate_index, zero_finding, ownership_summary, overhead} (PR 01-01).
 
 Workflow calling convention (from any global_workflows workflow):
     python {SCRIPTS_DIR}/doorway/doorway.py --workspace {TARGET_WORKSPACE}
     python {SCRIPTS_DIR}/doorway/doorway.py --workspace {TARGET_WORKSPACE} --output-json
+    python {SCRIPTS_DIR}/doorway/doorway.py --workspace {TARGET_WORKSPACE} --output-json --context-only  # PR 01-01 substrate index fast path
 
 Data directory:
     All runtime state is stored in {workspace}/.doorway/ (hidden, workspace-local).
@@ -73,6 +75,14 @@ IGNORE_DIRS = {
     DOORWAY_DATA_DIR_NAME,  # Never scan our own data directory.
 }
 
+# P1 stabilization (pr-01-00 per PILLAR_01): configurable dirs whose README.md
+# are intentionally not healed (e.g. nav files like claude-commands/README.md)
+# and do not contribute to has_readme/ingested/missing_readme signals.
+README_EXCLUDE_DIRS = {
+    "claude-commands",
+    "helpdesk-tickets/archive",
+}
+
 
 # ---------------------------------------------------------------------------
 # Main contextualizer class
@@ -89,10 +99,11 @@ class DoorwayContextualizer:
         output_json:  Emit results as JSON instead of human-readable output.
     """
 
-    def __init__(self, workspace: Path, quiet: bool = False, output_json: bool = False):
+    def __init__(self, workspace: Path, quiet: bool = False, output_json: bool = False, context_only: bool = False):
         self.workspace = workspace
         self.quiet = quiet
         self.output_json = output_json
+        self.context_only = context_only  # PR 01-01 CLI for minimal substrate payload
 
         # Data directory: {workspace}/.doorway/
         self.data_dir = workspace / DOORWAY_DATA_DIR_NAME
@@ -100,6 +111,7 @@ class DoorwayContextualizer:
         self.update_log = self.data_dir / "context_updates.log"
         self.success_cert = self.data_dir / "ctw_last_success.json"
         self.repair_plan_file = self.data_dir / "repair_implementation_plan.md"
+        self.substrate_file = self.data_dir / "substrate_index.json"  # PR 01-01 emission target (atomic)
 
         # Templates: bundled with this package.
         self.primary_templates = _HERE / "templates"
@@ -117,10 +129,10 @@ class DoorwayContextualizer:
         self.metrics: dict = {"created": 0, "ingested": 0, "repairs": 0}
 
         # Instantiate all components — workspace path flows through constructors.
-        self.scanner = WorkspaceScanner(workspace, IGNORE_DIRS)
+        self.scanner = WorkspaceScanner(workspace, IGNORE_DIRS, README_EXCLUDE_DIRS)
         self.breadcrumb_manager = BreadcrumbManager(workspace, self.update_log)
         self.integrity_manager = IntegrityManager(
-            workspace, self.primary_templates, self.backup_templates
+            workspace, self.primary_templates, self.backup_templates, README_EXCLUDE_DIRS
         )
         self.auditor = StructuralAuditor(
             workspace,
@@ -128,6 +140,7 @@ class DoorwayContextualizer:
             self.breadcrumb_manager,
             self.integrity_manager,
             self.metrics,
+            README_EXCLUDE_DIRS,
         )
         self.recommender = ProtocolRecommender()
         self.manifest_manager = ManifestManager(workspace, self.manifest_file)
@@ -151,6 +164,8 @@ class DoorwayContextualizer:
           1. Load previous workspace snapshot.
           2. Run hash-based workspace scan.
           3. Structural audit: detect drift, heal missing READMEs.
+             (Option C may trigger here: if not full_scan + repairs > 0 + missing_readme,
+             re-scan full + re-audit to refresh has_readme; see effective_full.)
           4. Promote WORKLOG entries to governance/Chronology.md.
           5. Persist the new snapshot.
           6. Sync MANIFEST.md.
@@ -159,7 +174,7 @@ class DoorwayContextualizer:
           9. Render the report (or emit JSON).
 
         Returns:
-            dict with keys: map, drift, recommendations, overhead, skipped, data_dir
+            dict with keys: map, drift, recommendations, overhead, skipped, data_dir, substrate_index (PR 01-01)
         """
         start = time.time()
 
@@ -189,6 +204,67 @@ class DoorwayContextualizer:
         # Step 3 — Structural audit.
         drift = self.auditor.audit(current_map, previous_map)
 
+        # Option C auto-escalate (P1 stabilization, pr-01-00, PILLAR_01 §4.4):
+        # If incremental scan produced self-heal repairs (stale has_readme from carry-over),
+        # re-scan with full to refresh has_readme post-heal so final drift/zero_finding clean.
+        # Note: post-heal drift may list healed entries until re-audit; escalation forces refresh.
+        # (PILLAR pseudocode used metrics["repairs"]; .get is defensive.)
+        escalated = False
+        if (not full_scan and self.metrics.get("repairs", 0) > 0 and drift.get("missing_readme")):
+            if not self.output_json and not self.quiet:
+                print("[DOORWAY] Auto-escalated to full-scan after self-heal repairs")
+            current_map, ingested_count = self.scanner.scan(previous_map, full_scan=True)
+            self.metrics["ingested"] = ingested_count
+            drift = self.auditor.audit(current_map, previous_map)
+            escalated = True
+
+        effective_full = full_scan or escalated
+
+        # PR 01-02: Tiered zero-finding (PILLAR_01). Tier 1 gates zero_finding (ownership + index freshness);
+        # Tier 2 (missing_readme) is warn-only and does not block. Enables zero_finding true post self-heal
+        # without requiring manual --full-scan (Option C may still escalate for snapshot accuracy).
+        # Index freshness integrates with substrate_index from prior PR (pr-01-01); falls back gracefully.
+        tier1_keys = ["new", "modified", "deleted", "unowned", "ownership_incomplete", "stale_index"]
+        try:
+            sub_path = self.data_dir / "substrate_index.json"
+            snap_path = self.snapshot_file
+            index_fresh = True
+            if sub_path.exists():
+                # minimal freshness proxy: substrate present + not obviously stale vs snapshot mtime or dir count
+                sub_mtime = sub_path.stat().st_mtime
+                snap_mtime = snap_path.stat().st_mtime if snap_path.exists() else 0
+                if sub_mtime < (snap_mtime - 30):  # 30s tolerance
+                    index_fresh = False
+                else:
+                    try:
+                        sub = json.loads(sub_path.read_text(encoding="utf-8"))
+                        sub_dirs = sub.get("directories", {})
+                        if len(sub_dirs) > 0 and abs(len(sub_dirs) - len(current_map)) > 10:
+                            index_fresh = False
+                    except Exception:
+                        index_fresh = False
+            if not index_fresh:
+                if not drift.get("stale_index"):
+                    drift["stale_index"] = []
+                if "substrate_index.json" not in drift["stale_index"]:
+                    drift["stale_index"].append("substrate_index.json")
+        except Exception:
+            pass  # never fail run on freshness probe
+
+        zero_finding = not any(bool(drift.get(k)) for k in tier1_keys)
+
+        # Step 3.5 — Build + emit substrate_index.json (PR 01-01: from auditor using final map)
+        # Smallest integration: after Tier 1 calc settles; write atomic; include in results.
+        # zero_finding_candidate uses the Tier 1 value computed above (not a re-derived Tier-2-inclusive one)
+        # so the persisted index and the live report never disagree on what "clean" means.
+        substrate_index = self.auditor.build_substrate_index(current_map)
+        substrate_index["zero_finding_candidate"] = zero_finding
+        try:
+            safe_mkdir(self.data_dir)
+            atomic_write(self.substrate_file, json.dumps(substrate_index, indent=2))
+        except (OSError, ValueError) as e:
+            print(f"[SUBSTRATE] Failed to write substrate_index.json: {e}")
+
         # Step 4 — Worklog promotion.
         self._promote_worklogs(current_map)
 
@@ -202,7 +278,7 @@ class DoorwayContextualizer:
         recommendations = self.recommender.recommend(drift)
 
         # Step 8 — Qualitative audit.
-        self.audit_manager.perform_qualitative_audit(drift, current_map, full_scan)
+        self.audit_manager.perform_qualitative_audit(drift, current_map, effective_full)
 
         overhead = time.time() - start
 
@@ -215,10 +291,13 @@ class DoorwayContextualizer:
                 len(previous_map)
                 - len(drift.get("modified", []))
                 - len(drift.get("deleted", []))
-                if not full_scan
+                if not effective_full
                 else 0
             ),
             "data_dir": str(self.data_dir),
+            "escalated": escalated,
+            "substrate_index": substrate_index,
+            "zero_finding": zero_finding,
         }
 
         # Step 9 — Report.
@@ -228,6 +307,7 @@ class DoorwayContextualizer:
             workspace_name=self.workspace.name,
             quiet=self.quiet,
             output_json=self.output_json,
+            context_only=self.context_only,
         )
 
         return results
@@ -328,6 +408,7 @@ def _parse_args() -> argparse.Namespace:
             "  python doorway.py --workspace /home/user/project\n"
             "  python doorway.py --workspace /home/user/project --full-scan --output-json\n"
             "  python doorway.py --workspace /home/user/project --auto-apply\n"
+            "  python doorway.py --workspace /home/user/project --output-json --context-only\n"
         ),
     )
 
@@ -357,6 +438,11 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="Suppress all output except errors and JSON.",
     )
+    parser.add_argument(
+        "--context-only",
+        action="store_true",
+        help="Emit minimal substrate_index payload for context/session init (PR 01-01).",
+    )
 
     return parser.parse_args()
 
@@ -377,6 +463,7 @@ def main() -> int:
         workspace=workspace,
         quiet=args.quiet,
         output_json=args.output_json,
+        context_only=args.context_only,
     )
     contextualizer.run(full_scan=args.full_scan, auto_apply=args.auto_apply)
     return 0

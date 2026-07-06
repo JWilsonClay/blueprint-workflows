@@ -42,16 +42,21 @@ class ProtocolRecommender:
         recs = []
 
         if drift.get("new"):
-            dirs = ", ".join(drift["new"][:3])
-            recs.append({
-                "id": "SEQ-SUBSTRATE-HEALTH",
-                "workflow": "/investigate",
-                "reason": (
-                    f"New directories detected ({dirs}). "
-                    "Verify architectural alignment before proceeding."
-                ),
-                "severity": "MEDIUM",
-            })
+            new_entries = drift["new"]
+            # P1 bootstrap: inaugural (is_bootstrap flag) produces many "new";
+            # suppress SEQ-SUBSTRATE-HEALTH (expected, not actionable) per PILLAR_01.
+            is_bootstrap = bool(drift.get("is_bootstrap"))
+            if not is_bootstrap:
+                dirs = ", ".join(new_entries[:3])
+                recs.append({
+                    "id": "SEQ-SUBSTRATE-HEALTH",
+                    "workflow": "/investigate",
+                    "reason": (
+                        f"New directories detected ({dirs}). "
+                        "Verify architectural alignment before proceeding."
+                    ),
+                    "severity": "MEDIUM",
+                })
 
         if drift.get("unowned"):
             dirs = ", ".join(drift["unowned"][:3])
@@ -72,9 +77,9 @@ class ProtocolRecommender:
                 "workflow": "/document",
                 "reason": (
                     f"Directories without README files ({dirs}). "
-                    "Breadcrumb web is incomplete — regenerate documentation."
+                    "Tier 2 hygiene (README existence); does not affect Tier 1 zero_finding."
                 ),
-                "severity": "LOW",
+                "severity": "INFO",
             })
 
         if drift.get("deleted"):
@@ -98,6 +103,20 @@ class ProtocolRecommender:
                     "Broad modification sweep warrants a full substrate re-assimilation."
                 ),
                 "severity": "HIGH",
+            })
+
+        # PR 01-02 tiered: index-staleness or ownership_incomplete (Tier 1 gates)
+        tier1_issues = (drift.get("stale_index") or []) + (drift.get("ownership_incomplete") or [])
+        if tier1_issues:
+            dirs = ", ".join(tier1_issues[:3])
+            recs.append({
+                "id": "SEQ-SUBSTRATE-HEALTH",
+                "workflow": "/investigate",
+                "reason": (
+                    f"Index freshness or ownership completeness issue ({dirs}). "
+                    "Verify FOLDER_OWNERSHIP non-placeholder sentences + substrate_index (Tier 1)."
+                ),
+                "severity": "MEDIUM",
             })
 
         return recs

@@ -37,6 +37,8 @@ class IntegrityManager:
         workspace:          Absolute path to the target workspace root.
         primary_templates:  Path to the primary templates directory.
         backup_templates:   Path to the fallback templates directory.
+        readme_exclude_dirs: Set of dirs whose READMEs are never auto-healed
+            (P1 pr-01-00 stabilization; e.g. claude-commands).
     """
 
     def __init__(
@@ -44,10 +46,12 @@ class IntegrityManager:
         workspace: Path,
         primary_templates: Path,
         backup_templates: Path,
+        readme_exclude_dirs: set = None,
     ):
         self.workspace = workspace
         self.primary_templates = primary_templates
         self.backup_templates = backup_templates
+        self.readme_exclude_dirs = readme_exclude_dirs or set()
 
     # ------------------------------------------------------------------
     # Substrate bootstrap
@@ -207,6 +211,10 @@ class IntegrityManager:
             print(f"[SELF-HEAL] {e}")
             return False
 
+        # P1: skip heal entirely for README_EXCLUDE_DIRS (configurable, no-heal).
+        if self._is_readme_excluded(folder_path_str):
+            return False
+
         template_content = None
         for base in [self.primary_templates, self.backup_templates]:
             tpl_file = base / "README.md.template"
@@ -239,3 +247,13 @@ class IntegrityManager:
         except (OSError, ValueError) as e:
             print(f"[SELF-HEAL] Failed to create README at {target}: {e}")
             return False
+
+    def _is_readme_excluded(self, folder_path_str: str) -> bool:
+        """Respect README_EXCLUDE_DIRS (and subpaths) — no heal, no contrib."""
+        if not self.readme_exclude_dirs or not folder_path_str:
+            return False
+        p = Path(folder_path_str)
+        for ex in self.readme_exclude_dirs:
+            if str(p) == ex or str(p).startswith(ex + "/"):
+                return True
+        return False

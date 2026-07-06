@@ -16,6 +16,7 @@ Refactored from .blueprints/governance/thedoorway/structural_auditor.py:
   - Broad 'except Exception: pass' replaced with specific OSError handling.
 """
 
+from datetime import datetime
 from pathlib import Path
 
 
@@ -30,6 +31,7 @@ class StructuralAuditor:
         breadcrumb_manager: BreadcrumbManager instance for proposal logging.
         integrity_manager:  IntegrityManager instance for README self-healing.
         metrics:            Shared metrics dict {'created': int, 'repairs': int, ...}.
+        readme_exclude_dirs: Set of dirs to skip heal + missing_readme (P1 pr-01-00).
     """
 
     def __init__(
@@ -39,12 +41,14 @@ class StructuralAuditor:
         breadcrumb_manager,
         integrity_manager,
         metrics: dict,
+        readme_exclude_dirs: set = None,
     ):
         self.workspace = workspace
         self.ownership_file = ownership_file
         self.breadcrumb_manager = breadcrumb_manager
         self.integrity_manager = integrity_manager
         self.metrics = metrics
+        self.readme_exclude_dirs = readme_exclude_dirs or set()
 
     def audit(self, current_map: dict, previous_map: dict) -> dict:
         """
@@ -54,11 +58,16 @@ class StructuralAuditor:
 
         Returns:
             drift dict with keys:
-              new           — directories first seen in this scan
+              new           — directories first seen in this scan (pure path strings;
+                              inaugural bootstrap indicated by top-level "is_bootstrap": true)
               modified      — directories whose content hash changed
               deleted       — directories present in previous scan but now gone
               unowned       — directories absent from FOLDER_OWNERSHIP.md
-              missing_readme — directories that lacked a README (healed if possible)
+              missing_readme — directories that lacked a README (healed if possible; post-heal
+                              entries may remain listed until Option C re-audit). Tier 2 hygiene only (does not gate zero_finding per PR 01-02).
+              ownership_incomplete — (Tier 1) top-level dirs from FOLDER_OWNERSHIP with placeholder/empty sentences
+              is_bootstrap  — (optional) true for inaugural run (len(previous)==0); used for
+                              tagging display and suppression of inaugural "new" routing
         """
         drift = {
             "new": [],
@@ -66,13 +75,32 @@ class StructuralAuditor:
             "deleted": [],
             "unowned": [],
             "missing_readme": [],
+            "ownership_incomplete": [],
         }
         ownership_map = self.parse_ownership()
+        is_bootstrap = len(previous_map) == 0
+
+        # Tier 1 gate (PILLAR_01 PR 01-02): ownership completeness — top-level owned dirs must have non-placeholder sentences.
+        # (unowned already catches dirs w/o entry; this catches entries that are placeholder per spec).
+        try:
+            if self.ownership_file.exists():
+                lines = self.ownership_file.read_text(encoding="utf-8").splitlines()
+                for line in lines:
+                    if line.strip().startswith("- "):
+                        if ":" in line:
+                            path_part, desc_part = [p.strip() for p in line.split(":", 1)]
+                            path_part = path_part.replace("- ", "").rstrip("/")
+                            desc = desc_part
+                            if path_part and self._is_placeholder_sentence(desc):
+                                if path_part not in drift["ownership_incomplete"]:
+                                    drift["ownership_incomplete"].append(path_part)
+        except OSError:
+            pass
 
         for path, info in current_map.items():
             # Change detection.
             if path != "." and path not in previous_map:
-                drift["new"].append(path)
+                drift["new"].append(path)  # always clean path; see is_bootstrap flag
                 self.breadcrumb_manager.propose(path, "new directory")
             elif path in previous_map:
                 prev_hash = previous_map[path].get("content_hash")
@@ -80,12 +108,13 @@ class StructuralAuditor:
                     drift["modified"].append(path)
                     self.breadcrumb_manager.propose(path, "hash drift detected")
 
-            # README check — trigger self-healing if missing.
+            # README check — trigger self-healing if missing (skip for excludes per P1).
             if not info["has_readme"]:
-                drift["missing_readme"].append(path)
-                if self.integrity_manager.create_readme(path):
-                    self.metrics["created"] += 1
-                    self.metrics["repairs"] += 1
+                if not self._is_readme_excluded(path):
+                    drift["missing_readme"].append(path)
+                    if self.integrity_manager.create_readme(path):
+                        self.metrics["created"] += 1
+                        self.metrics["repairs"] += 1
 
             # Ownership check.
             if path != "." and not self.is_owned(path, ownership_map):
@@ -95,6 +124,9 @@ class StructuralAuditor:
         for path in previous_map:
             if path not in current_map:
                 drift["deleted"].append(path)
+
+        if is_bootstrap:
+            drift["is_bootstrap"] = True
 
         return drift
 
@@ -142,3 +174,67 @@ class StructuralAuditor:
             print(f"[AUDITOR] Cannot read FOLDER_OWNERSHIP.md: {e}")
 
         return owned_dirs
+
+    def _is_readme_excluded(self, path_str: str) -> bool:
+        """Skip heal/missing for configured README_EXCLUDE_DIRS (incl children)."""
+        if not self.readme_exclude_dirs or not path_str:
+            return False
+        p = Path(path_str)
+        for ex in self.readme_exclude_dirs:
+            if str(p) == ex or str(p).startswith(ex + "/"):
+                return True
+        return False
+
+    def _is_placeholder_sentence(self, desc: str) -> bool:
+        """Tier 1: detect placeholder/empty sentences in FOLDER_OWNERSHIP (per PILLAR_01)."""
+        if not desc:
+            return True
+        d = desc.strip().lower()
+        if len(d) < 8 or d == "description" or "todo" in d or "placeholder" in d or d.startswith("add "):
+            return True
+        return False
+
+    def build_substrate_index(self, current_map: dict) -> dict:
+        """Build .doorway/substrate_index.json payload (schema v1.0) from scanner map + ownership.
+
+        Per PILLAR_01 PR 01-01: emission from auditor (map + ownership). Smallest change.
+        breadcrumb_summary synthesized minimally from scanner fields (pre-Phase 1.5).
+        zero_finding_candidate overwritten by caller using drift.
+        """
+        directories = {}
+        for path_str, info in sorted(current_map.items()):
+            owner_ref = f"FOLDER_OWNERSHIP:{path_str}" if path_str != "." else "FOLDER_OWNERSHIP:."
+            py_count = len(info.get("py_files", []))
+            sub_count = len(info.get("subdirs", []))
+            breadcrumb_summary = (
+                f"FILES:{info.get('files_count', 0)} PY:{py_count} "
+                f"SUBDIRS:{sub_count} HAS_README:{info.get('has_readme', False)} "
+                f"SCANNED:{info.get('last_seen', '')[:19]}"
+            )
+            directories[path_str] = {
+                "owner_ref": owner_ref,
+                "breadcrumb_summary": breadcrumb_summary,
+                "files_count": info.get("files_count", 0),
+                "py_files": info.get("py_files", []),
+                "subdirs": info.get("subdirs", []),
+                "has_readme": info.get("has_readme", False),
+                "last_seen": info.get("last_seen", ""),
+                "last_modified": info.get("last_modified", ""),
+                "content_hash": info.get("content_hash", ""),
+            }
+        excluded = list(self.readme_exclude_dirs)
+        total = len(directories)
+        ingested = sum(1 for v in directories.values() if v.get("has_readme"))
+        return {
+            "schema_version": "1.0",
+            "generated_at": datetime.now().isoformat(),
+            "workspace": str(self.workspace),
+            "zero_finding_candidate": True,
+            "directories": directories,
+            "ownership_source": "docs/FOLDER_OWNERSHIP.md",
+            "excluded_dirs": excluded,
+            "metrics": {
+                "total_dirs": total,
+                "ingested_readmes": ingested,
+            },
+        }
