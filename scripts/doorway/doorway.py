@@ -17,10 +17,12 @@ Optional:
     --auto-apply        Apply approved breadcrumb proposals from the update log.
     --output-json       Emit results as JSON to stdout (for workflow consumption).
     --quiet             Suppress all output except errors and JSON.
+    --context-only      Emit minimal {substrate_index, zero_finding, ownership_summary, overhead} (PR 01-01).
 
 Workflow calling convention (from any global_workflows workflow):
     python {SCRIPTS_DIR}/doorway/doorway.py --workspace {TARGET_WORKSPACE}
     python {SCRIPTS_DIR}/doorway/doorway.py --workspace {TARGET_WORKSPACE} --output-json
+    python {SCRIPTS_DIR}/doorway/doorway.py --workspace {TARGET_WORKSPACE} --output-json --context-only  # PR 01-01 substrate index fast path
 
 Data directory:
     All runtime state is stored in {workspace}/.doorway/ (hidden, workspace-local).
@@ -97,10 +99,11 @@ class DoorwayContextualizer:
         output_json:  Emit results as JSON instead of human-readable output.
     """
 
-    def __init__(self, workspace: Path, quiet: bool = False, output_json: bool = False):
+    def __init__(self, workspace: Path, quiet: bool = False, output_json: bool = False, context_only: bool = False):
         self.workspace = workspace
         self.quiet = quiet
         self.output_json = output_json
+        self.context_only = context_only  # PR 01-01 CLI for minimal substrate payload
 
         # Data directory: {workspace}/.doorway/
         self.data_dir = workspace / DOORWAY_DATA_DIR_NAME
@@ -108,6 +111,7 @@ class DoorwayContextualizer:
         self.update_log = self.data_dir / "context_updates.log"
         self.success_cert = self.data_dir / "ctw_last_success.json"
         self.repair_plan_file = self.data_dir / "repair_implementation_plan.md"
+        self.substrate_file = self.data_dir / "substrate_index.json"  # PR 01-01 emission target (atomic)
 
         # Templates: bundled with this package.
         self.primary_templates = _HERE / "templates"
@@ -168,7 +172,7 @@ class DoorwayContextualizer:
           9. Render the report (or emit JSON).
 
         Returns:
-            dict with keys: map, drift, recommendations, overhead, skipped, data_dir
+            dict with keys: map, drift, recommendations, overhead, skipped, data_dir, substrate_index (PR 01-01)
         """
         start = time.time()
 
@@ -210,6 +214,21 @@ class DoorwayContextualizer:
             drift = self.auditor.audit(current_map, previous_map)
             escalated = True
 
+        # Step 3.5 — Build + emit substrate_index.json (PR 01-01: from auditor using final map)
+        # Smallest integration: after Option C settle; write atomic; include in results.
+        substrate_index = self.auditor.build_substrate_index(current_map)
+        zf = not any(
+            drift.get(k) for k in ("new", "modified", "deleted", "unowned", "missing_readme")
+        )
+        substrate_index["zero_finding_candidate"] = zf
+        try:
+            safe_mkdir(self.data_dir)
+            atomic_write(self.substrate_file, json.dumps(substrate_index, indent=2))
+        except (OSError, ValueError) as e:
+            print(f"[SUBSTRATE] Failed to write substrate_index.json: {e}")
+        # also surface zero_finding for reporter/CLI consumers
+        results_zf = zf
+
         # Step 4 — Worklog promotion.
         self._promote_worklogs(current_map)
 
@@ -241,6 +260,8 @@ class DoorwayContextualizer:
             ),
             "data_dir": str(self.data_dir),
             "escalated": escalated,
+            "substrate_index": substrate_index,
+            "zero_finding": results_zf,
         }
 
         # Step 9 — Report.
@@ -250,6 +271,7 @@ class DoorwayContextualizer:
             workspace_name=self.workspace.name,
             quiet=self.quiet,
             output_json=self.output_json,
+            context_only=self.context_only,
         )
 
         return results
@@ -350,6 +372,7 @@ def _parse_args() -> argparse.Namespace:
             "  python doorway.py --workspace /home/user/project\n"
             "  python doorway.py --workspace /home/user/project --full-scan --output-json\n"
             "  python doorway.py --workspace /home/user/project --auto-apply\n"
+            "  python doorway.py --workspace /home/user/project --output-json --context-only\n"
         ),
     )
 
@@ -379,6 +402,11 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="Suppress all output except errors and JSON.",
     )
+    parser.add_argument(
+        "--context-only",
+        action="store_true",
+        help="Emit minimal substrate_index payload for context/session init (PR 01-01).",
+    )
 
     return parser.parse_args()
 
@@ -399,6 +427,7 @@ def main() -> int:
         workspace=workspace,
         quiet=args.quiet,
         output_json=args.output_json,
+        context_only=args.context_only,
     )
     contextualizer.run(full_scan=args.full_scan, auto_apply=args.auto_apply)
     return 0

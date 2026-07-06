@@ -16,6 +16,7 @@ Refactored from .blueprints/governance/thedoorway/structural_auditor.py:
   - Broad 'except Exception: pass' replaced with specific OSError handling.
 """
 
+from datetime import datetime
 from pathlib import Path
 
 
@@ -158,3 +159,48 @@ class StructuralAuditor:
             if str(p) == ex or str(p).startswith(ex + "/"):
                 return True
         return False
+
+    def build_substrate_index(self, current_map: dict) -> dict:
+        """Build .doorway/substrate_index.json payload (schema v1.0) from scanner map + ownership.
+
+        Per PILLAR_01 PR 01-01: emission from auditor (map + ownership). Smallest change.
+        breadcrumb_summary synthesized minimally from scanner fields (pre-Phase 1.5).
+        zero_finding_candidate overwritten by caller using drift.
+        """
+        directories = {}
+        for path_str, info in sorted(current_map.items()):
+            owner_ref = f"FOLDER_OWNERSHIP:{path_str}" if path_str != "." else "FOLDER_OWNERSHIP:."
+            py_count = len(info.get("py_files", []))
+            sub_count = len(info.get("subdirs", []))
+            breadcrumb_summary = (
+                f"FILES:{info.get('files_count', 0)} PY:{py_count} "
+                f"SUBDIRS:{sub_count} HAS_README:{info.get('has_readme', False)} "
+                f"SCANNED:{info.get('last_seen', '')[:19]}"
+            )
+            directories[path_str] = {
+                "owner_ref": owner_ref,
+                "breadcrumb_summary": breadcrumb_summary,
+                "files_count": info.get("files_count", 0),
+                "py_files": info.get("py_files", []),
+                "subdirs": info.get("subdirs", []),
+                "has_readme": info.get("has_readme", False),
+                "last_seen": info.get("last_seen", ""),
+                "last_modified": info.get("last_modified", ""),
+                "content_hash": info.get("content_hash", ""),
+            }
+        excluded = list(self.readme_exclude_dirs)
+        total = len(directories)
+        ingested = sum(1 for v in directories.values() if v.get("has_readme"))
+        return {
+            "schema_version": "1.0",
+            "generated_at": datetime.now().isoformat(),
+            "workspace": str(self.workspace),
+            "zero_finding_candidate": True,
+            "directories": directories,
+            "ownership_source": "docs/FOLDER_OWNERSHIP.md",
+            "excluded_dirs": excluded,
+            "metrics": {
+                "total_dirs": total,
+                "ingested_readmes": ingested,
+            },
+        }
