@@ -20,10 +20,11 @@ class CoverageReporter:
             present = report["receipt_files_present"]
             print(f"  Receipt files present: build={present['build']} "
                   f"validation={present['validation']} harden={present['harden']} "
-                  f"docs={present['docs']}")
+                  f"docs={present['docs']} design={present['design']} triage={present['triage']}")
             for p in report["phases"]:
                 print(f"  [{p['checkbox_status']:>16}] {p['title']}: "
-                      f"built={p['built']} validated={p['validated']} hardened={p['hardened']}")
+                      f"built={p['built']} validated={p['validated']} hardened={p['hardened']} "
+                      f"designed={p['designed']} triaged={p['triaged']}")
             gp = report["gap_percent"]
             print(f"  Gap: {gp}%  ({report['covered_dimensions']}/{report['checkable_dimensions']} "
                   f"checkable dimensions covered)" if gp is not None

@@ -115,3 +115,64 @@
 - **Modified**: `~/blueprint-workflows/claude-commands/harden-workflow.md` — TM-5 ticket archival step
 - **Modified**: `~/blueprint-workflows/manifest/WORKFLOW_MANIFEST.md` — /workstream entry, count 32
 - **Replaced**: `~/.opencode/commands/workflow-pointer.md` — retired bulk-load with per-workflow pointers
+
+## 2026-07-05 — Grok Build Inaugural Session: /sentinel Bootstrap, /investigate, /document Hygiene
+
+### Today's Progress
+- First Grok Build session on blueprint-workflows; executed `/sentinel` inaugural Doorway scan — 32 directories flagged as "new" (first-scan bootstrap, not structural mutation)
+- Populated 33 agentic breadcrumb summaries into README BREADCRUMB sections during sentinel Phase 1.5
+- Executed `/investigate` on sentinel drift findings — confirmed HIGH confidence: directories are long-established suite layout; drift signal was empty prior snapshot artifact
+- Executed `/document` hygiene pass: rewrote `docs/FOLDER_OWNERSHIP.md`, propagated owner sentences into `MANIFEST.md` and `governance/Architecture.md`, updated root `README.md`
+- Gitignore seeder: unchanged block, 0 tracked secrets
+
+### Architecture Updates
+- **Doorway baseline established**: `.doorway/workspace_snapshot.json` now exists; future `/sentinel` scans will detect real hash drift instead of first-seen false positives
+- **FOLDER_OWNERSHIP.md corrected**: replaced generic self-heal template (core/, logic/, data/, tests/) with actual blueprint-workflows top-level layout (claude-commands/, scripts/, manifest/, etc.)
+- **Governance propagation**: MANIFEST.md and Architecture.md no longer carry `[awaiting FOLDER_OWNERSHIP.md]` placeholders — owner sentences synced from source of truth
+- **32 Doorway auto-generated READMEs** remain untracked in git; title placeholders (`[One Sentence Owner Description Placeholder]`) in per-directory READMEs deferred for user review
+
+### Implementation Plan
+- **Phase 1 (user review)**: Review FOLDER_OWNERSHIP owner sentences, MANIFEST.md, Architecture.md, root README.md
+- **Phase 2 (post-approval)**: Run `/sentinel --workspace /home/jwils/blueprint-workflows` rescan — expect unowned count to drop to 0; verify zero-finding or hygiene-only findings
+- **Phase 3 (optional)**: Propagate owner sentences into per-directory README Ownership sections (32 files); decide git track vs. gitignore for auto-generated READMEs
+- **Phase 4 (open tickets)**: `20260704_lint-fix-hashes-gap` (SUBSTANTIVE-LOGIC), `20260705_opencode-to-grok-build-transition` (STRUCTURAL, PENDING) — unrelated to today's hygiene but visible in patrol
+
+### Key Decisions & Learnings
+- **First Doorway scan ≠ new directories**: auditor marks `path not in previous_map` as new; inaugural scan always produces structural-health routing — investigate before reacting
+- **Self-heal templates are workspace-agnostic**: FOLDER_OWNERSHIP template lists generic dirs; blueprint-workflows needs explicit ownership maintenance after first sentinel run
+- **manifest/ and process_learnings/ gitignored by design**: local-only governance state per `.gitignore` lines 7, 10 — not a documentation defect
+
+### Challenges & Resolutions
+- **breadcrumb.py `--- PROPOSAL` delimiter mismatch**: `apply_approved()` only processed last log entry when delimiters absent; resolved in sentinel session via direct `update_readme()` calls — latent bug in `scripts/doorway/breadcrumb.py` worth a future ticket
+- **User on turn-boundary pause**: investigation confirmed, `/document` executed fully; awaiting user review before rescan or README propagation
+
+### Next Actions
+1. User reviews governance doc updates (FOLDER_OWNERSHIP, MANIFEST, Architecture, root README)
+2. On approval: `/sentinel` rescan to confirm hygiene closure
+3. Optional: propagate Standard Sentence into 32 per-directory README headers
+4. Optional: file helpdesk ticket for breadcrumb.py proposal-delimiter bug
+
+---
+
+### Documentation Changes Summary
+- **Modified**: `docs/FOLDER_OWNERSHIP.md` — full rewrite with reconciliation note
+- **Modified**: `MANIFEST.md` — owner sentences propagated from FOLDER_OWNERSHIP
+- **Modified**: `governance/Architecture.md` — owner sentences propagated
+- **Modified**: `README.md` (root) — title and ownership section updated
+- **Appended**: `DevJournal.md` — this entry
+- **Created**: `.workflow_state/receipts/DOCS_RECEIPTS.md` — documentation receipt
+
+## 2026-07-06 — Pointer/Payload Contract Central Doc + Receipt Family v3+ Skeleton (pr-05-01b)
+
+### Architecture Updates
+- **Pointer/Payload contract revived centrally**: documented in role.md (II) + this DevJournal (history). Standardized header + rules for focused delegation payloads (Sovereign → Grok /design /execute-plan). "One canonical, multiple delivery" revived per DevJournal 2026-05-21 precedent for formula-in-formula.
+- **Receipt family v3+ skeleton**: DESIGN_RECEIPTS + TRIAGE_RECEIPTS constants + load + phase matching + files_present in scripts/receipt/coverage.py (and reporter). Extends dimensions safely (BUILD/VALIDATION parity for Phase/Stage; PENDING/ absent logic untouched; checkable count only on found/missing). Emission parity with BUILD_RECEIPTS heredoc ready for P2/P3.
+
+### Key Decisions & Learnings
+- Central durable location (role + DevJournal) prevents drift vs. scattered in P2/P3 designs only.
+- Skeleton first (this PR) per Phase B; full emission/consumption in later P5 PRs.
+
+### Documentation Changes Summary
+- **Modified**: `claude-commands/role.md` — Pointer/Payload table row + new contract subsection (spec, header, rules).
+- **Appended**: `DevJournal.md` — this revival entry (P5 pr-05-01b).
+- **Modified**: `scripts/receipt/coverage.py` + `reporter.py` — v3 skeleton (consts, loads, phase keys "designed"/"triaged", present dict, render, docstring).
