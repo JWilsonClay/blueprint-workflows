@@ -30,6 +30,7 @@ class StructuralAuditor:
         breadcrumb_manager: BreadcrumbManager instance for proposal logging.
         integrity_manager:  IntegrityManager instance for README self-healing.
         metrics:            Shared metrics dict {'created': int, 'repairs': int, ...}.
+        readme_exclude_dirs: Set of dirs to skip heal + missing_readme (P1 pr-01-00).
     """
 
     def __init__(
@@ -39,12 +40,14 @@ class StructuralAuditor:
         breadcrumb_manager,
         integrity_manager,
         metrics: dict,
+        readme_exclude_dirs: set = None,
     ):
         self.workspace = workspace
         self.ownership_file = ownership_file
         self.breadcrumb_manager = breadcrumb_manager
         self.integrity_manager = integrity_manager
         self.metrics = metrics
+        self.readme_exclude_dirs = readme_exclude_dirs or set()
 
     def audit(self, current_map: dict, previous_map: dict) -> dict:
         """
@@ -68,11 +71,13 @@ class StructuralAuditor:
             "missing_readme": [],
         }
         ownership_map = self.parse_ownership()
+        is_bootstrap = len(previous_map) == 0
 
         for path, info in current_map.items():
             # Change detection.
             if path != "." and path not in previous_map:
-                drift["new"].append(path)
+                entry = f"{path} [BOOTSTRAP]" if is_bootstrap else path
+                drift["new"].append(entry)
                 self.breadcrumb_manager.propose(path, "new directory")
             elif path in previous_map:
                 prev_hash = previous_map[path].get("content_hash")
@@ -80,12 +85,13 @@ class StructuralAuditor:
                     drift["modified"].append(path)
                     self.breadcrumb_manager.propose(path, "hash drift detected")
 
-            # README check — trigger self-healing if missing.
+            # README check — trigger self-healing if missing (skip for excludes per P1).
             if not info["has_readme"]:
-                drift["missing_readme"].append(path)
-                if self.integrity_manager.create_readme(path):
-                    self.metrics["created"] += 1
-                    self.metrics["repairs"] += 1
+                if not self._is_readme_excluded(path):
+                    drift["missing_readme"].append(path)
+                    if self.integrity_manager.create_readme(path):
+                        self.metrics["created"] += 1
+                        self.metrics["repairs"] += 1
 
             # Ownership check.
             if path != "." and not self.is_owned(path, ownership_map):
@@ -142,3 +148,13 @@ class StructuralAuditor:
             print(f"[AUDITOR] Cannot read FOLDER_OWNERSHIP.md: {e}")
 
         return owned_dirs
+
+    def _is_readme_excluded(self, path_str: str) -> bool:
+        """Skip heal/missing for configured README_EXCLUDE_DIRS (incl children)."""
+        if not self.readme_exclude_dirs or not path_str:
+            return False
+        p = Path(path_str)
+        for ex in self.readme_exclude_dirs:
+            if str(p) == ex or str(p).startswith(ex + "/"):
+                return True
+        return False

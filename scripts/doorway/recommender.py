@@ -42,16 +42,21 @@ class ProtocolRecommender:
         recs = []
 
         if drift.get("new"):
-            dirs = ", ".join(drift["new"][:3])
-            recs.append({
-                "id": "SEQ-SUBSTRATE-HEALTH",
-                "workflow": "/investigate",
-                "reason": (
-                    f"New directories detected ({dirs}). "
-                    "Verify architectural alignment before proceeding."
-                ),
-                "severity": "MEDIUM",
-            })
+            new_entries = drift["new"]
+            # P1 bootstrap tagging: inaugural run produces many "new"; suppress
+            # SEQ-SUBSTRATE-HEALTH (expected, not actionable) per PILLAR_01.
+            is_bootstrap = any("[BOOTSTRAP]" in str(e) for e in new_entries)
+            if not is_bootstrap:
+                dirs = ", ".join(new_entries[:3])
+                recs.append({
+                    "id": "SEQ-SUBSTRATE-HEALTH",
+                    "workflow": "/investigate",
+                    "reason": (
+                        f"New directories detected ({dirs}). "
+                        "Verify architectural alignment before proceeding."
+                    ),
+                    "severity": "MEDIUM",
+                })
 
         if drift.get("unowned"):
             dirs = ", ".join(drift["unowned"][:3])

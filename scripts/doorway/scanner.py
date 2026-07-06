@@ -26,11 +26,25 @@ class WorkspaceScanner:
     Args:
         workspace:    Absolute path to the target workspace root.
         ignore_dirs:  Set of directory names to skip during traversal.
+        readme_exclude_dirs: Optional set of dirs (and children) to skip
+            README heal contribution / ingested count / missing_readme signals
+            (P1 stabilization pr-01-00).
     """
 
-    def __init__(self, workspace: Path, ignore_dirs: set):
+    def __init__(self, workspace: Path, ignore_dirs: set, readme_exclude_dirs: set = None):
         self.workspace = workspace
         self.ignore_dirs = ignore_dirs
+        self.readme_exclude_dirs = readme_exclude_dirs or set()
+
+    def _is_readme_excluded(self, rel_path_str: str) -> bool:
+        """Return True if this dir (or parent) is in README_EXCLUDE_DIRS (P1)."""
+        if not self.readme_exclude_dirs or not rel_path_str:
+            return False
+        p = Path(rel_path_str)
+        for ex in self.readme_exclude_dirs:
+            if str(p) == ex or str(p).startswith(ex + "/"):
+                return True
+        return False
 
     def compute_dir_hash(self, root_path: Path) -> str:
         """
@@ -89,7 +103,7 @@ class WorkspaceScanner:
             content_hash = self.compute_dir_hash(root_path)
 
             has_readme = "README.md" in files
-            if has_readme:
+            if has_readme and not self._is_readme_excluded(rel_path_str):
                 ingested_count += 1
 
             workspace_map[rel_path_str] = {
@@ -113,7 +127,7 @@ class WorkspaceScanner:
                         and p_old not in workspace_map
                     ):
                         workspace_map[p_old] = info_old
-                        if info_old.get("has_readme"):
+                        if info_old.get("has_readme") and not self._is_readme_excluded(p_old):
                             ingested_count += 1
                 dirs[:] = []  # Halt os.walk recursion for this branch.
 

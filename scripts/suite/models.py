@@ -11,6 +11,10 @@ SYMLINK_DIR = os.path.expanduser("~/.claude/commands")
 OPENCODE_DIR = os.path.expanduser("~/.opencode/commands")
 ANTIGRAVITY_DIR = os.path.expanduser("~/.gemini/antigravity/global_workflows")
 
+# P1 stabilization (pr-01-00): exclude navigation READMEs (e.g. claude-commands/README.md)
+# which intentionally lack workflow frontmatter to avoid linter CRITICAL / Grade Fraud.
+LINT_EXCLUDE_FILES = frozenset({"README.md"})
+
 V1_REQUIRED_FIELDS = [
     "description", "type", "grade", "version", "content_hash",
     "last_hardened", "strict_rule_count", "phase_count",

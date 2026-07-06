@@ -73,6 +73,14 @@ IGNORE_DIRS = {
     DOORWAY_DATA_DIR_NAME,  # Never scan our own data directory.
 }
 
+# P1 stabilization (pr-01-00 per PILLAR_01): configurable dirs whose README.md
+# are intentionally not healed (e.g. nav files like claude-commands/README.md)
+# and do not contribute to has_readme/ingested/missing_readme signals.
+README_EXCLUDE_DIRS = {
+    "claude-commands",
+    "helpdesk-tickets/archive",
+}
+
 
 # ---------------------------------------------------------------------------
 # Main contextualizer class
@@ -117,10 +125,10 @@ class DoorwayContextualizer:
         self.metrics: dict = {"created": 0, "ingested": 0, "repairs": 0}
 
         # Instantiate all components — workspace path flows through constructors.
-        self.scanner = WorkspaceScanner(workspace, IGNORE_DIRS)
+        self.scanner = WorkspaceScanner(workspace, IGNORE_DIRS, README_EXCLUDE_DIRS)
         self.breadcrumb_manager = BreadcrumbManager(workspace, self.update_log)
         self.integrity_manager = IntegrityManager(
-            workspace, self.primary_templates, self.backup_templates
+            workspace, self.primary_templates, self.backup_templates, README_EXCLUDE_DIRS
         )
         self.auditor = StructuralAuditor(
             workspace,
@@ -128,6 +136,7 @@ class DoorwayContextualizer:
             self.breadcrumb_manager,
             self.integrity_manager,
             self.metrics,
+            README_EXCLUDE_DIRS,
         )
         self.recommender = ProtocolRecommender()
         self.manifest_manager = ManifestManager(workspace, self.manifest_file)
@@ -189,6 +198,18 @@ class DoorwayContextualizer:
         # Step 3 — Structural audit.
         drift = self.auditor.audit(current_map, previous_map)
 
+        # Option C auto-escalate (P1 stabilization, pr-01-00, PILLAR_01 §4.4):
+        # If incremental scan produced self-heal repairs (stale has_readme from carry-over),
+        # re-scan with full_scan to refresh has_readme post-heal so final drift/zero_finding clean.
+        # This eliminates need for manual --full-scan after repairs on stale snapshots.
+        escalated = False
+        if (not full_scan and self.metrics.get("repairs", 0) > 0 and drift.get("missing_readme")):
+            print("[DOORWAY] Auto-escalated to full-scan after self-heal repairs")
+            current_map, ingested_count = self.scanner.scan(previous_map, full_scan=True)
+            self.metrics["ingested"] = ingested_count
+            drift = self.auditor.audit(current_map, previous_map)
+            escalated = True
+
         # Step 4 — Worklog promotion.
         self._promote_worklogs(current_map)
 
@@ -219,6 +240,7 @@ class DoorwayContextualizer:
                 else 0
             ),
             "data_dir": str(self.data_dir),
+            "escalated": escalated,
         }
 
         # Step 9 — Report.

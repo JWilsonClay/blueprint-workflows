@@ -30,7 +30,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from suite.models import COMMANDS_DIR, SYMLINK_DIR, OPENCODE_DIR, ANTIGRAVITY_DIR, LintReport
+from suite.models import COMMANDS_DIR, SYMLINK_DIR, OPENCODE_DIR, ANTIGRAVITY_DIR, LintReport, LINT_EXCLUDE_FILES
 from suite.checks import (
     parse_frontmatter, compute_content_hash,
     check_frontmatter, check_structure, check_cross_references,
@@ -92,6 +92,8 @@ def main():
         sys.exit(1)
 
     all_files = sorted(f.name for f in commands_dir.glob("*.md"))
+    # P1 stabilization (pr-01-00): filter README.md (e.g. claude-commands/README.md has no frontmatter by design)
+    all_files = [f for f in all_files if f not in LINT_EXCLUDE_FILES]
 
     if args.fix_hashes:
         print("Content hashes (paste into frontmatter as content_hash):")
@@ -154,6 +156,9 @@ def main():
 
     if args.file:
         target = args.file if args.file.endswith(".md") else args.file + ".md"
+        if target in LINT_EXCLUDE_FILES:
+            print(f"[LINT] Skipping excluded file per LINT_EXCLUDE_FILES: {target}")
+            sys.exit(0)
         report.workflows_scanned = 1
         lint_single(workspace, target, all_files, report)
     else:
