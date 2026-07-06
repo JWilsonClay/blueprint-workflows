@@ -650,3 +650,20 @@ Ready for review_file cycle per design/SKILL.md (if selected). This document its
 
 *Signed,*  
 Grok Build (Systems Architect — reflection of accumulated patterns; /quality applied; no praise per frame)
+
+---
+
+## 15. Agent Capability Gate Amendment (ADDED 2026-07-06 — post-canonical, pre-first-build-attempt)
+
+**Context:** Same trigger as Pillar 2's Amendment (`docs/design-pillars/PILLAR_02_DESIGN_ORCHESTRATION_FORMULA.md` §15): the first build attempt against this cluster's canonical (PLAN_ID `d992f697`) never reached Pillar 3 at all — zero branches were created for PR 03-00 through 03-08, though 9 commits landed for Pillars 1 and 5 (recovered and merged into `main` 2026-07-06). Grok Build access has since been suspended by the user after incurring real, unbudgeted cost across two workspaces, confirmed after this pillar was designed around Grok `/execute-plan` as an always-available delegation target.
+
+**The gate:** PR 03-01 through PR 03-04 (payload schema, receipt-consumption verification, pre-delegation Sovereign spine wiring, post-delegation resumption + full native gates) require no Grok capability — the PR Plan closing note above already states "after 03-04 a testable native+resume path (no Grok needed) exists." Only **PR 03-05** (the actual handoff to Grok `/execute-plan`) is Grok-specific. This amendment gates PR 03-05 on agent capability:
+
+- **If the executing agent has native Grok `/execute-plan` tool-calling available** (and the user has authorized it for this session): follow PR 03-05 exactly as specified — detect the DESIGN's `## PR Plan`, emit the minimal payload, delegate DAG execution/worktree/review to Grok, resume at native 5g/5h/quality gates.
+- **If not** (the default going forward): **skip the delegation adapter entirely.** `/execute-build` (`claude-commands/execute-build.md`) already is a complete, tested, Diamond-graded execution engine — its existing Phase 0-7 loop (tasks.md-driven, `/continuous-verify` at 5g, substrate hygiene at 5h, canonical Phase Build Receipt, `BUILD_RECEIPTS.md` append) requires no new code to serve as the non-Grok channel. PR 03-05 is not replaced by new machinery; it is simply not exercised. The agent runs `/implementation-plan` against the DESIGN's `## PR Plan` to produce a real `tasks.md`, then drives it phase-by-phase with `/execute-build` exactly as it would for any other build — no payload, no pointer, no `.grok/` reference.
+
+**Evidence this works:** every one of the 9 real commits already landed for Pillars 1 and 5 in this cluster was built this way — directly, by the executing agent, with no Grok delegation — and passed the full 238-test suite plus a 0-CRITICAL lint pass after recovery. The native path is not a fallback that still needs proving; it is the one with the actual track record in this cluster so far.
+
+**PR Plan status update:** PR 03-05 is now labeled **conditional (Grok-available path)**. The native alternative is not a new PR — it is PR 03-04's existing native gates, applied without a preceding delegation step, driving a `tasks.md` generated the normal way (via `/implementation-plan`) instead of one derived from a Grok DAG. PR 03-06 through 03-08 (integration, harden, end-to-end) proceed unchanged under either path; their "hybrid receipts" language refers to the Grok-available path only.
+
+**Key Decision (append to §"Key Decisions"):** The non-Grok path for this pillar costs nothing to build because it already exists and is already the more battle-tested engine in this workspace (Diamond-graded, 238 passing tests, used across every other workflow in the suite). Gating PR 03-05 on capability — rather than removing it — preserves the option to use Grok later without rewriting or deleting anything already designed, consistent with /nodelete.
