@@ -54,9 +54,15 @@ class SubstrateReporter:
         print(f"  README files created:  {metrics.get('created', 0)}")
         print(f"  README files ingested: {metrics.get('ingested', 0)}")
         print(f"  Substrate repairs:     {metrics.get('repairs', 0)}")
+        if results.get("escalated"):
+            print("  [INFO] Auto-escalated to full-scan after self-heal repairs (Option C)")
 
         if drift.get("new"):
-            print(f"\n[+] NEW DIRECTORIES:     {', '.join(drift['new'])}")
+            new_display = [
+                f"{p} [BOOTSTRAP]" if drift.get("is_bootstrap") else p
+                for p in drift["new"]
+            ]
+            print(f"\n[+] NEW DIRECTORIES:     {', '.join(new_display)}")
         if drift.get("modified"):
             print(f"[*] MODIFIED:            {', '.join(drift['modified'])}")
         if drift.get("deleted"):
@@ -109,5 +115,6 @@ class SubstrateReporter:
                 results.get("drift", {}).get(k)
                 for k in ("new", "modified", "deleted", "unowned", "missing_readme")
             ),
+            "escalated": results.get("escalated", False),
         }
         print(json.dumps(payload, indent=2))

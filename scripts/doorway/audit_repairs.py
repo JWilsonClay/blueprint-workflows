@@ -78,8 +78,15 @@ class AuditRepairManager:
         if BestPracticesAuditor is None:
             return None
 
+        # Defensive clean for legacy/any "[BOOTSTRAP]" suffix in drift["new"] (P1 tagging
+        # surface; paths must remain usable keys into current_map). See auditor.py drift doc.
+        def _clean(p):
+            if isinstance(p, str) and " [BOOTSTRAP]" in p:
+                return p.split(" [BOOTSTRAP]", 1)[0]
+            return p
+
         paths_to_audit = set(
-            audit_results.get("new", []) + audit_results.get("modified", [])
+            _clean(p) for p in (audit_results.get("new", []) + audit_results.get("modified", []))
         )
         files_to_audit: List[Path] = []
 

@@ -160,6 +160,8 @@ class DoorwayContextualizer:
           1. Load previous workspace snapshot.
           2. Run hash-based workspace scan.
           3. Structural audit: detect drift, heal missing READMEs.
+             (Option C may trigger here: if not full_scan + repairs > 0 + missing_readme,
+             re-scan full + re-audit to refresh has_readme; see effective_full.)
           4. Promote WORKLOG entries to governance/Chronology.md.
           5. Persist the new snapshot.
           6. Sync MANIFEST.md.
@@ -200,15 +202,19 @@ class DoorwayContextualizer:
 
         # Option C auto-escalate (P1 stabilization, pr-01-00, PILLAR_01 §4.4):
         # If incremental scan produced self-heal repairs (stale has_readme from carry-over),
-        # re-scan with full_scan to refresh has_readme post-heal so final drift/zero_finding clean.
-        # This eliminates need for manual --full-scan after repairs on stale snapshots.
+        # re-scan with full to refresh has_readme post-heal so final drift/zero_finding clean.
+        # Note: post-heal drift may list healed entries until re-audit; escalation forces refresh.
+        # (PILLAR pseudocode used metrics["repairs"]; .get is defensive.)
         escalated = False
         if (not full_scan and self.metrics.get("repairs", 0) > 0 and drift.get("missing_readme")):
-            print("[DOORWAY] Auto-escalated to full-scan after self-heal repairs")
+            if not self.output_json and not self.quiet:
+                print("[DOORWAY] Auto-escalated to full-scan after self-heal repairs")
             current_map, ingested_count = self.scanner.scan(previous_map, full_scan=True)
             self.metrics["ingested"] = ingested_count
             drift = self.auditor.audit(current_map, previous_map)
             escalated = True
+
+        effective_full = full_scan or escalated
 
         # Step 4 — Worklog promotion.
         self._promote_worklogs(current_map)
@@ -223,7 +229,7 @@ class DoorwayContextualizer:
         recommendations = self.recommender.recommend(drift)
 
         # Step 8 — Qualitative audit.
-        self.audit_manager.perform_qualitative_audit(drift, current_map, full_scan)
+        self.audit_manager.perform_qualitative_audit(drift, current_map, effective_full)
 
         overhead = time.time() - start
 
@@ -236,7 +242,7 @@ class DoorwayContextualizer:
                 len(previous_map)
                 - len(drift.get("modified", []))
                 - len(drift.get("deleted", []))
-                if not full_scan
+                if not effective_full
                 else 0
             ),
             "data_dir": str(self.data_dir),

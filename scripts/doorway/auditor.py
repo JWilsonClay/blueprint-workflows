@@ -57,11 +57,15 @@ class StructuralAuditor:
 
         Returns:
             drift dict with keys:
-              new           — directories first seen in this scan
+              new           — directories first seen in this scan (pure path strings;
+                              inaugural bootstrap indicated by top-level "is_bootstrap": true)
               modified      — directories whose content hash changed
               deleted       — directories present in previous scan but now gone
               unowned       — directories absent from FOLDER_OWNERSHIP.md
-              missing_readme — directories that lacked a README (healed if possible)
+              missing_readme — directories that lacked a README (healed if possible; post-heal
+                              entries may remain listed until Option C re-audit)
+              is_bootstrap  — (optional) true for inaugural run (len(previous)==0); used for
+                              tagging display and suppression of inaugural "new" routing
         """
         drift = {
             "new": [],
@@ -76,8 +80,7 @@ class StructuralAuditor:
         for path, info in current_map.items():
             # Change detection.
             if path != "." and path not in previous_map:
-                entry = f"{path} [BOOTSTRAP]" if is_bootstrap else path
-                drift["new"].append(entry)
+                drift["new"].append(path)  # always clean path; see is_bootstrap flag
                 self.breadcrumb_manager.propose(path, "new directory")
             elif path in previous_map:
                 prev_hash = previous_map[path].get("content_hash")
@@ -101,6 +104,9 @@ class StructuralAuditor:
         for path in previous_map:
             if path not in current_map:
                 drift["deleted"].append(path)
+
+        if is_bootstrap:
+            drift["is_bootstrap"] = True
 
         return drift
 
