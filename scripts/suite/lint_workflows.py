@@ -30,7 +30,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from suite.models import COMMANDS_DIR, SYMLINK_DIR, OPENCODE_DIR, ANTIGRAVITY_DIR, LintReport
+from suite.models import COMMANDS_DIR, SYMLINK_DIR, OPENCODE_DIR, ANTIGRAVITY_DIR, LintReport, LINT_EXCLUDE_FILES
 from suite.checks import (
     parse_frontmatter, compute_content_hash,
     check_frontmatter, check_structure, check_cross_references,
@@ -78,7 +78,7 @@ def main():
     parser.add_argument("--generate-graph", action="store_true",
                         help="Generate dependency_graph.json in manifest/")
     parser.add_argument("--fix-hashes", action="store_true",
-                        help="Recompute and print content hashes for all workflows")
+                        help="Recompute and print content hashes for all workflows (paste by hand into frontmatter per convention)")
     parser.add_argument("--fix-pointers", action="store_true",
                         help="Auto-create missing pointer files for all 3 platforms")
     parser.add_argument("--quiet", action="store_true", help="Suppress INFO findings")
@@ -92,9 +92,10 @@ def main():
         sys.exit(1)
 
     all_files = sorted(f.name for f in commands_dir.glob("*.md"))
+    all_files = [f for f in all_files if f not in LINT_EXCLUDE_FILES]
 
     if args.fix_hashes:
-        print("Content hashes (paste into frontmatter as content_hash):")
+        print("Content hashes (computed via --fix-hashes and pasted by hand into frontmatter):")
         for wf_file in all_files:
             content = (commands_dir / wf_file).read_text(encoding="utf-8", errors="replace")
             h = compute_content_hash(content)
