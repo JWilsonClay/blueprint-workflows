@@ -25,19 +25,22 @@ class TestRuntimeAvailability(unittest.TestCase):
     def test_reports_info_when_directory_missing(self):
         report = LintReport()
         with mock.patch.object(checks, "OPENCODE_DIR", "/nonexistent/opencode"), \
-             mock.patch.object(checks, "ANTIGRAVITY_DIR", "/nonexistent/antigravity"):
+             mock.patch.object(checks, "ANTIGRAVITY_DIR", "/nonexistent/antigravity"), \
+             mock.patch.object(checks, "GROK_BUILD_DIR", "/nonexistent/grok"):
             checks.check_runtime_availability(report)
-        self.assertEqual(len(report.findings), 2)
+        self.assertEqual(len(report.findings), 3)
         self.assertTrue(all(f.severity == "INFO" for f in report.findings))
         self.assertTrue(all(f.workflow == "(suite)" for f in report.findings))
         messages = [f.message for f in report.findings]
         self.assertTrue(any("OpenCode" in m for m in messages))
         self.assertTrue(any("Antigravity" in m for m in messages))
+        self.assertTrue(any("Grok Build" in m for m in messages))
 
     def test_no_finding_when_directory_present(self):
         report = LintReport()
         with mock.patch.object(checks, "OPENCODE_DIR", "/tmp"), \
-             mock.patch.object(checks, "ANTIGRAVITY_DIR", "/tmp"):
+             mock.patch.object(checks, "ANTIGRAVITY_DIR", "/tmp"), \
+             mock.patch.object(checks, "GROK_BUILD_DIR", "/tmp"):
             checks.check_runtime_availability(report)
         self.assertEqual(report.findings, [])
 

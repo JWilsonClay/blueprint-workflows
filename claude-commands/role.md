@@ -3,7 +3,7 @@ description: "Senior Architect of Workflows — blueprint-workflows workspace id
 type: documentation
 grade: Hardened
 version: 2
-content_hash: "sha256:3d3bc8a18f31a305"
+content_hash: "sha256:75ec89b929b9eac6"
 last_hardened: "2026-05-21"
 strict_rule_count: 0
 phase_count: 0
