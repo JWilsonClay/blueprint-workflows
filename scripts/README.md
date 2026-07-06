@@ -80,3 +80,8 @@ through every constructor argument; data stored in `.doorway/` not `data/`;
 3. Never hardcode workspace paths. Resolve everything from `Path(args.workspace).resolve()`.
 4. Document the calling convention in this README.
 5. Run `/harden` before considering it production-ready.
+
+
+<!-- BREADCRUMB -->
+MODULE:scripts TYPE:scripts LANG:python FILES:11(README.md,run_tests.sh,refactor_audit.py...) SUBDIRS:core/,doorway/,focus/,gitignore/,harden/,iterate/,ledger/,quality/,receipt/,registry/,suite/,tests/,workstream/ PURPOSE:sovereign-suite-executable-toolkit DEPS-DETECTED:pytest DRIFT:new-directory SCANNED:2026-07-05
+<!-- BREADCRUMB_END -->
