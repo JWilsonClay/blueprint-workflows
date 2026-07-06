@@ -28,6 +28,7 @@ class SubstrateReporter:
         workspace_name: str = "workspace",
         quiet: bool = False,
         output_json: bool = False,
+        context_only: bool = False,
     ) -> None:
         """
         Renders the final substrate health report to stdout.
@@ -38,9 +39,10 @@ class SubstrateReporter:
             workspace_name: Display name for the workspace (derived from workspace path).
             quiet:          If True, suppress all output except errors.
             output_json:    If True, emit results as JSON to stdout.
+            context_only:   If True with output_json, emit minimal substrate-focused payload (PR 01-01).
         """
         if output_json:
-            self._render_json(results, metrics)
+            self._render_json(results, metrics, context_only=context_only)
             return
 
         if quiet:
@@ -99,11 +101,22 @@ class SubstrateReporter:
         if results.get("data_dir"):
             print(f"Proposals logged to: {results['data_dir']}/context_updates.log")
 
-    def _render_json(self, results: dict, metrics: dict) -> None:
+    def _render_json(self, results: dict, metrics: dict, context_only: bool = False) -> None:
         """
         Emits a structured JSON payload to stdout for workflow/agent consumption.
         Removes the non-serializable 'map' key (too large for typical consumption).
+        PR 01-01: includes substrate_index (always in full); --context-only yields minimal.
         """
+        if context_only:
+            payload = {
+                "substrate_index": results.get("substrate_index", {}),
+                "zero_finding": results.get("zero_finding", False),
+                "ownership_summary": results.get("substrate_index", {}).get("ownership_source", "docs/FOLDER_OWNERSHIP.md"),
+                "overhead_seconds": round(results.get("overhead", 0.0), 3),
+            }
+            print(json.dumps(payload, indent=2))
+            return
+
         payload = {
             "drift": results.get("drift", {}),
             "recommendations": results.get("recommendations", []),
@@ -116,5 +129,6 @@ class SubstrateReporter:
                 for k in ("new", "modified", "deleted", "unowned", "ownership_incomplete", "stale_index")
             )),
             "escalated": results.get("escalated", False),
+            "substrate_index": results.get("substrate_index"),
         }
         print(json.dumps(payload, indent=2))
