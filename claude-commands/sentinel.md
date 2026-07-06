@@ -3,7 +3,7 @@ description: "Sovereign Session-Initialization Monitor — ambient workspace dri
 type: meta
 grade: Sovereign
 version: 2
-content_hash: "sha256:7c80015e2550e5c3"
+content_hash: "sha256:0b79bd54a4eb27a1"
 last_hardened: "2026-05-15"
 strict_rule_count: 8
 phase_count: 6
@@ -38,13 +38,14 @@ recommend. Execution belongs to the workflows you hand off to.
 |------|-----------|
 | **Workspace** | An absolute filesystem path declared by the user (or inferred from session context) as the target project root. |
 | **Doorway Scan** | The invocation of `scripts/doorway/doorway.py --workspace {PATH} --output-json` that produces the structured drift report. |
-| **Drift Report** | The JSON payload emitted by the Doorway scan — contains `drift`, `recommendations`, `metrics`, `overhead_seconds`, `zero_finding`. |
-| **Zero-Finding State** | A workspace with no new, modified, deleted, unowned directories AND no missing READMEs — drift.zero_finding == true. |
+| **Drift Report** | The JSON payload emitted by the Doorway scan — contains `drift`, `recommendations`, `metrics`, `overhead_seconds`, `zero_finding`, `substrate_index`. |
+| **Substrate Index** | `.doorway/substrate_index.json` — machine canonical context payload (directories + breadcrumb_summary + ownership refs). Primary source for agent context per Doorway Design Invariant. |
+| **Zero-Finding State** | Tier-1 integrity gate: substrate_index.json fresh + ownership completeness (FOLDER_OWNERSHIP); `drift.zero_finding == true` for Tier 1 only. (missing_readme is Tier-2 hygiene, does not gate zero_finding.) |
 | **Recommendation** | A `{id, workflow, reason, severity}` object in the Doorway JSON — maps a drift condition to a specific global_workflows workflow trigger. |
 | **Severity Tier** | HIGH / MEDIUM / LOW — the urgency classification assigned by the recommender engine. HIGH findings may trigger helpdesk ticket filing. |
 | **Ticket Threshold** | The severity level at or above which a helpdesk ticket is automatically filed. Default: HIGH. Configurable per-session. |
 | **Session Context** | The workspace path is derived in priority order: (1) explicit `--workspace` argument from user, (2) inferred from the open document paths visible in the session metadata, (3) user is asked once for a path. |
-| **Mute Witness** | Sentinel is read-only during Phases 0–2. The scan tool writes only to the workspace's hidden `.doorway/` directory — never to the project substrate itself. |
+| **Mute Witness** | Sentinel is read-only during Phases 0–2. The scan tool writes only to the workspace's hidden `.doorway/` directory — never to the project substrate itself. Engine owns context delivery via index (see Doorway Design Invariant). |
 | **Routing** | Surfacing a recommendation to the user that names the next workflow to run. Sentinel does not autonomously invoke the downstream workflow — it presents the routing map and waits for user confirmation. |
 
 ---
@@ -114,10 +115,11 @@ Extract from the JSON:
 - `drift.modified` — hash-changed directories
 - `drift.deleted` — directories removed since last scan
 - `drift.unowned` — directories absent from FOLDER_OWNERSHIP.md
-- `drift.missing_readme` — directories without a README
+- `drift.missing_readme` — directories without a README (Tier-2 hygiene only)
 - `recommendations` — list of `{id, workflow, reason, severity}` objects
 - `metrics.created` / `metrics.repairs` — self-healing actions taken during this scan
-- `zero_finding` — boolean: true = workspace integrity verified
+- `zero_finding` — boolean: true = Tier-1 workspace integrity verified (index + ownership)
+- `substrate_index` — primary context payload (freshness, directories, summaries) from .doorway/substrate_index.json
 
 ### Step 1d — Gitignore Hygiene Seed (SILENT)
 
@@ -155,22 +157,20 @@ Unlike the doorway scan (Rule 4), a gitignore-seed failure does not halt the ses
 
 ---
 
-## PHASE 1.5 — AGENT BREADCRUMB POPULATION (SILENT)
+## PHASE 1.5 — OPTIONAL AGENT ENRICHMENT (SILENT)
+
+**[RE-SCOPED 2026-07-06 — PR pr-01-04 per PILLAR_01: agent enrichment pass on index entries (not N files); default skip for core path; --enrich-breadcrumbs to force. LLM summary walk removed from mandatory core. Engine owns base via substrate_index.]**
 
 **[INJECTED 2026-05-15 — Bug #2 fix: LLM breadcrumb generation stage,
 /harden-workflow --ticket 20260514_sentinel_workflow.md + /nodelete]**
 
-**Objective**: Populate all `[PENDING AGENT SUMMARIZATION]` entries in the
-context log with real, compact, agentic-language directory summaries optimized
-for rapid LLM workspace contextualization. This phase runs silently — the user
-sees nothing until Phase 3 (Sentinel Report).
+**Objective**: (Optional) Agent enrichment of substrate_index breadcrumb_summaries for selected entries. Core sentinel path skips LLM walk; relies on engine-generated index summaries. Only runs on explicit enrichment flag.
 
-**Intent**: When an agent later ingests 5–30 READMEs from a workspace, the
-BREADCRUMB section of each README should give it full context — module type,
-language, file inventory, dependencies detected, purpose — in compact key:value
-format. No placeholder language should remain after a /sentinel run.
+**Intent**: Substrate index is primary (see Invariant). Enrichment augments specific index entries when requested; does not walk N files in core path.
 
-### Step 1.5a — Read the Pending Log
+**Default behavior (core path)**: Skip this phase entirely unless `--enrich-breadcrumbs` (or equivalent) is passed through to doorway. No LLM file sampling or summary generation occurs for standard /sentinel.
+
+### Step 1.5a — Read the Pending Log (enrichment path only)
 
 ```bash
 cat {WORKSPACE_PATH}/.doorway/context_updates.log
@@ -280,7 +280,7 @@ Also count raw drift:
 ```
 STRUCTURAL_MUTATIONS = len(new) + len(deleted)   # most serious: structural change
 CONTENT_DRIFT        = len(modified)              # content changed but structure intact
-HYGIENE_GAPS         = len(unowned) + len(missing_readme)
+HYGIENE_GAPS         = len(unowned) + len(missing_readme)  # Tier-2 only; does not affect zero_finding (Tier-1)
 ```
 
 ### Step 2b — Routing Map Construction
@@ -291,7 +291,7 @@ For each recommendation in the drift report, map it to the appropriate workflow:
 |---------------------|-----------------|---------------|
 | SEQ-SUBSTRATE-HEALTH | `/investigate` | New or deleted directories detected |
 | SEQ-SUBSTRATE-HYGIENE | `/document` | Unowned directories found |
-| SEQ-SUBSTRATE-MAINTAIN | `/document` | Missing READMEs found |
+| SEQ-SUBSTRATE-MAINTAIN | `/document` | Missing READMEs found (Tier-2 hygiene only; promote only if Tier-2 configured or explicit) |
 | SEQ-SUBSTRATE-ASSIMILATE | `/focus-plan` | Broad modification sweep (>5 dirs changed) |
 | SEQ-STRATEGIC-ARCHIVAL | `/investigate` | Deleted directories detected |
 | `(scan_failure)` | `/helpdesk-tickets` | Doorway scan itself failed |
@@ -300,6 +300,7 @@ Additional automatic routing rules (applied after Doorway recommendations):
 - If `metrics.repairs > 0`: notify the user that self-healing occurred (READMEs were created). No workflow routing needed — informational only.
 - If `zero_finding == true` AND `metrics.repairs == 0`: route to nothing — report ZERO-FINDING STATE.
 - If `zero_finding == true` AND `metrics.repairs > 0`: route to `/document` to review what was auto-generated.
+- Index freshness (Tier 1 from substrate_index) and bootstrap tags (inaugural [BOOTSTRAP]) are reported but do not auto-route unless structural drift present. missing_readme (Tier 2) does not route to /document by default.
 
 ### Step 2c — Ticket Threshold Check
 
@@ -321,16 +322,18 @@ Produce the following report format. Fill every field. No field may be omitted.
 ║ Scanned At:    {TIMESTAMP_UTC}
 ║ Scan Duration: {overhead_seconds}s
 ║ Directories:   {total_directories} scanned, {skipped} hash-matched (unchanged)
+║ Context Source: docs/FOLDER_OWNERSHIP.md + .doorway/substrate_index.json (primary per Invariant)
 ╠════════════════════════════════════════════════════════════════════╣
-║ SUBSTRATE STATE: [ZERO-FINDING] / [DRIFT DETECTED]
+║ SUBSTRATE STATE: [ZERO-FINDING (Tier 1)] / [DRIFT DETECTED] / [Tier 2 hygiene only]
 ╠════════════════════════════════════════════════════════════════════╣
 ║ DRIFT SUMMARY:
 ║   New directories:         {len(drift.new)}     {drift.new if non-empty}
 ║   Modified directories:    {len(drift.modified)} {drift.modified if non-empty}
 ║   Deleted directories:     {len(drift.deleted)}  {drift.deleted if non-empty}
 ║   Unowned directories:     {len(drift.unowned)}  {drift.unowned if non-empty}
-║   Missing READMEs:         {len(drift.missing_readme)} {drift.missing_readme if non-empty}
+║   Missing READMEs:         {len(drift.missing_readme)} {drift.missing_readme if non-empty} (Tier 2)
 ║   Self-healing repairs:    {metrics.repairs} (READMEs auto-created)
+║   Substrate Index:         freshness checked; zero_finding = Tier 1 (index+ownership) only; see .doorway/substrate_index.json for full payload + summaries
 ╠════════════════════════════════════════════════════════════════════╣
 ║ FINDINGS:
 ║   {For each recommendation:}
@@ -355,7 +358,7 @@ After the report block, print:
 
 If `zero_finding == true` AND `metrics.repairs == 0`:
 ```
-[SENTINEL] ZERO-FINDING STATE — workspace substrate integrity verified.
+[SENTINEL] ZERO-FINDING STATE (Tier 1) — context from FOLDER_OWNERSHIP.md + .doorway/substrate_index.json; workspace substrate integrity verified.
 [SENTINEL] No workflow routing required. Session is clear to proceed.
 ```
 
@@ -406,7 +409,9 @@ workspace, then produce a unified Routing Map that covers all workspaces.
 5. **System path protection.** Refuse to scan `/etc`, `/usr`, `/bin`, `/sbin`, `/lib`, `/proc`, `/sys`, or any path that is a direct child of `/home` (i.e., `/home` itself, not a user's home directory subdirectory). Print: `[SENTINEL] Refused: system path scanning is not permitted`.
 6. **No jargon without definition.** Every technical term in the report that the user might not know must be defined inline on first use. Example: "hash-matched (meaning the directory's content fingerprint has not changed since the last scan)".
 7. **Confidence is declared.** The Sentinel Report must declare its scan confidence: HIGH (doorway.py ran successfully and produced valid JSON), MEDIUM (partial JSON, some fields missing), or LOW (doorway.py failed, report is estimated from last snapshot). A report without a confidence declaration is incomplete.
-8. **Mute Witness on all workspace files.** Even if a README is corrupt or missing in the target workspace, do not rewrite it. The `doorway.py` script's self-healing is the only authorized write channel for workspace content during a sentinel scan **(plus the gitignore seeder's managed-block write — see the Rule 1 exception)**. If you observe corruption, report it — do not fix it yourself.
+8. **Mute Witness on all workspace files.** Even if a README is corrupt or missing in the target workspace, do not rewrite it. The `doorway.py` script's self-healing is the only authorized write channel for workspace content during a sentinel scan **(plus the gitignore seeder's managed-block write — see the Rule 1 exception)**. Engine owns context delivery (index + ownership file). If you observe corruption, report it — do not fix it yourself.
+
+**Doorway Design Invariant:** "Agent context is delivered by the engine (JSON index + ownership file), not by filesystem cardinality (N × README.md). Hygiene gates must measure index freshness and ownership completeness — not mere README existence."
 
 ---
 
@@ -423,6 +428,8 @@ Exception: the pre-flight failure halt (Phase 0b) and the scan failure halt (Pha
 - `/sentinel --workspace /path1 /path2` — multi-workspace scan
 - `/sentinel --workspace /path --full-scan` — force deep scan (bypasses hash cache)
 - `/sentinel --workspace /path --no-ticket` — suppress automatic helpdesk ticket filing
+- `/sentinel --workspace /path --context-only` — fast path: substrate_index + ownership + zero_finding (minimal briefing)
+- `/sentinel --workspace /path --materialize-readmes` — optional human README materialization from index (non-core)
 
 ---
 
@@ -445,6 +452,7 @@ Exception: the pre-flight failure halt (Phase 0b) and the scan failure halt (Pha
 - `/sentinel` is proactive: it runs at session initialization and reports before any question is asked.
 - Both route to the same downstream workflows — but sentinel's evidence is physical substrate state, while triage's evidence is user-described symptoms.
 - They are complementary, not redundant. Running `/sentinel` then `/triage` gives both physical and symptomatic evidence before any work begins.
+- **Primary handover artifact**: `.doorway/substrate_index.json` (plus FOLDER_OWNERSHIP.md) — engine context delivery; referenced by triage/secretary/SUITE_HEALTH.
 
 ---
 
@@ -455,6 +463,7 @@ Required: ~/blueprint-workflows/scripts/doorway/doorway.py
 Optional: ~/blueprint-workflows/scripts/gitignore/gitignore_seeder.py  (Step 1d — non-fatal if absent)
 Runtime:  python3 (stdlib only — hashlib, os, pathlib, json, argparse, datetime, tomllib, subprocess)
 Data dir: {workspace}/.doorway/ (auto-created on first scan; owner-only 0o700)
+  - substrate_index.json is primary context/handover artifact (FOLDER_OWNERSHIP + index)
 Writes:   {workspace}/.gitignore managed block (Step 1d only; non-destructive, idempotent)
 ```
 
@@ -475,3 +484,4 @@ Phase 1a (Execute the Scan), and Phase 1d (Gitignore Hygiene Seed).
    (d) `breadcrumb.py:propose()`: Enhanced to enumerate and include directory file inventory (names, count, subdirectory list) in the log entry, giving the LLM agent in Phase 1.5 the structural facts it needs without an additional filesystem scan. All changes follow /nodelete discipline. Standard Version: 2.
 3. **2026-05-21**: `[PORTED — Claude Code migration]` Pointer/Payload architecture retired. Merged into single command file at `~/blueprint-workflows/claude-commands/sentinel.md`. All doorway.py paths updated: `/home/jwils/.gemini/antigravity/global_workflows/scripts/doorway/doorway.py` → `~/blueprint-workflows/scripts/doorway/doorway.py` (Phase 0b, Phase 1a, Phase 1.5c, SCRIPTS DEPENDENCY). Phase 1.5b Step 2: `view_file` → Read tool. Phase 1.5b Step 4: `run_command` → Bash tool. SCRIPTS DEPENDENCY stale-path update note reworded to drop pointer-file reference.
 4. **2026-06-12**: `[INJECTED — ticket 20260612_gitignore-seeder_module.md, /nodelete]` Gave /sentinel a gitignore-hygiene responsibility. (a) New **Step 1d (Gitignore Hygiene Seed)** in Phase 1: invokes `scripts/gitignore/gitignore_seeder.py --workspace {PATH} --output-json`, which writes a non-destructive, idempotent managed block (`.history/`, `quarantine/`, `.workflow_state/`, security + noise patterns) into the workspace `.gitignore` from an editable `seed.toml`, and runs a detect-and-warn pass intersecting security patterns with `git ls-files`. Already-tracked secrets become a HIGH finding routed to `/gitclean --mode a` (gitignore stops only *future* leaks; history rewrite is /gitclean's job). Seeder failure is non-fatal (unlike the doorway scan halt, Rule 4). (b) **STRICT RULE 1** reconciled via a marked EXCEPTION: the seeder's managed-block write to `{workspace}/.gitignore` is an explicitly authorized write channel (the only project-file write permitted), on par with doorway's README self-healing. (c) **STRICT RULE 8** annotated to acknowledge the second authorized write channel. (d) SCRIPTS DEPENDENCY updated (seeder path, `tomllib`/`subprocess` runtime, `.gitignore` write note). Standard Version: 2.
+5. **2026-07-06**: `[UPDATED — PR pr-01-04, per PILLAR_01_CONTEXT_SESSION_INITIALIZATION.md + DESIGN_Sovereign_Redesign_Cluster_Canonical.md (Phase B)]` Sentinel workflow update: GLOSSARY (zero_finding as Tier-1, substrate_index term + refs); Phase 1.5 re-scoped/optionalized (agent enrichment on index entries, default skip, --enrich-breadcrumbs, LLM walk removed from core); Phase 2 routing (missing_readme Tier-2 only, no default /document; added index_freshness + bootstrap handling); Phase 3 report (substrate_index freshness, Tier breakdown, "context from FOLDER_OWNERSHIP + .doorway/substrate_index.json"); STRICT RULES (Mute Witness + "Engine owns context delivery (index)", Doorway Design Invariant stated verbatim); INTEGRATION/SCRIPTS (substrate_index primary handover); ACTIVATION (document --context-only, --materialize-readmes); parse/report updates for new substrate. All /nodelete (inject + append only). Follows existing patterns; smallest targeted changes.
