@@ -196,6 +196,8 @@ def check_symlinks(workflow_name, workspace_root, report):
         if not antigravity_link.exists():
             report.add("WARNING", workflow_name, "pointer", f"Antigravity pointer missing: {antigravity_link}")
 
+    # Dir existence handling (generalized) + Grok runtime note: is_dir gate
+    # + single INFO. [pr-05-01a per PILLAR_05]
     if Path(GROK_BUILD_DIR).is_dir():
         grok_link = Path(GROK_BUILD_DIR) / workflow_name
         if not grok_link.exists():
