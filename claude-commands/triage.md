@@ -17,7 +17,8 @@ dependencies:
 triggers:
   - "/sentinel"
   - "/harden-workflow"
-produces: []
+produces:
+  - ".workflow_state/receipts/TRIAGE_RECEIPTS.md"
 consumes:
   - "tasks.md"
   - "implementation-plan.md"
@@ -46,6 +47,7 @@ platform_requirements:
 | **P3 — SUGGESTED** | Lower urgency. Pattern suggests value; not time-critical. |
 | **Harden grade** | The post-hardening quality rating for a script file: Diamond, Gold, Silver, or Bronze. Recorded in receipt infrastructure. |
 | **Receipt infrastructure** | The `.workflow_state/receipts/` directory. Contains Build Receipts, Validation Receipts, and Harden Grades. Absence of this directory is itself a triage signal. |
+| **TRIAGE_RECEIPTS.md** | Append-only triage report ledger (P5). Written by /triage using identical `cat >>` + heredoc header style as BUILD_RECEIPTS.md (## DATE — /triage — ...). Emitted on handover signal. Consumed by /secretary and SUITE_HEALTH. |
 | **God-file** | A script file exceeding 500 LOC. Signals Separation of Concerns debt. Triggers `/soc` and `/refactor`. |
 | **LOC** | Lines of code. Measured via `wc -l`. |
 | **Orphaned in-progress task** | A task marked `[/]` in `tasks.md` — started in a prior session, not completed, not reset to pending. Signals a broken execution boundary. |
@@ -107,6 +109,7 @@ git log --since="7 days ago" --oneline | wc -l  # velocity proxy
 - Are Build Receipts present? For which phases?
 - Are Validation Receipts present? For which stages?
 - Are Harden Grades recorded? For which files? What grades?
+- Is TRIAGE_RECEIPTS.md present? Note last date or count of entries (P5 consumption).
 - If receipts directory does not exist: this is itself a signal — receipt infrastructure not yet established.
 
 **0d. File Modification State**
@@ -413,6 +416,22 @@ FAILURE SIGNALS DETECTED: [none / list pattern names and evidence source]
 **[INJECTION — 2026-05-11] /nodelete discipline — Report Records:**
 If Triage Reports are appended to a governance or journal file: append only. Never overwrite a prior report. Each report is a dated record. Two triage runs on the same day produce two dated entries. Prior reports are historical; the most recent is current. A prior report is never deleted to make room for a new one.
 
+**[STAGE 1a — TRIAGE_RECEIPTS.md writer — INJECTED 2026-07-06, pr-05-02, PILLAR_05, /nodelete]**
+After emitting the Triage Report to chat, persist a verbatim report block using atomic append (exact heredoc parity to BUILD_RECEIPTS in execute-build.md:350). Use workspace root for the receipts dir. This implements triage handover persistence (P5 / P1 cross; on user signals like "wrap up", "handover", "close session", "end", "reset", "finish" in SESSION_INTENT or at session end; always safe to emit as the triage report itself is the handover record).
+
+```bash
+mkdir -p ".workflow_state/receipts"
+cat >> ".workflow_state/receipts/TRIAGE_RECEIPTS.md" << 'RECEIPT_EOF'
+## $(date +%Y-%m-%d) — /triage — REPORT
+- Phase/Stage: TRIAGE
+- Grade/Status: REPORT ISSUED
+- Files: N/A
+- Commit: $(git rev-parse --short HEAD 2>/dev/null || echo "N/A")
+---
+RECEIPT_EOF
+```
+If `cat >>` fails: print `[TRIAGE-RECEIPT] WARNING: could not write TRIAGE_RECEIPTS.md — {error}` and continue. Do not halt triage.
+
 ---
 
 ## STRICT RULES (never violate)
@@ -471,3 +490,4 @@ Typical invocation triggers:
 7. **2026-05-23**: `[INJECTED — Multi-Agent Workstream Orchestration triggers, /nodelete]` Four new Trigger Matrix blocks added: `/implementation-plan` (base command — was absent from matrix entirely), `/implementation-plan --workstreams` (workstream design triggers), `/workstream` (workstream execution triggers), `/implementation-plan --audit --workstreams` (workstream audit triggers). Phase 0h added: Multi-Agent Workstream State collection step — reads `WORKSTREAM_STATUS.md`, `DECISIONS.md`, and checks `implementation-plan.md` for workstream definitions, stores as `<WORKSTREAM_STATE>`. All existing content preserved per /nodelete. Standard Version: 3.
 8. **2026-06-02**: `[INJECTED — /quality Option-F wiring, /nodelete]` The `/quality` P3 audit trigger now names its deterministic source: `scripts/quality/quality_audit.py --workspace . --output-json` → `ledger.audit_trigger == "P3"`, replacing the hand-count heuristic (the engine recognizes both `## REVIEWED` and `[REVIEWED]` reset markers). All prior trigger wording preserved per /nodelete. Standard Version: 3.
 9. **2026-06-02**: `[INJECTED — /iterate-test Mock-Trap Detector wiring (Verification-Spine Campaign), /nodelete]` The `/iterate-test` Trigger Matrix block gains a deterministic-call row: `scripts/iterate/iterate_audit.py --workspace . --output-json` — a `MOCK_TRAP_CANDIDATE` (`verdict_hint: FINDINGS`) in a recently-built stage's test promotes the recommendation from receipt-absence to actual-finding evidence (P1; `HARDCODED_ASSERTION` → P2), mirroring the existing `harden_audit.py` and `lint_workflows.py --quiet` precedents. One-directional: the engine surfaces candidates; the PRIMARY/INFRASTRUCTURE classification stays with /iterate-test Step 4b. All prior trigger wording preserved per /nodelete. Standard Version: 3.
+10. **2026-07-06**: `[INJECTED — pr-05-02, PILLAR_05, /nodelete]` Added TRIAGE_RECEIPTS.md emission (atomic cat >> heredoc after report, matching BUILD_RECEIPTS format exactly). Added GLOSSARY entry, frontmatter produces, Phase 0 consumption read of TRIAGE_RECEIPTS.md. Implements triage persistence + handover record per PILLAR_05 §4.5. Smallest additive change; no overwrite.

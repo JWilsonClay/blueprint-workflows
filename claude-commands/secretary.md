@@ -69,6 +69,7 @@ This workflow does NOT:
 | **manifest/ directory** | `~/blueprint-workflows/manifest/` — a subdirectory that stores WORKFLOW_MANIFEST.md separately from the command files. Originally created in Antigravity to shield the manifest from that platform's 12,000-char injection cap (a retired risk in Claude Code). The subdirectory location is preserved for organizational clarity. |
 | **CONTRADICTION_REGISTRY.md** | **[ADDED 2026-07-04]** `~/blueprint-workflows/manifest/CONTRADICTION_REGISTRY.md` — deterministic aggregation of `.history/` ledgers and the ticket corpus, produced by `scripts/registry/registry.py`. Previously updated only by `/harden-workflow --ticket`'s Step TM-6; now also refreshed unconditionally every `/secretary` run (Phase 1, Step 1.0.5), independent of whether `/harden-workflow` was invoked this session. |
 | **SUITE_HEALTH.md** | **[ADDED 2026-07-04]** `~/blueprint-workflows/manifest/SUITE_HEALTH.md` — the Live-State half of what was `WORKFLOW_MANIFEST.md` before it was split by Retention Contract. One current value per workflow, in-place-edited, never appended. The mandatory session-start read. |
+| **TRIAGE_RECEIPTS.md** | **[ADDED pr-05-02]** Append-only triage reports in `.workflow_state/receipts/`. Consumed here for session summary + SUITE_HEALTH notes (P5 receipt family). |
 | **manifest/history/** | **[ADDED 2026-07-04]** `~/blueprint-workflows/manifest/history/` — dated shard files (`WORKFLOW_MANIFEST_{YYYY-Q}.md`) holding the Append-Only session narrative that used to live in `WORKFLOW_MANIFEST.md`. Rolled over by `scripts/ledger/monitor.py` on a real calendar-quarter change or a within-quarter size safety valve. Read on demand, never mandatory at session start. |
 | **scripts/ledger/** | **[ADDED 2026-07-04]** The deterministic engine (Step 1.2) that performs narrative-shard rollover and the `SUITE_PHYLOGENY.md` growth warning, config-driven via `ledger_config.toml`. Always uses the real OS clock for quarter determination — never agent inference. |
 | **Retrospective Lag** | **[ADDED 2026-07-05]** Named failure shape: a session closes (Phase 1 writes its `manifest/history/` narrative entry) but its Phase 6 `/retrospective` entry never lands in `PROCESS_LEARNINGS.md` — and the gap persists silently across further sessions because nothing checks the *prior* session's Phase 6, only the current one's (ADDENDUM E). Closed by Step 0b.5's one-step-back consistency check. |
@@ -204,6 +205,7 @@ Produce or update `~/blueprint-workflows/manifest/SUITE_HEALTH.md` **[RETARGETED
 ## Architecture Notes
 - All workflows are single merged files in ~/blueprint-workflows/claude-commands/
 - Pointer/Payload architecture: RETIRED (migrated to Claude Code 2026-05-21)
+- Receipts family (P5): BUILD + VALIDATION + HARDEN + DOCS + TRIAGE (consumed here + SUITE_HEALTH narrative)
 - Largest files: [top 3 by byte size]
 ```
 
@@ -421,6 +423,14 @@ Confirm that the last entry's date matches today's session date (`$(date +%Y-%m-
 
 Do not proceed to Phase 7 until this verification is confirmed or the failure is explicitly logged.
 
+**[INJECTED pr-05-02, PILLAR_05 — secretary TRIAGE_RECEIPTS consumption, /nodelete]**
+Before Phase 7 receipt, explicitly consume TRIAGE_RECEIPTS (read for presence + recent entries; include in summary + SUITE_HEALTH notes). This ensures secretary and downstream SUITE_HEALTH surface the new receipt family member (P5).
+
+```bash
+ls .workflow_state/receipts/TRIAGE_RECEIPTS.md 2>/dev/null && echo "TRIAGE_RECEIPTS present" || echo "TRIAGE_RECEIPTS absent"
+tail -n 5 .workflow_state/receipts/TRIAGE_RECEIPTS.md 2>/dev/null || true
+```
+
 ---
 
 ## PHASE 7 — SECRETARY RECEIPT
@@ -450,6 +460,7 @@ Sub-workflows triggered:
   /receipt-check:        [COMPLETE — Coverage Map produced / SKIPPED — suite session / FAILED: reason]
   /retrospective:        [COMPLETE — entry verified via tail -n 10 / FAILED: reason]
   RETROSPECTIVE LAG (Step 0b.5): [NO GAP — consistent as of [date] / GAP DETECTED — narrative through [date], PROCESS_LEARNINGS.md last [date]]
+  TRIAGE_RECEIPTS:       [present (N entries) / absent] (P5 consumption for secretary + SUITE_HEALTH)
 
 **[ADDENDUM B — Suite Health Score Re-Read Gate — INJECTED 2026-05-15, RETARGETED 2026-07-04, /harden-workflow --ticket 20260512_secretary_workflow.md + /nodelete]**
 Before emitting the Suite Health Score field below, re-read `SUITE_HEALTH.md` NOW (was `WORKFLOW_MANIFEST.md` before the split — this file is now small enough that a full read costs little, but `tail` is kept for consistency with the original gate's intent):
@@ -561,3 +572,4 @@ Output files:
 9. **2026-07-05**: `[INJECTED — Retrospective Lag one-step-back check, resolves a finding logged in process_learnings/PROCESS_LEARNINGS.md's 2026-07-05 entry]` That retrospective entry found /secretary's own ADDENDUM E (Phase 6 verification) checks whether *this* session's retrospective landed, but has no visibility into whether the *prior* session's did — and two consecutive sessions (2026-07-04 `/nodelete` Pillar 6; 2026-07-05 Hallucinated Success investigation) had in fact each closed via Phase 1 without a matching Phase 6 entry, undetected until an unrelated retrospective manually cross-checked `manifest/history/` against `PROCESS_LEARNINGS.md`. Added **Step 0b.5** to Phase 0: a mechanical date comparison between the two files' latest entries, noting `GAP DETECTED` or `NO GAP` in the Phase 7 receipt — advisory, same treatment as the existing `SUITE_PHYLOGENY.md` WARN and Registry REVIEW verdict (Steps 1.0.5/1.2), not a hard gate on this session's own close. Follows the same "X.5 insertion" convention this file already used for Step 1.0.5 (`manifest/SUITE_PHYLOGENY.md`'s own lineage archive names this convention explicitly, 2026-07-04 entry). GLOSSARY: **Retrospective Lag** term added. Phase 7 receipt template gains a `RETROSPECTIVE LAG (Step 0b.5)` line. STRICT RULE 20 added (19→20), same STRICT RULE 11 workflow-suite exemption as Rules 18-19. Frontmatter: version 4→5, `strict_rule_count` 19→20, `last_hardened` 2026-07-05, content_hash recomputed via a live `lint_workflows.py --fix-hashes` run this session (the tool worked cleanly this time — the "known limitation" the prior entry cited was about the tool's output not being pasted automatically, not the tool being broken).
 
 10. **2026-07-06**: `[INJECTED — P5 pr-05-00 linter excludes + hashes convention + dir gate, per Master Execution Plan Phase A / PILLAR_05]` Linter excludes for claude-commands/README.md (nav file with no frontmatter by design) added to models + lint_workflows.py filter (0 CRITICAL on nav README baseline). --fix-hashes convention decided: content hashes computed via `lint_workflows.py --fix-hashes` and pasted by hand (tool remains print-only; updated help + output phrasing). Dir gate generalized in checks.py + models (GROK_BUILD_DIR added); runtime availability now covers Grok Build (single INFO note pattern). Accurate convention phrasing recorded here; prior entries' "recomputed via" references clarified by this decision (no content change to hashes). See also execute-build.md and helpdesk-tickets.md Change Logs, DESIGN_Sovereign_Redesign_Cluster_Canonical.md, PILLAR_05. /nodelete observed (append). Smallest additive change.
+11. **2026-07-06**: `[INJECTED — pr-05-02, PILLAR_05, /nodelete]` Added TRIAGE_RECEIPTS.md consumption to secretary (explicit read/tail before Phase 7; GLOSSARY entry; note in SUITE_HEALTH Architecture Notes; entry in Phase 7 receipt template). Pairs with triage emission for secretary/SUITE_HEALTH consumption of TRIAGE_RECEIPTS per PILLAR_05 §4.5 and spec. Append-only; smallest change.
