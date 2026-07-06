@@ -77,9 +77,9 @@ class ProtocolRecommender:
                 "workflow": "/document",
                 "reason": (
                     f"Directories without README files ({dirs}). "
-                    "Breadcrumb web is incomplete — regenerate documentation."
+                    "Tier 2 hygiene (README existence); does not affect Tier 1 zero_finding."
                 ),
-                "severity": "LOW",
+                "severity": "INFO",
             })
 
         if drift.get("deleted"):
@@ -103,6 +103,20 @@ class ProtocolRecommender:
                     "Broad modification sweep warrants a full substrate re-assimilation."
                 ),
                 "severity": "HIGH",
+            })
+
+        # PR 01-02 tiered: index-staleness or ownership_incomplete (Tier 1 gates)
+        tier1_issues = (drift.get("stale_index") or []) + (drift.get("ownership_incomplete") or [])
+        if tier1_issues:
+            dirs = ", ".join(tier1_issues[:3])
+            recs.append({
+                "id": "SEQ-SUBSTRATE-HEALTH",
+                "workflow": "/investigate",
+                "reason": (
+                    f"Index freshness or ownership completeness issue ({dirs}). "
+                    "Verify FOLDER_OWNERSHIP non-placeholder sentences + substrate_index (Tier 1)."
+                ),
+                "severity": "MEDIUM",
             })
 
         return recs

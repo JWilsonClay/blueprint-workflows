@@ -63,7 +63,8 @@ class StructuralAuditor:
               deleted       — directories present in previous scan but now gone
               unowned       — directories absent from FOLDER_OWNERSHIP.md
               missing_readme — directories that lacked a README (healed if possible; post-heal
-                              entries may remain listed until Option C re-audit)
+                              entries may remain listed until Option C re-audit). Tier 2 hygiene only (does not gate zero_finding per PR 01-02).
+              ownership_incomplete — (Tier 1) top-level dirs from FOLDER_OWNERSHIP with placeholder/empty sentences
               is_bootstrap  — (optional) true for inaugural run (len(previous)==0); used for
                               tagging display and suppression of inaugural "new" routing
         """
@@ -73,9 +74,27 @@ class StructuralAuditor:
             "deleted": [],
             "unowned": [],
             "missing_readme": [],
+            "ownership_incomplete": [],
         }
         ownership_map = self.parse_ownership()
         is_bootstrap = len(previous_map) == 0
+
+        # Tier 1 gate (PILLAR_01 PR 01-02): ownership completeness — top-level owned dirs must have non-placeholder sentences.
+        # (unowned already catches dirs w/o entry; this catches entries that are placeholder per spec).
+        try:
+            if self.ownership_file.exists():
+                lines = self.ownership_file.read_text(encoding="utf-8").splitlines()
+                for line in lines:
+                    if line.strip().startswith("- "):
+                        if ":" in line:
+                            path_part, desc_part = [p.strip() for p in line.split(":", 1)]
+                            path_part = path_part.replace("- ", "").rstrip("/")
+                            desc = desc_part
+                            if path_part and self._is_placeholder_sentence(desc):
+                                if path_part not in drift["ownership_incomplete"]:
+                                    drift["ownership_incomplete"].append(path_part)
+        except OSError:
+            pass
 
         for path, info in current_map.items():
             # Change detection.
@@ -163,4 +182,13 @@ class StructuralAuditor:
         for ex in self.readme_exclude_dirs:
             if str(p) == ex or str(p).startswith(ex + "/"):
                 return True
+        return False
+
+    def _is_placeholder_sentence(self, desc: str) -> bool:
+        """Tier 1: detect placeholder/empty sentences in FOLDER_OWNERSHIP (per PILLAR_01)."""
+        if not desc:
+            return True
+        d = desc.strip().lower()
+        if len(d) < 8 or d == "description" or "todo" in d or "placeholder" in d or d.startswith("add "):
+            return True
         return False

@@ -78,7 +78,7 @@ class SubstrateReporter:
         print("[TEST] Ownership Audit:             [CONFIRMED]")
 
         if recommendations or any(
-            drift.get(k) for k in ("new", "modified", "deleted", "unowned", "missing_readme")
+            drift.get(k) for k in ("new", "modified", "deleted", "unowned", "ownership_incomplete", "stale_index")
         ):
             print("\n[!] DRIFT DETECTED — review findings above.")
             if recommendations:
@@ -111,10 +111,10 @@ class SubstrateReporter:
             "overhead_seconds": round(results.get("overhead", 0.0), 3),
             "total_directories": len(results.get("map", {})),
             "skipped": results.get("skipped", 0),
-            "zero_finding": not any(
+            "zero_finding": results.get("zero_finding", not any(
                 results.get("drift", {}).get(k)
-                for k in ("new", "modified", "deleted", "unowned", "missing_readme")
-            ),
+                for k in ("new", "modified", "deleted", "unowned", "ownership_incomplete", "stale_index")
+            )),
             "escalated": results.get("escalated", False),
         }
         print(json.dumps(payload, indent=2))

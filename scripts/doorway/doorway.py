@@ -216,6 +216,39 @@ class DoorwayContextualizer:
 
         effective_full = full_scan or escalated
 
+        # PR 01-02: Tiered zero-finding (PILLAR_01). Tier 1 gates zero_finding (ownership + index freshness);
+        # Tier 2 (missing_readme) is warn-only and does not block. Enables zero_finding true post self-heal
+        # without requiring manual --full-scan (Option C may still escalate for snapshot accuracy).
+        # Index freshness integrates with substrate_index from prior PR (pr-01-01); falls back gracefully.
+        tier1_keys = ["new", "modified", "deleted", "unowned", "ownership_incomplete", "stale_index"]
+        try:
+            sub_path = self.data_dir / "substrate_index.json"
+            snap_path = self.snapshot_file
+            index_fresh = True
+            if sub_path.exists():
+                # minimal freshness proxy: substrate present + not obviously stale vs snapshot mtime or dir count
+                sub_mtime = sub_path.stat().st_mtime
+                snap_mtime = snap_path.stat().st_mtime if snap_path.exists() else 0
+                if sub_mtime < (snap_mtime - 30):  # 30s tolerance
+                    index_fresh = False
+                else:
+                    try:
+                        sub = json.loads(sub_path.read_text(encoding="utf-8"))
+                        sub_dirs = sub.get("directories", {})
+                        if len(sub_dirs) > 0 and abs(len(sub_dirs) - len(current_map)) > 10:
+                            index_fresh = False
+                    except Exception:
+                        index_fresh = False
+            if not index_fresh:
+                if not drift.get("stale_index"):
+                    drift["stale_index"] = []
+                if "substrate_index.json" not in drift["stale_index"]:
+                    drift["stale_index"].append("substrate_index.json")
+        except Exception:
+            pass  # never fail run on freshness probe
+
+        zero_finding = not any(bool(drift.get(k)) for k in tier1_keys)
+
         # Step 4 — Worklog promotion.
         self._promote_worklogs(current_map)
 
@@ -247,6 +280,7 @@ class DoorwayContextualizer:
             ),
             "data_dir": str(self.data_dir),
             "escalated": escalated,
+            "zero_finding": zero_finding,
         }
 
         # Step 9 — Report.
