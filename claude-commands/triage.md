@@ -3,7 +3,7 @@ description: "The Triage Desk — reads workspace state, recommends which workfl
 type: meta
 grade: Sovereign
 version: 3
-content_hash: "sha256:8d30d92d7e47054a"
+content_hash: "sha256:2a49b2990c5d1643"
 last_hardened: "2026-05-25"
 strict_rule_count: 11
 phase_count: 3

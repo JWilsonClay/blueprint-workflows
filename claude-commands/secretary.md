@@ -3,7 +3,7 @@ description: "Sovereign Session Secretary — meta-layer orchestrator that close
 type: meta
 grade: Sovereign
 version: 5
-content_hash: "sha256:65e6b48e955468ab"
+content_hash: "sha256:896a3ec1c4754119"
 last_hardened: "2026-07-05"
 strict_rule_count: 20
 phase_count: 8
