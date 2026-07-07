@@ -2,8 +2,8 @@
 description: "Multi-agent workstream orchestrator — activates role-specific execution (--claude/--gemini/--grok/--pm), reads shared project state, enforces scope boundaries and guardrails, and produces HITL-ready handoff blocks for coordinated parallel development across AI agents"
 type: execution
 grade: Sovereign
-version: 3
-content_hash: "sha256:924c4f90af4c2051"
+version: 4
+content_hash: "sha256:2248248d681aacfd"
 last_hardened: "2026-05-25"
 strict_rule_count: 24
 phase_count: 6
@@ -48,6 +48,8 @@ You are the **Workstream Conductor** — the orchestration layer that coordinate
 This workflow does NOT design workstreams or create implementation plans. It EXECUTES them. The implementation plan is written by the Project Manager before this workflow is invoked. This workflow reads that plan, filters to the assigned role, and drives execution within the defined scope.
 
 This workflow is platform-agnostic in its core protocol. Claude Code invokes it as a slash command. Grok OpenCode and Antigravity Gemini read the file directly via filesystem pointer. The instructions are written for any agent that can read files and follow structured protocols.
+
+**[NOTE — 2026-07-07, Sovereign Redesign Cluster Stage 6, /nodelete]** This workflow's `--grok` and `--pm` roles assume Grok OpenCode tool-calling is available and session-authorized. That assumption is never automatic — see the **Agent Capability Gate** (`docs/design-pillars/PILLAR_02_DESIGN_ORCHESTRATION_FORMULA.md` / `PILLAR_03_EXECUTION_DELEGATION_FORMULA.md` §15): native (non-Grok) execution is the suite-wide default; a Grok-delegated path requires confirmed capability and explicit session authorization before use, never assumed present. This workflow's own protocol is unchanged — the gate governs *whether* to invoke a Grok role at all, not how this file behaves once invoked.
 
 ---
 
@@ -1005,3 +1007,4 @@ Before assigning any agent to a workstream, the PM should confirm the agent's pl
 1. **2026-05-23**: `[CREATED]` Built via Sovereign Scaffold Generator (/harden-workflow --generator). Origin: user directive to create a multi-agent workstream orchestration workflow supporting four roles (--claude, --gemini, --grok, --pm) with HITL coordination, structured handoff blocks, append-only decision logging, binary escalation protocol, and scaffold-mode file generation. Designed as a platform-agnostic protocol readable by Claude Code, Grok OpenCode, and Antigravity Gemini. Standard Version: 3.
 2. **2026-05-24**: `[HARDENED — Post-Iteration-1 remediation + 5 divergences, /nodelete]` Seven findings from /investigate on Iteration 1 + five approved divergences. Fixes: Phase 4a REPLACE enforcement, Phase 4b/4d file output paths, Phase 4.0 mkdir-p gate, STRICT RULES 14-22. Divergences: Phase 2.5 Pre-Flight Manifest (BLOCKED halt), Phase 4e Iteration Ledger (10th-iter checkpoint), GLOSSARY +5 terms, Platform Invocation Requirement (31 OpenCode pointer files created, bulk-load retired). Standard Version: 3.
 3. **2026-05-25**: `[HARDENED — Agent signing + structural clarity, /nodelete]` STRICT RULE 23 (agent identity signing in handoff blocks). Change Log entries 2-5 consolidated for structural clarity — all information preserved, verbose entries compressed. Standard Version: 3.
+4. **2026-07-07**: `[INJECTED — Sovereign Redesign Cluster Stage 6, /nodelete]` Added a note (opening section, before GLOSSARY) cross-referencing the Agent Capability Gate (PILLAR_02/03 §15): native execution is the suite-wide default; this workflow's `--grok`/`--pm` roles require confirmed Grok tool-calling availability and explicit session authorization before use, never assumed. No protocol logic changed — this workflow's own phases and STRICT RULES are unaffected; the gate governs whether a Grok role is invoked at all. `version` 3→4.

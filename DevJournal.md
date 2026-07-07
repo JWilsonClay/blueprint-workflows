@@ -176,3 +176,25 @@
 - **Modified**: `claude-commands/role.md` — Pointer/Payload table row + new contract subsection (spec, header, rules).
 - **Appended**: `DevJournal.md` — this revival entry (P5 pr-05-01b).
 - **Modified**: `scripts/receipt/coverage.py` + `reporter.py` — v3 skeleton (consts, loads, phase keys "designed"/"triaged", present dict, render, docstring).
+
+## 2026-07-06 to 2026-07-07 — Sovereign Redesign Cluster: Recovery + Native Completion (Stages 0-6)
+
+### Architecture Updates
+- **Agent Capability Gate (§15)**, amending PILLAR_02/PILLAR_03: native (non-Grok) execution is the suite-wide default; a Grok-delegated path requires confirmed tool-calling capability and explicit session authorization, never assumed. Built after recovering from a real Grok Build termination (unbudgeted API cost, not a design failure) — this is the change that let a non-Grok agent finish the cluster.
+- **`design-orchestrator.md`** (new): the native, non-Grok DESIGN production workflow. Sovereign-graded via a real `/harden-workflow` pass.
+- **`execute-build.md`'s Native Execution Trigger**: detects a DESIGN with `## PR Plan`, runs `/implementation-plan` against it, continues the existing Phase 0-7 loop unmodified — glue between three existing engines, not new machinery.
+- **Pillar 4 (Post-Build Hygiene)**: `/implementation-plan --audit`'s Completion Marking sub-pass (dual-verifies `phase_status.py`'s checkbox status AND receipt cross-reference before marking `**COMPLETED**`), `templates/plan/`, `scripts/plan/ensure_plan_templates.py` (populator, create-only Safety Invariant — deliberately narrower than the governing PILLAR_04 design's literal spec, which would have permitted overwriting real content), `/sentinel` Phase 1.6.
+- **`scripts/engine_utils.py`**: promoted `atomic_write`/`safe_mkdir`/`assert_within` from `doorway/_utils.py` at the point of a second real write-consumer (`scripts/plan/`), mirroring the prior `safe_read` consolidation precedent.
+- **`scripts/doorway/`**: fixed a real, previously-unknown data-loss defect (`integrity.py`'s `create_readme()` had no existence check before overwriting) and the escalation-condition gap that fix exposed (`doorway.py`'s Option C) — found via a genuinely independent subagent review during Stage 6's own end-to-end pipeline exercise, not self-critique.
+
+### Key Decisions & Learnings
+- **Option F (prototype-first re-sequencing)** was chosen at the `/implementation-plan` HITL gate over resuming the original stage order — proved the native pipeline shape on one small real item (Stage 1) before later stages built permanent scaffolding around it. Paid for itself: Stage 1 alone surfaced two real, unrelated bugs cheaply.
+- **A recurring pattern across nearly every stage**: the most valuable finding was rarely the thing the stage set out to build — it was a real, pre-existing gap the stage's own verification work happened to surface (stale nested-tasks.md checkboxes, twice; `.gitignore` silently blocking permanent records, twice, different root causes each time; the doorway data-loss bug). Ticket's own stated severity was wrong more than once (`"no data loss"` on the doorway ticket, corrected on direct inspection) — never trusted without independent re-verification.
+- **Independent review is load-bearing, not ceremonial**: Stage 6's design-orchestrator pass used a genuinely separate subagent (no authoring context) rather than self-critique, and it caught a real, more-severe-than-the-ticket-described defect that the producing agent's own adversarial self-critique had missed entirely.
+- Full narrative detail (stage-by-stage): `manifest/history/WORKFLOW_MANIFEST_2026-Q3b.md`, `[SESSION APPEND — 2026-07-06 to 2026-07-07]` entry. Per-stage build receipts: `.workflow_state/receipts/BUILD_RECEIPTS.md`.
+
+### Documentation Changes Summary
+- **Created**: `design-orchestrator.md`; `templates/plan/{tasks,implementation-plan}.md.template`; `scripts/plan/` (populator + tests); `scripts/tests/test_doorway.py`; multiple DESIGN_*.md documents under `docs/`.
+- **Modified**: `execute-build.md`, `implementation-plan.md`, `sentinel.md`, `helpdesk-tickets.md`, `nodelete.md` (pre-existing, unmodified — consumed only), `focus-plan.md`, `workstream.md`, `triage.md`, `secretary.md`, `role.md`, `.gitignore` (twice, two distinct root causes), `scripts/doorway/{doorway,integrity}.py`, `scripts/engine_utils.py`.
+- **Closed tickets**: `CLOSED_20260705_doorway_lazy-scan-stale-readme_workflow.md`, `CLOSED_20260706_gitignore-untracked-self-and-ledgers_workflow.md` (closed same-session as filed), `CLOSED_20260707_history-archive-gitignored_workflow.md` (closed same-session as filed).
+- **Appended**: this entry; `manifest/history/WORKFLOW_MANIFEST_2026-Q3b.md`; `.history/archive/pr-06-02-tasks.md.ledger.md` (first-ever real entry in this ledger).
