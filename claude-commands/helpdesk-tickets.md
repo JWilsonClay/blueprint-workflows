@@ -1,16 +1,17 @@
 ---
-description: "Sovereign Workflow Failure Ticket Protocol — forensic incident reporter and ticket lifecycle manager with structured root cause analysis and remediation tracking. v3: forked closure pipeline (Structural vs Substantive/Logic tickets)."
+description: "Sovereign Workflow Failure Ticket Protocol — forensic incident reporter and ticket lifecycle manager with structured root cause analysis and remediation tracking. v3: forked closure pipeline (Structural vs Substantive/Logic tickets). v6: script-backed by the Ticket Lifecycle Evidence Engine (scripts/helpdesk_tickets/helpdesk_tickets_audit.py) for schema validation, duplicate detection, staleness, and the Phylogeny/Status contradiction gate."
 type: execution
 grade: Sovereign
-version: 5
-content_hash: "sha256:3a862748181cdfd2"
-last_hardened: "2026-07-04"
+version: 6
+content_hash: "sha256:835efd4b61e7f61c"
+last_hardened: "2026-07-07"
 strict_rule_count: 13
 phase_count: 5
 context_retention: medium
 flags: []
 dependencies:
   - "/harden-workflow"
+  - "scripts/helpdesk_tickets/helpdesk_tickets_audit.py"
 triggers:
   - "/triage"
   - "/harden-workflow"
@@ -59,6 +60,7 @@ This workflow does NOT fix failures. It documents them with sufficient forensic 
 | **Phylogeny Disposition** | **[ADDED 2026-07-04, resolves helpdesk-tickets/20260704_registry-phylogeny-gap_workflow.md]** A mandatory ticket field, declared PENDING at filing, that must resolve to CONFIRMED — either `NO TRANSFER` or a reference to a `manifest/SUITE_PHYLOGENY.md` lineage entry — before Phase 4 may close the ticket, via *either* closure path. Exists because `/harden-workflow`'s Phase 9 (Phylogeny) only fires on the STRUCTURAL closure path and is structurally skipped by a Substantive/Logic closure's TM-1.5 redirect — the path that has closed every ticket since 2026-06-25. Unlike the Suite Learning Registry (mechanically recoverable at any time from ticket text), a phylogeny judgment not captured at the moment of the fix cannot be reconstructed later with the same fidelity — so this one is a hard gate, not an advisory step. |
 | **Meta ticket** | **[ADDED 2026-07-07, Sovereign Redesign Cluster Stage 6]** A ticket whose scope is a multi-workflow *cluster* of work (e.g. a redesign spanning several pillars), explicitly named as governing one or more other, independently-filed tickets rather than a single faulting workflow. Closes via its own Phase 4 pass over the cluster's own Phylogeny/Remediation, using **Step 4d** below — it does not require every sibling ticket to close simultaneously. |
 | **Sibling ticket** | **[ADDED 2026-07-07, Sovereign Redesign Cluster Stage 6]** A ticket a meta ticket names as within its scope. Each sibling closes independently, on its own merit and its own evidence, whenever its own remediation is genuinely complete — never bulk-closed just because the meta ticket closes. See Step 4d. |
+| **Ticket Lifecycle Evidence Engine** | **[ADDED 2026-07-07, implementation-plan.md Phase 5.5]** `scripts/helpdesk_tickets/helpdesk_tickets_audit.py` — the read-only mechanical layer behind Phase 2 (TICKET VALIDATION), STRICT RULE 7 (duplicate-ticket detection), STRICT RULE 12 (Phylogeny-vs-Status contradiction check), and staleness detection (days-open per open ticket). Citation checks are delegated to `scripts/investigate/citation_fidelity.py` directly — the same `file:///path#LN-LM` format, not reimplemented. Never judges failure-class correctness, root-cause narrative quality, urgency correctness, or Phylogeny Disposition correctness — only presence, format, and cross-field consistency. |
 
 ---
 
@@ -80,6 +82,19 @@ FAILURE INTAKE:
   Discovery context:   [what session/task was running when the failure was discovered]
   Prior occurrence:    FIRST OBSERVED / PREVIOUSLY DOCUMENTED (cite: [ticket or PROCESS_LEARNINGS.md entry])
 ```
+
+**[ENGINE-BACKED — ADDED 2026-07-07, implementation-plan.md Phase 5.5]** Before writing the ticket, check STRICT RULE 7 mechanically rather than by memory — "already documented in an open ticket" is a real, checkable fact:
+
+```bash
+python3 ~/blueprint-workflows/scripts/helpdesk_tickets/helpdesk_tickets_audit.py \
+  --tickets-dir ~/blueprint-workflows/helpdesk-tickets \
+  --check-duplicate [workflow-name] \
+  --output-json
+```
+
+Read `duplicates.open_tickets_for_workflow`. If non-empty: an open ticket already names this workflow. **This is a fact to evaluate, not an automatic block** — the existing ticket may document a genuinely distinct failure. If the new failure is the same one already tracked: append a "## Addendum" section to the existing ticket instead of filing a duplicate (STRICT RULE 7). If it's genuinely distinct: proceed with a new ticket, and note the existing one in Prior occurrence above. If the engine is unavailable: fall back to manually listing `helpdesk-tickets/` and checking by eye; note the fallback.
+
+**Staleness (same call, `staleness` field)**: the same invocation reports days-open for every currently-open ticket. If any `exceeds_threshold` (default 14 days): this is worth surfacing to the user alongside the new ticket, since a growing backlog of unresolved failures is itself a signal — but the engine never judges whether a given age is actually a problem (that stays with you, per STRICT RULE 9's urgency discipline).
 
 **0b. Assign the ticket filename.**
 
@@ -174,24 +189,34 @@ No jargon without definition. Should be readable in 30 seconds by a fresh agent 
 
 ## PHASE 2 — TICKET VALIDATION
 
-Before committing the ticket, validate it against this checklist:
+**[ENGINE-BACKED — ADDED 2026-07-07, implementation-plan.md Phase 5.5]** Most of this checklist is mechanical — get it from the engine rather than eyeballing the file a second time:
+
+```bash
+python3 ~/blueprint-workflows/scripts/helpdesk_tickets/helpdesk_tickets_audit.py \
+  --tickets-dir ~/blueprint-workflows/helpdesk-tickets \
+  --validate-file helpdesk-tickets/[filename] \
+  --output-json
+```
+
+Read `validation.issues` — an empty list means the mechanical checks below all passed. If the engine is unavailable: fall back to the manual checklist; note the fallback.
 
 ```
 TICKET VALIDATION:
-  [ ] Filename follows naming convention (YYYYMMDD_[workflow]_workflow.md)
+  [ ] Filename follows naming convention (YYYYMMDD_[workflow]_workflow.md) — engine: filename_valid
   [ ] File written to correct directory (helpdesk-tickets/)
-  [ ] All 5 sections present and non-empty
-  [ ] Root Cause Type declared: STRUCTURAL / SUBSTANTIVE-LOGIC — [ADDED 2026-07-04]
-  [ ] Phylogeny Disposition declared as PENDING — [ADDED 2026-07-04]
-  [ ] Root cause names a specific structural gap in the faulting workflow
-  [ ] Section 3 has at least 2 forensic citations with file:/// links
-  [ ] Section 5 names a specific workflow-level improvement (not project-specific)
-  [ ] Status line is OPEN or REMEDIATED — not blank or "TBD"
-  [ ] Urgency level is set and justified
-  [ ] Ticket filename matches the faulting workflow name
+  [ ] All 5 sections present — engine: sections_missing == []  (non-empty content is a judgment call, not mechanized)
+  [ ] Root Cause Type declared: STRUCTURAL / SUBSTANTIVE-LOGIC — engine: root_cause_type_valid
+  [ ] Phylogeny Disposition declared — engine: phylogeny_disposition_present
+  [ ] Phylogeny Disposition is not still PENDING if Status is REMEDIATED — engine: NOT phylogeny_status_contradiction (STRICT RULE 12)
+  [ ] Root cause names a specific structural gap in the faulting workflow — JUDGMENT, not mechanized
+  [ ] Section 3 has at least 2 forensic citations with file:/// links that actually resolve — engine: citation_count >= 2 AND citation_findings == [] (reuses scripts/investigate/citation_fidelity.py directly)
+  [ ] Section 5 names a specific workflow-level improvement (not project-specific) — JUDGMENT, not mechanized
+  [ ] Status line is OPEN or REMEDIATED — not blank or "TBD" — engine: status_valid_format
+  [ ] Urgency level is set and justified — JUDGMENT (presence only is mechanical; justification is not)
+  [ ] Ticket filename matches the faulting workflow name — engine: cross-referenced via the filename's own workflow-name segment
 ```
 
-If any item is unchecked: complete it before emitting the Phase 3 report. An incomplete ticket is worse than no ticket — it wastes the Senior Architect's triage time.
+If any item is unchecked: complete it before emitting the Phase 3 report. An incomplete ticket is worse than no ticket — it wastes the Senior Architect's triage time. **The engine confirms presence and format only — it never judges whether the root cause is correctly identified or the recommendation is well-formed.** Those items stay judgment calls.
 
 ---
 
@@ -339,6 +364,8 @@ INTEGRATION WITH OTHER WORKFLOWS
 
   /secretary           → calls /helpdesk-tickets to scan for open tickets at session close
   /helpdesk-tickets    → THIS WORKFLOW — creates and manages failure tickets
+     └─ Phase 0a       → scripts/helpdesk_tickets/helpdesk_tickets_audit.py (duplicate check + staleness)
+     └─ Phase 2        → scripts/helpdesk_tickets/helpdesk_tickets_audit.py (TICKET VALIDATION, reusing scripts/investigate/citation_fidelity.py for citations)
   /harden-workflow     → consumes STRUCTURAL tickets via --ticket mode; closes on hardening complete
   /role.md             → "On code authority" — the bounded authority SUBSTANTIVE-LOGIC remediation runs under
   /retrospective       → reads closed tickets as evidence of resolved regressions
@@ -385,3 +412,4 @@ path that was already happening.
 
 5. **2026-07-06**: `[INJECTED — P5 pr-05-00 linter excludes + hashes convention + dir gate, per Master Execution Plan Phase A / PILLAR_05]` Linter excludes for claude-commands/README.md (nav file with no frontmatter by design) added to models + lint_workflows.py filter (0 CRITICAL on nav README baseline). --fix-hashes convention decided: content hashes computed via `lint_workflows.py --fix-hashes` and pasted by hand (tool remains print-only; updated help + output phrasing). Dir gate generalized in checks.py + models (GROK_BUILD_DIR added); runtime availability now covers Grok Build (single INFO note pattern). Accurate convention phrasing recorded here; prior entries' "recomputed via" references clarified by this decision (no content change to hashes). See also execute-build.md and secretary.md Change Logs, DESIGN_Sovereign_Redesign_Cluster_Canonical.md, PILLAR_05. /nodelete observed (append). Smallest additive change.
 6. **2026-07-07**: `[INJECTED — Sovereign Redesign Cluster Stage 6, scaffolding gap found while preparing the cluster's own meta ticket for eventual close]` **Defect**: this protocol had no notion of a ticket whose scope is a multi-workflow cluster governing other, independently-filed tickets — a real, live shape (the Sovereign Redesign Cluster's own meta ticket names 5 sibling tickets). Read literally, Phase 4 as written would suggest a meta ticket needs every named ticket closed first, which is wrong: two of the five siblings are correctly, deliberately still open (one deferred by explicit user direction, one tracking a future external condition, neither a defect awaiting a fix) — bulk-closing either to satisfy a literal reading would be an unverified, Hallucinated-Success-shaped closure. **Fix**: GLOSSARY (Meta ticket, Sibling ticket); new **Step 4d** (meta ticket closure — additive, does not change 4a-4c for ordinary tickets): each sibling's disposition is snapshotted in the meta ticket's own closure record, but no sibling closure is required before the meta ticket itself may close. STRICT RULE 13 added (12→13) naming this explicitly as the same failure class STRICT RULES 11-12 already guard against. `strict_rule_count` 12→13. Frontmatter: version 4→5.
+7. **2026-07-07**: `[BUILT — Ticket Lifecycle Evidence Engine, Verification-Spine Upgrade, implementation-plan.md Phase 5.5, /nodelete]` Ran Honest-Design Discipline fresh against this file — result staged at `docs/compression-staging/helpdesk-tickets-honest-design.md`. **Finding: seed design CONFIRMED and specified** — the queue's own hint ("OPEN/CLOSED counts, schema validation, staleness detection") named three real, currently-unenforced mechanisms exactly: Phase 2's TICKET VALIDATION checklist was almost entirely mechanical but hand-checked; STRICT RULE 7's duplicate-ticket check was manual and unenforced; staleness had no mechanism at all despite being named. A fourth item was found by reading STRICT RULE 12 directly: the Phylogeny-Disposition-vs-Status contradiction had no mechanical enforcement — nothing caught a ticket claiming REMEDIATED while still PENDING. **Built `scripts/helpdesk_tickets/`**: `ticket_parser.py` (header fields, section presence, Status value, filename convention), `schema_validator.py` (the mechanizable Phase 2 checklist items plus the STRICT RULE 12 contradiction check; citation checks delegated to `scripts/investigate/citation_fidelity.py` directly — same `file:///path#LN-LM` format, zero new parsing), `duplicate_detector.py` (STRICT RULE 7), `staleness.py` (days-open from filename `YYYYMMDD`, advisory only, no hardcoded staleness-severity judgment), `reporter.py`, `helpdesk_tickets_audit.py` CLI. 23 new tests (`scripts/tests/test_helpdesk_tickets_evidence.py`) including a read-only invariant test and a regression test proving the Phylogeny/Status contradiction check catches a real malformed ticket. Full suite 463/463 passing (up from 440 pre-task). **Live-run finding, not hypothetical**: running the new validator against this session's own already-filed, already-CLOSED tickets (from Phases 4-5 of this same campaign) surfaced that several were marked `REMEDIATED` while their `Phylogeny Disposition` field was still `PENDING`, and used prose-only forensic evidence rather than the mandated `file:///path#LN-LM` citation format — a real, live compliance gap in this campaign's own ticket-filing practice, caught by the very engine built to catch it. Flagged to the user directly; not retroactively fixed in this pass (out of Phase 5.5's own scope, which is building the engine, not auditing this session's entire ticket history). **Wired**: Phase 0a (STRICT RULE 7 duplicate check + staleness surfacing before filing) and Phase 2 (TICKET VALIDATION checklist annotated per-item with which parts are engine-checked vs. genuinely judgment) — both keep explicit manual-fallback instructions. GLOSSARY term added (Ticket Lifecycle Evidence Engine). `scripts/helpdesk_tickets/helpdesk_tickets_audit.py` added to frontmatter `dependencies`. No STRICT RULE added — existing Rules 7/12 already require exactly this; the engine changes how compliance is confirmed, not what the rules require. Frontmatter: version 5→6, `last_hardened` 2026-07-07, `content_hash` recomputed via `--fix-hashes`. `strict_rule_count`/`phase_count` unchanged. Resolves `helpdesk-tickets/CLOSED_20260707_helpdesk-tickets-engine-gap_workflow.md`. **This closes Phase 5 of the Sovereign Scaling Cluster entirely** — all five remaining Verification-Spine targets (`/redteam`, `/sentinel`, `/continuous-verify`, `/investigate`, `/helpdesk-tickets`) now have real, tested, read-only engines.
