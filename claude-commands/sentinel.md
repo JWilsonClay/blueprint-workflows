@@ -1,16 +1,17 @@
 ---
-description: "Sovereign Session-Initialization Monitor — ambient workspace drift detection via doorway.py, producing structured context briefing and workflow recommendations at session start"
+description: "Sovereign Session-Initialization Monitor — ambient workspace drift detection via doorway.py, producing structured context briefing and workflow recommendations at session start. v4: script-backed by the Recommender/Routing-Table Parity Engine (scripts/sentinel/sentinel_audit.py) confirming Step 2b's table matches recommender.py's actual behavior."
 type: meta
 grade: Sovereign
-version: 3
-content_hash: "sha256:bce33c79d4ce9b62"
-last_hardened: "2026-05-15"
+version: 4
+content_hash: "sha256:3426e514343cec7c"
+last_hardened: "2026-07-07"
 strict_rule_count: 8
 phase_count: 7
 context_retention: medium
 flags: []
 dependencies:
   - "/triage"
+  - "scripts/sentinel/sentinel_audit.py"
 triggers: []
 produces: []
 consumes: []
@@ -42,12 +43,13 @@ recommend. Execution belongs to the workflows you hand off to.
 | **Substrate Index** | `.doorway/substrate_index.json` — machine canonical context payload (directories + breadcrumb_summary + ownership refs). Primary source for agent context per Doorway Design Invariant. |
 | **Zero-Finding State** | Tier-1 integrity gate: substrate_index.json fresh + ownership completeness (FOLDER_OWNERSHIP); `drift.zero_finding == true` for Tier 1 only. (missing_readme is Tier-2 hygiene, does not gate zero_finding.) |
 | **Recommendation** | A `{id, workflow, reason, severity}` object in the Doorway JSON — maps a drift condition to a specific global_workflows workflow trigger. |
-| **Severity Tier** | HIGH / MEDIUM / LOW — the urgency classification assigned by the recommender engine. HIGH findings may trigger helpdesk ticket filing. |
+| **Severity Tier** | HIGH / MEDIUM / LOW / INFO — the urgency classification assigned by the recommender engine. HIGH findings may trigger helpdesk ticket filing. **[CORRECTED 2026-07-07 — `INFO` added; `recommender.py` has emitted `severity: "INFO"` for `SEQ-SUBSTRATE-MAINTAIN` since this file's own creation, but this term and Step 2a's tally only counted HIGH/MEDIUM/LOW, silently excluding INFO findings from the count — found live during Phase 5.2's Honest-Design Discipline pass, not a hypothetical gap.]** |
 | **Ticket Threshold** | The severity level at or above which a helpdesk ticket is automatically filed. Default: HIGH. Configurable per-session. |
 | **Session Context** | The workspace path is derived in priority order: (1) explicit `--workspace` argument from user, (2) inferred from the open document paths visible in the session metadata, (3) user is asked once for a path. |
 | **Mute Witness** | Sentinel is read-only during Phases 0–2. The scan tool writes only to the workspace's hidden `.doorway/` directory — never to the project substrate itself. Engine owns context delivery via index (see Doorway Design Invariant). **[NOTE — 2026-07-07, Stage 5]** Two narrow, safety-gated exceptions to the substrate write predate/accompany this note: Phase 1.5's optional `--auto-apply` breadcrumb population, and Phase 1.6 (Plan & Tasks Format Check) below — both write only when the target is genuinely absent or explicitly opted into, never overwriting real content. See Plan & Tasks Format Check. |
 | **Routing** | Surfacing a recommendation to the user that names the next workflow to run. Sentinel does not autonomously invoke the downstream workflow — it presents the routing map and waits for user confirmation. |
 | **Plan & Tasks Format Check** | **[ADDED 2026-07-07 — Sovereign Redesign Cluster Stage 5, PILLAR_04_POST_BUILD_HYGIENE_ARCHIVAL_NODELETE.md]** Phase 1.6: calls `scripts/plan/ensure_plan_templates.py --workspace {PATH}`, the canonical populator, to ensure a genuinely-absent `tasks.md`/`implementation-plan.md` is seeded from `templates/plan/`. Never overwrites a file with real content (the populator's own Safety Invariant, not a sentinel-side check) — safe to run live, unconditionally, every session. |
+| **Recommender/Routing-Table Parity Engine** | **[ADDED 2026-07-07, implementation-plan.md Phase 5.2]** `scripts/sentinel/recommender_parity.py` — the read-only mechanical layer behind Step 2b, confirming this file's Routing Map table matches `scripts/doorway/recommender.py`'s actual emitted id/workflow/severity behavior. Built after finding the table had already drifted live (a missing row, an undocumented severity) — see Step 2b's own note. Never judges whether a routing decision is correct, only whether the documentation of an already-decided engine behavior is complete and current. |
 
 ---
 
@@ -321,8 +323,10 @@ Count findings by tier:
 HIGH   = count of recommendations where severity == "HIGH"
 MEDIUM = count of recommendations where severity == "MEDIUM"
 LOW    = count of recommendations where severity == "LOW"
+INFO   = count of recommendations where severity == "INFO"  # [ADDED 2026-07-07 — see GLOSSARY Severity Tier correction; SEQ-SUBSTRATE-MAINTAIN emits INFO and was previously silently excluded from every tally]
 TOTAL  = len(recommendations)
 ```
+`HIGH + MEDIUM + LOW + INFO` must equal `TOTAL`. If it does not, a recommendation is using a severity value not accounted for here — treat that as a finding in its own right (the same drift this file's own Phase 5.2 engine now checks for) rather than silently under-counting.
 
 Also count raw drift:
 ```
@@ -333,13 +337,23 @@ HYGIENE_GAPS         = len(unowned) + len(missing_readme)  # Tier-2 only; does n
 
 ### Step 2b — Routing Map Construction
 
-For each recommendation in the drift report, map it to the appropriate workflow:
+**[ENGINE-BACKED — ADDED 2026-07-07, implementation-plan.md Phase 5.2]** This table documents `scripts/doorway/recommender.py`'s actual behavior — it does not decide routing itself. Read `recommendations[].workflow` directly from the Doorway JSON (Phase 1c) rather than re-deriving it from this table; the table exists for human readability and is verified against the engine's real source below. **This table was found live-drifted from the engine during Phase 5.2's Honest-Design Discipline pass** (two real defects: a missing row for a duplicate-emitting ID, an undocumented severity value) — verify it stays current with:
+
+```bash
+python3 ~/blueprint-workflows/scripts/sentinel/sentinel_audit.py \
+  --recommender-py ~/blueprint-workflows/scripts/doorway/recommender.py \
+  --sentinel-md ~/blueprint-workflows/claude-commands/sentinel.md \
+  --output-json
+```
+
+Read `parity.missing_from_table` and `parity.undercounted_ids` (an ID the engine emits from more distinct blocks than the table has rows for — the specific defect shape found live in this file) and `parity.undocumented_severities`. A non-empty result means this table (or the GLOSSARY's Severity Tier list) has drifted from `recommender.py`'s actual behavior and needs a correction, same as this entry's own fix. If the engine is unavailable: fall back to reading `recommender.py`'s source directly and comparing by eye.
 
 | Doorway Protocol ID | Workflow Trigger | When to route |
 |---------------------|-----------------|---------------|
 | SEQ-SUBSTRATE-HEALTH | `/investigate` | New or deleted directories detected |
+| SEQ-SUBSTRATE-HEALTH | `/investigate` | Tier-1 index freshness or ownership-completeness issue detected (`stale_index`/`ownership_incomplete`) — **row added 2026-07-07, was previously undocumented despite the engine emitting it since PR 01-02** |
 | SEQ-SUBSTRATE-HYGIENE | `/document` | Unowned directories found |
-| SEQ-SUBSTRATE-MAINTAIN | `/document` | Missing READMEs found (Tier-2 hygiene only; promote only if Tier-2 configured or explicit) |
+| SEQ-SUBSTRATE-MAINTAIN | `/document` | Missing READMEs found (Tier-2 hygiene only; promote only if Tier-2 configured or explicit) — severity `INFO` |
 | SEQ-SUBSTRATE-ASSIMILATE | `/focus-plan` | Broad modification sweep (>5 dirs changed) |
 | SEQ-STRATEGIC-ARCHIVAL | `/investigate` | Deleted directories detected |
 | `(scan_failure)` | `/helpdesk-tickets` | Doorway scan itself failed |
@@ -490,6 +504,7 @@ Exception: the pre-flight failure halt (Phase 0b) and the scan failure halt (Pha
 ```
 /focus-plan     → verifies intent/plan/substrate alignment before sentinel is useful
 /sentinel       → THIS WORKFLOW — session-init ambient monitor
+   └─ Step 2b   → scripts/sentinel/sentinel_audit.py (Recommender/Routing-Table Parity)
 /triage         → sentinel informs triage; triage is reactive (on-demand), sentinel is proactive (session-init)
 /investigate    → sentinel routes here when structural mutations (new/deleted dirs) are detected
 /document       → sentinel routes here for hygiene gaps (unowned dirs, missing READMEs)
@@ -542,3 +557,4 @@ Format Check).
 4. **2026-06-12**: `[INJECTED — ticket 20260612_gitignore-seeder_module.md, /nodelete]` Gave /sentinel a gitignore-hygiene responsibility. (a) New **Step 1d (Gitignore Hygiene Seed)** in Phase 1: invokes `scripts/gitignore/gitignore_seeder.py --workspace {PATH} --output-json`, which writes a non-destructive, idempotent managed block (`.history/`, `quarantine/`, `.workflow_state/`, security + noise patterns) into the workspace `.gitignore` from an editable `seed.toml`, and runs a detect-and-warn pass intersecting security patterns with `git ls-files`. Already-tracked secrets become a HIGH finding routed to `/gitclean --mode a` (gitignore stops only *future* leaks; history rewrite is /gitclean's job). Seeder failure is non-fatal (unlike the doorway scan halt, Rule 4). (b) **STRICT RULE 1** reconciled via a marked EXCEPTION: the seeder's managed-block write to `{workspace}/.gitignore` is an explicitly authorized write channel (the only project-file write permitted), on par with doorway's README self-healing. (c) **STRICT RULE 8** annotated to acknowledge the second authorized write channel. (d) SCRIPTS DEPENDENCY updated (seeder path, `tomllib`/`subprocess` runtime, `.gitignore` write note). Standard Version: 2.
 5. **2026-07-06**: `[UPDATED — PR pr-01-04, per PILLAR_01_CONTEXT_SESSION_INITIALIZATION.md + DESIGN_Sovereign_Redesign_Cluster_Canonical.md (Phase B)]` Sentinel workflow update: GLOSSARY (zero_finding as Tier-1, substrate_index term + refs); Phase 1.5 re-scoped/optionalized (agent enrichment on index entries, default skip, --enrich-breadcrumbs, LLM walk removed from core); Phase 2 routing (missing_readme Tier-2 only, no default /document; added index_freshness + bootstrap handling); Phase 3 report (substrate_index freshness, Tier breakdown, "context from FOLDER_OWNERSHIP + .doorway/substrate_index.json"); STRICT RULES (Mute Witness + "Engine owns context delivery (index)", Doorway Design Invariant stated verbatim); INTEGRATION/SCRIPTS (substrate_index primary handover); ACTIVATION (document --context-only, --materialize-readmes); parse/report updates for new substrate. All /nodelete (inject + append only). Follows existing patterns; smallest targeted changes.
 6. **2026-07-07**: `[INJECTED — Sovereign Redesign Cluster Stage 5, PILLAR_04_POST_BUILD_HYGIENE_ARCHIVAL_NODELETE.md §4.5, /nodelete]` Added **Phase 1.6 — Plan & Tasks Format Check**, immediately after Phase 1.5 and before Phase 2: calls `scripts/plan/ensure_plan_templates.py --workspace {PATH} --output-json`, the canonical populator, to seed a genuinely-absent `tasks.md`/`implementation-plan.md` from `templates/plan/`. Safe to run live unconditionally — the populator's own Safety Invariant (not a sentinel-side check) refuses to touch a file with any real content, matching the gitignore seeder's precedent (Change Log entry 4) of an explicitly authorized, narrow, non-destructive write channel. GLOSSARY: "Plan & Tasks Format Check" term added; "Mute Witness" entry annotated with a dated note rather than rewritten. STRICT RULE 1 gets a third named exception (following the exact pattern of the 2026-06-12 gitignore-seeder exception); STRICT RULE 8's parenthetical updated to match. Phase 3 report template gets a new "PLAN & TASKS FORMAT" block, positioned after DRIFT SUMMARY and before FINDINGS per the governing design's own placement spec. SCRIPTS DEPENDENCY: new optional dependency + a second `Writes:` line, scoped to exactly the two files, create-only. Frontmatter: `phase_count` 6→7, `platform_requirements.file_write` false→true (Phase 1.5's existing conditional `--auto-apply` write already made this field stale before this entry — not fixed retroactively here, out of this stage's scope, but not compounded either: this entry's own new write channel is now accurately declared). `version` 2→3.
+7. **2026-07-07**: `[BUILT — Recommender/Routing-Table Parity Engine, Verification-Spine Upgrade, implementation-plan.md Phase 5.2, /nodelete]` Ran Honest-Design Discipline fresh against this file — result staged at `docs/compression-staging/sentinel-honest-design.md`. **Finding: the seed design's assumed gap (a "drift-delta layer" augmenting `doorway.py`) does not exist** — `doorway.py`'s own snapshot/hash-compare mechanism already computes session-over-session drift; nothing needed building there. **The real gap, found by direct comparison rather than assumption**: Step 2b's Routing Map table hand-duplicates logic `scripts/doorway/recommender.py` already owns and emits per-recommendation via its own `workflow` field — diffing the table against the engine's actual source (not just reading the table's claim about itself) found it had ALREADY DRIFTED, live, two ways: (1) `recommender.py` emits a SECOND `SEQ-SUBSTRATE-HEALTH` recommendation for Tier-1 index/ownership issues (`stale_index`/`ownership_incomplete`) with no corresponding table row at all — a genuine ID-presence check would have missed this since the ID string already existed in the table under a different condition, so the engine's checker specifically counts BLOCK OCCURRENCES per ID against TABLE ROWS per ID, not mere presence; (2) `recommender.py` emits `severity: "INFO"` for `SEQ-SUBSTRATE-MAINTAIN`, but the GLOSSARY's Severity Tier term and Step 2a's Severity Tally only ever named/counted HIGH/MEDIUM/LOW — an INFO recommendation was silently excluded from every tally while still counting toward `TOTAL`. **Both defects fixed directly, same session**: added the missing Tier-1-issues row to Step 2b's table; added INFO to the Severity Tier GLOSSARY term and Step 2a's tally with an explicit `HIGH+MEDIUM+LOW+INFO == TOTAL` invariant check. **Built `scripts/sentinel/`**: `recommender_parity.py` (`extract_recommender_triples()` — regex over `recs.append({...})` blocks; `extract_routing_table()` — parses Step 2b's markdown table; `compute_parity()` — set-difference PLUS a Counter-based occurrence-vs-row-count check, the specific mechanization needed to catch the duplicate-ID defect an ID-presence check alone would have missed), `reporter.py`, `sentinel_audit.py` CLI. 14 new tests (`scripts/tests/test_sentinel_evidence.py`) including a read-only invariant test and — critically — REGRESSION tests proving the checker actually catches both real defects found in this repo's own (pre-fix) file, not just clean-input tests. Full suite 411/411 passing (up from 397 pre-task). Live-run against the real `recommender.py`/`sentinel.md` pair confirmed `PARITY: CLEAN` after the fix, `UNDERCOUNTED`/`UNDOCUMENTED SEVERITIES` findings before it. Wired Step 2b with a live verification command and an explicit note that this table was found drifted during this exact pass. GLOSSARY term added (Recommender/Routing-Table Parity Engine). `scripts/sentinel/sentinel_audit.py` added to frontmatter `dependencies`. No STRICT RULE added — the engine verifies documentation accuracy, not a new behavioral constraint. Frontmatter: version 3→4, `last_hardened` 2026-07-07, `content_hash` recomputed via `--fix-hashes`. `strict_rule_count`/`phase_count` unchanged. Resolves `helpdesk-tickets/CLOSED_20260707_sentinel-engine-gap_workflow.md`.
