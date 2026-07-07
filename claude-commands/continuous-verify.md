@@ -1,10 +1,10 @@
 ---
-description: "Continuous Plan Verification Gate — sub-gate embedded inside /execute-build Step 5g. Not user-invokable. Checks phase acceptance criteria and forward contracts against the full implementation plan after each phase build."
+description: "Continuous Plan Verification Gate — sub-gate embedded inside /execute-build Step 5g. Not user-invokable. Checks phase acceptance criteria and forward contracts against the full implementation plan after each phase build. v3: script-backed by the Anchor Verification Engine (scripts/continuous_verify/anchor_cli.py, wrapping scripts/focus/anchor_scanner.py) for Phase 1/2 anchor checks, including Mock Trap candidate detection."
 type: audit
 grade: Sovereign
-version: 2
-content_hash: "sha256:15b1f453da956de6"
-last_hardened: "2026-05-15"
+version: 3
+content_hash: "sha256:322d962e238697b1"
+last_hardened: "2026-07-07"
 strict_rule_count: 10
 phase_count: 5
 context_retention: medium
@@ -12,6 +12,7 @@ flags: []
 dependencies:
   - "/execute-build"
   - "/focus-plan"
+  - "scripts/continuous_verify/anchor_cli.py"
 triggers:
   - "/execute-build"
 produces: []
@@ -55,6 +56,8 @@ This workflow does NOT:
 | **PARITY** | The gate outcome meaning: the built code matches the plan's intent and introduces no forward-contract violations. Phase advancement proceeds silently. |
 | **MISMATCH** | The gate outcome meaning: a verifiable contradiction exists between the built code and the implementation plan. Phase advancement is HALTED. |
 | **UNVERIFIABLE** | The gate outcome meaning: the gate cannot confirm alignment due to insufficient evidence (missing plan detail, untestable output). Phase advancement proceeds with a risk note logged to the Phase Build Receipt. |
+| **Anchor Verification Engine** | **[ADDED 2026-07-07, implementation-plan.md Phase 5.3]** `scripts/continuous_verify/anchor_cli.py` — a thin CLI wrapper around `scripts/focus/anchor_scanner.py` (not a duplicate; the same scanner already proven for `/focus-plan`), backing Phase 1/2's anchor existence checks. Never judges whether an anchor's code correctly implements a criterion or contract — only whether it exists and where. |
+| **Mock Trap candidate** | A symbol anchor found only in test/mock code (`FOUND_TEST_ONLY`), surfaced by the Anchor Verification Engine as `mock_trap_candidate: true`. One-directional and advisory — investigate, do not auto-fail; the criterion may genuinely be about test coverage. |
 
 ---
 
@@ -112,20 +115,35 @@ SCOPE MANIFEST — Phase [N]:
 
 **For each acceptance criterion in the Scope Manifest:**
 
-1. Identify the physical anchor — the specific file, function, schema, or output that represents this criterion being met.
-2. Read the anchor: use the Read tool on `{path}`, or `grep` as appropriate.
-3. Assess: does the current state of the anchor satisfy the criterion as written in the plan?
+1. Identify the physical anchor — the specific file, function, schema, or output that represents this criterion being met. Classify it as a `file` anchor or a `symbol` anchor.
+2. **[ENGINE-BACKED — ADDED 2026-07-07, implementation-plan.md Phase 5.3]** Check the anchor's existence mechanically — this reuses `scripts/focus/anchor_scanner.py` directly (already proven in production for `/focus-plan`), not a re-implementation:
+
+```bash
+python3 ~/blueprint-workflows/scripts/continuous_verify/anchor_cli.py \
+  --workspace {workspace_root} \
+  --file-queries {file anchors} \
+  --symbol-queries {symbol anchors} \
+  --exclude {implementation_plan.md path} \
+  --output-json
+```
+
+Read `file_anchors[].status` (`EXISTS`/`MISSING`/`INVALID`) and `symbol_anchors[].status` (`FOUND_PRODUCTION`/`FOUND_TEST_ONLY`/`ABSENT`) plus `mock_trap_candidate`. If the engine is unavailable: fall back to the Read tool / `grep` manually; note the fallback.
+
+**A `FOUND_TEST_ONLY` result (`mock_trap_candidate: true`) is a Mock Trap signal, not an automatic NOT SATISFIED verdict.** The symbol exists only in test/mock code — investigate whether the criterion is genuinely about production behavior (likely NOT SATISFIED, or SATISFIED-with-risk-noted) or genuinely about test coverage (may be legitimately SATISFIED). The engine flags the candidate; the classification stays with you.
+
+3. Assess: does the current state of the anchor satisfy the criterion as written in the plan? **The engine confirms existence and location only — it never judges whether the code at that anchor actually implements the criterion's intent.** That semantic judgment is entirely yours.
 
 ```
 CRITERION CHECK [N.1]:
   Criterion:     [exact text from plan]
   Anchor:        [file:line / function name / schema key]
-  Evidence:      Read {path}:L{start}-L{end} → [finding]
+  Evidence:      {EXISTS/FOUND_PRODUCTION/FOUND_TEST_ONLY/etc. from engine} → [your semantic finding]
+  Mock Trap:     [flagged / not flagged — from mock_trap_candidate]
   Assessment:    SATISFIED / NOT SATISFIED / UNVERIFIABLE
   Reason:        [one sentence explaining the assessment]
 ```
 
-**Null-evidence rule**: If no physical anchor can be identified for a criterion, the criterion is UNVERIFIABLE — not SATISFIED. Do not assume satisfied because nothing contradicts it.
+**Null-evidence rule**: If no physical anchor can be identified for a criterion, the criterion is UNVERIFIABLE — not SATISFIED. Do not assume satisfied because nothing contradicts it. If the anchor is a `MISSING` file or `ABSENT` symbol, the criterion is NOT SATISFIED, not UNVERIFIABLE — the engine found nothing to be uncertain about.
 
 ---
 
@@ -136,8 +154,20 @@ CRITERION CHECK [N.1]:
 For each forward contract in the Scope Manifest:
 
 1. Identify the contract specification: what exactly does the future phase expect to exist, receive, or call?
-2. Find the corresponding element in the Phase N code just built.
-3. Compare: does the built element match the contract specification?
+2. **[ENGINE-BACKED — ADDED 2026-07-07, implementation-plan.md Phase 5.3]** Find the corresponding element in the Phase N code just built — reuse the same `anchor_cli.py` call as Phase 1 (batch file/symbol queries across both phases in one invocation where practical) rather than a separate manual search:
+
+```bash
+python3 ~/blueprint-workflows/scripts/continuous_verify/anchor_cli.py \
+  --workspace {workspace_root} \
+  --file-queries {contract file anchors} \
+  --symbol-queries {contract symbol anchors} \
+  --exclude {implementation_plan.md path} \
+  --output-json
+```
+
+Same Mock Trap handling as Phase 1: a `FOUND_TEST_ONLY` symbol backing a forward contract is a flag to investigate, not an automatic contract violation.
+
+3. Compare: does the built element match the contract specification? **The engine confirms the element exists and where — it never judges whether it matches the contract's shape (signature, schema, interface).** That comparison is entirely yours.
 
 ```
 CONTRACT CHECK [N+K → Phase N]:
@@ -300,6 +330,7 @@ This gate operates as Step 5g inside the /execute-build Build Audit:
 
   /execute-build Step 5a-5f  → Build Audit (phase-scoped task verification)
   /execute-build Step 5g     → THIS GATE (full-plan alignment verification)
+     └─ Phase 1/2            → scripts/continuous_verify/anchor_cli.py (anchor + Mock Trap checks)
   /execute-build Step 6      → Phase Build Receipt (receives gate contribution)
 
 Upstream dependencies:
@@ -340,3 +371,4 @@ Activation in Claude Code:
 1. **2026-05-07**: `[CREATED]` Created via Sovereign Scaffold Generator. Stage 4 of the Layer 2 Workflow Suite (see layer2_implementation_plan.md). Origin: Divergence #7 promoted to active plan by user. Defined as sub-step 5g inside /execute-build Build Audit, not a standalone user-invoked workflow. Three outcomes: PARITY (silent), MISMATCH (halt), UNVERIFIABLE (risk log). Scope constrained to Phase N acceptance criteria + forward contract verification only — not a full plan re-audit. Standard Version: 2.
 2. **2026-05-15**: `[INJECTED — /harden-workflow --ticket 20260512_continuous-verify_workflow.md + /nodelete]` Routing gap resolved. User-Facing Advisory sub-section added to INTEGRATION section — explains that the gate is not user-invocable, clarifies the /execute-build automatic path, names /focus-plan as the manual equivalent when /execute-build is not in use. Two advisory trigger rows added to /triage/core.md's continuous-verify block (also in this commit) to make the gate discoverable via /triage. Closes ticket 20260512_continuous-verify_workflow.md.
 3. **2026-05-21**: `[PORTED — blueprint-workflows / Claude Code migration]` Merged pointer (`continuous-verify.md`) and payload (`continuous-verify/core.md`) into single file. Pointer/Payload architecture retired. `view_file {path}` references replaced with Read tool throughout (Phase 0b, Phase 1 evidence line, STRICT RULE 1, HOW TO BEGIN Step 0b). `list_dir {workspace_root}` in Phase 0a replaced with `ls {workspace_root}` via Bash tool. INTEGRATION section extended with Claude Code activation note (embedded by /execute-build via Read tool on `~/.claude/commands/continuous-verify.md`). GLOSSARY note: removed retired terms (Pointer, Payload, Injection cap) from the /harden-workflow reference hint. All protocol content preserved verbatim. Old pointer and payload deleted per user direction; git history preserves full lineage.
+4. **2026-07-07**: `[BUILT — Anchor Verification Engine, Verification-Spine Upgrade, implementation-plan.md Phase 5.3, /nodelete]` Ran Honest-Design Discipline fresh against this file — result staged at `docs/compression-staging/continuous-verify-honest-design.md`. **Finding: seed design CONFIRMED, not corrected** — the queue's own hint ("reusing `scripts/focus/anchor_scanner.py`") was accurate: Phase 1/2 both instructed manual anchor-checking (Read tool / grep) that duplicated exactly what `AnchorScanner.verify_file()`/`verify_symbol()` already do, already proven in production for `/focus-plan` against arbitrary target workspaces (this workflow's plan structure is suite-imposed, not arbitrary like `/redteam`'s target codebase, so direct reuse is architecturally sound here). **Real gap found in the process**: `anchor_scanner.py` had no standalone CLI (only ever invoked as a class inside `focus.py`'s full plan-parsing pipeline, which does more than this gate needs) — required a thin wrapper, not a new verification engine. More significantly: `verify_symbol()`'s `FOUND_TEST_ONLY` result IS the Mock Trap signal `/focus-plan` already relies on, but this file's SATISFIED/NOT SATISFIED/UNVERIFIABLE vocabulary had no way to surface it at all — a criterion whose anchor existed only in test/mock code could have been marked SATISFIED with nothing flagging the risk. **Built `scripts/continuous_verify/`**: `anchor_cli.py` (thin CLI wrapping `AnchorScanner` directly for caller-supplied file/symbol queries, adding an explicit `mock_trap_candidate: true` flag on `FOUND_TEST_ONLY` results), `reporter.py`. 10 new tests (`scripts/tests/test_continuous_verify_evidence.py`) including a read-only invariant test, a plan-file-exclusion test (confirms a plan that merely *mentions* a symbol doesn't count as substrate — with a companion test proving the exclude mechanism actually does something, not just a clean-input pass), and a CLI-level end-to-end test. Full suite 421/421 passing (up from 411 pre-task). Live-run against this actual workspace confirmed correct output (real symbols found in production, a nonexistent symbol correctly reported ABSENT). **Wired**: Phase 1 (criterion anchor checks via engine, new Mock Trap handling row in the CRITERION CHECK template, corrected Null-evidence rule distinguishing MISSING/ABSENT-as-NOT-SATISFIED from genuinely-unidentifiable-as-UNVERIFIABLE), Phase 2 (forward-contract anchor checks via the same engine call). Both phases keep explicit manual-fallback instructions and are explicit that the engine confirms existence only, never semantic correctness. GLOSSARY: 2 terms added (Anchor Verification Engine, Mock Trap candidate). `scripts/continuous_verify/anchor_cli.py` added to frontmatter `dependencies`. No STRICT RULE added — existing Rules 1-2 already require exactly this rigor; the engine changes how anchors are checked, not what the rules require. Frontmatter: version 2→3, `last_hardened` 2026-07-07, `content_hash` recomputed via `--fix-hashes`. `strict_rule_count`/`phase_count` unchanged. Resolves `helpdesk-tickets/CLOSED_20260707_continuous-verify-engine-gap_workflow.md`.
