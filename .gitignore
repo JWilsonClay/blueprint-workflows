@@ -1,0 +1,43 @@
+scripts/__pycache__/*
+*.pyc
+*.code-workspace
+personality/*
+personality.md
+manifest/*
+implementation-plan/audits/*
+scripts/doorway/templates/*
+.history/
+.obsidian/
+
+# >>> Sovereign Suite — managed block (auto-generated; edit above/below, not inside) >>>
+# (managed by scripts/gitignore — re-run /sentinel to refresh; never edit between the markers)
+# --- Suite-generated / ingestion-banned (never tracked) ---
+.history/
+quarantine/
+.workflow_state/
+deprecated/
+.doorway/
+# --- Security — secrets & credentials (NEVER commit) ---
+.env
+.env.*
+secrets/
+*.key
+*.pem
+id_rsa*
+*.p12
+*.pfx
+credentials*.json
+service-account*.json
+.aws/
+# --- Common noise (build artifacts, caches, editor cruft) ---
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+dist/
+build/
+.DS_Store
+*.log
+.idea/
+.vscode/
+# <<< Sovereign Suite — managed block <<<
