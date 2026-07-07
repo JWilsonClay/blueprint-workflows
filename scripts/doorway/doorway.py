@@ -212,12 +212,25 @@ class DoorwayContextualizer:
         drift = self.auditor.audit(current_map, previous_map)
 
         # Option C auto-escalate (P1 stabilization, pr-01-00, PILLAR_01 §4.4):
-        # If incremental scan produced self-heal repairs (stale has_readme from carry-over),
-        # re-scan with full to refresh has_readme post-heal so final drift/zero_finding clean.
+        # If incremental scan reports any missing_readme, re-scan with full to
+        # refresh has_readme so final drift/zero_finding reflects live disk truth.
         # Note: post-heal drift may list healed entries until re-audit; escalation forces refresh.
-        # (PILLAR pseudocode used metrics["repairs"]; .get is defensive.)
+        # [CORRECTED 2026-07-07, Sovereign Redesign Cluster Stage 6, ticket
+        # 20260705_doorway_lazy-scan-stale-readme]: previously gated on
+        # self.metrics["repairs"] > 0. Once create_readme() (integrity.py) was
+        # fixed to re-verify disk before writing (no-op if the README already
+        # exists -- the exact stale-carry-over case), a false-positive
+        # missing_readme entry no longer counts as a "repair", so the old
+        # repairs>0 gate silently stopped escalating for precisely the scenario
+        # this mechanism exists to correct -- confirmed via a real regression
+        # test (test_stale_readme_with_no_other_repairs_still_resolves) before
+        # this fix, not assumed. Escalating on any non-empty missing_readme,
+        # dropping the repairs requirement, closes that gap: a legitimately
+        # excluded directory never appears in missing_readme in the first place
+        # (auditor.py's _is_readme_excluded guard), so this cannot loop forever
+        # on expected, permanent exclusions.
         escalated = False
-        if (not full_scan and self.metrics.get("repairs", 0) > 0 and drift.get("missing_readme")):
+        if not full_scan and drift.get("missing_readme"):
             if not self.output_json and not self.quiet:
                 print("[DOORWAY] Auto-escalated to full-scan after self-heal repairs")
             current_map, ingested_count = self.scanner.scan(previous_map, full_scan=True)

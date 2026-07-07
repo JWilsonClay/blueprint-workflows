@@ -4,9 +4,9 @@
 **From**: Grok (Grok Build session — discovered during second `/sentinel` run after inaugural scan + `/document` hygiene on blueprint-workflows)
 **Date**: 2026-07-05
 **Subject**: Incremental Doorway scans report `missing_readme` drift and route to `/document` even when every README exists on disk — caused by `scanner.py` carrying forward stale child metadata from the prior snapshot when parent `.py` hashes are unchanged.
-**Urgency**: LOW (workaround confirmed: `--full-scan` yields zero-finding; no data loss; wrong routing only)
+**Urgency**: LOW (workaround confirmed: `--full-scan` yields zero-finding; no data loss; wrong routing only) **[CORRECTION — 2026-07-07, /nodelete: this framing was wrong. Remediation (Section 6) found the same stale signal also reaches `create_readme()` with no existence check, meaning real data loss was genuinely possible, not just wrong routing. Original text preserved per /nodelete; do not trust this line alone.]**
 **Root Cause Type**: SUBSTANTIVE-LOGIC
-**Phylogeny Disposition**: PENDING
+**Phylogeny Disposition**: `NO TRANSFER` — [RESOLVED 2026-07-07, see Section 6 Remediation Record]
 
 ---
 
@@ -55,10 +55,53 @@ Engine-owned reconciliation (Option C) is preferable to scattering `--full-scan`
 Secondary: `breadcrumb.py`'s `apply_approved()` proposal-delimiter mismatch (`--- PROPOSAL` vs blank-line-separated entries) caused only one breadcrumb to apply during inaugural `/sentinel` — separate LOW ticket if not bundled here.
 
 ---
-**Status**: **OPEN**
-**Verification**: PENDING — Option C implemented in `doorway.py`, pytest green, incremental post-repair scan returns `zero_finding: true` without manual `--full-scan`; SUITE_HEALTH advisory superseded per Section 4 step 5.
+
+## 6. Remediation Record — [ADDED 2026-07-07, Sovereign Redesign Cluster Stage 6 Task 6.2, closed by Claude Code]
+
+```
+REMEDIATION RECORD
+  Ticket:            20260705_doorway_lazy-scan-stale-readme_workflow.md
+  Faulting workflow: N/A (SUBSTANTIVE-LOGIC — scripts/doorway/ engine code, not a workflow .md file)
+  Root cause fixed:  Two, not one. (a) Option C's auto-escalation (this ticket's own prescribed
+                     fix) was ALREADY implemented (doorway.py, landed during Stage 1/2's P1
+                     stabilization work, pr-01-00) but never verified with a dedicated test and
+                     the ticket itself was never closed to reflect this. (b) A genuinely NEW,
+                     more severe defect, found via independent design review (not this ticket's
+                     own original investigation): integrity.py's create_readme() had no
+                     existence check before overwriting a target file — the exact stale
+                     has_readme carry-over this ticket describes could silently destroy a real,
+                     hand-authored README's content, not just mis-report drift. This ticket's own
+                     original Urgency ("LOW... no data loss") was incorrect; superseded by this
+                     finding, documented here rather than silently corrected.
+  Changes made:      scripts/doorway/integrity.py: create_readme() re-verifies target.exists()
+                     before writing; no-op (no overwrite, no repair counted) if a README is
+                     genuinely present. scripts/doorway/doorway.py: Option C's escalation
+                     condition changed from `repairs > 0` to any non-empty `missing_readme`,
+                     since fix (a) means a stale-but-present README no longer counts as a
+                     "repair" -- found via a real failing test before the fix was written, not
+                     assumed necessary. scripts/tests/test_doorway.py (new): 4 direct tests
+                     against real temp-workspace fixtures -- content preservation, phantom
+                     self-correction with no other repair, escalation still fires on a genuine
+                     repair, no escalation when nothing changed (perf regression guard).
+                     manifest/SUITE_HEALTH.md: ACTIVE ADVISORY superseded with a RESOLVED line.
+  Tests:             4/4 new tests passing (scripts/tests/test_doorway.py); full suite 295/295
+                     (was 291 before this ticket's remediation).
+  Linter:            0 CRITICAL (python3 scripts/suite/lint_workflows.py --workspace . --quiet).
+  Deferred:          The ticket's own Section 5 "Secondary" item (breadcrumb.py proposal-
+                     delimiter mismatch) -- explicitly named there as a separate LOW ticket if
+                     not bundled, not bundled here. The sibling ticket
+                     20260705_sentinel-doorway-redesign_workflow.md's remaining Phase 0 items
+                     (LINT_EXCLUDE_FILES, doorway skip-list, breadcrumb.py) are that ticket's own
+                     separate, still-open scope -- confirmed via helpdesk-tickets.md's new Step
+                     4d (Stage 6 Task 6.1, this same stage): a sibling ticket closes independently
+                     on its own merit; this closure does not require that one to close too.
+```
+
+**Phylogeny Disposition**: `NO TRANSFER` — this remediation is contained within `scripts/doorway/`'s own two files (`integrity.py`, `doorway.py`); the fix pattern (a self-heal write function must re-verify its own precondition against live disk state immediately before a destructive write, not trust a possibly-stale caller-supplied signal) did not move between independent workflow `.md` protocol files, which is what this suite's Phylogeny mechanism tracks.
 
 ---
-*Signed,*
-**Grok**
-*(Session agent — Grok Build inaugural blueprint-workflows session)*
+**Status**: **REMEDIATED (Option C verified; a more severe, previously-unknown data-loss defect in the same self-heal path found via independent review and fixed alongside it; see Remediation Record above)**
+**Verification**: Remediation Record above. 4/4 new tests passing, 295/295 full suite, 0 CRITICAL lint. SUITE_HEALTH advisory superseded (`grep -c "ACTIVE ADVISORY" manifest/SUITE_HEALTH.md` → 0).
+
+---
+*Originally filed by Grok (Grok Build session, 2026-07-05). Closed by Claude Code, Sovereign Redesign Cluster Stage 6, 2026-07-07 — native path, no Grok involved in the remediation.*

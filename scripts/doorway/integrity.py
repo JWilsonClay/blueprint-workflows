@@ -199,7 +199,8 @@ class IntegrityManager:
             folder_path_str: Workspace-relative path string (e.g. 'governance/roles').
 
         Returns:
-            True if the README was created; False on failure.
+            True if the README was created; False on failure or if a README
+            already exists on disk (see existence re-check below).
         """
         target = self.workspace / folder_path_str / "README.md"
         name = Path(folder_path_str).name
@@ -213,6 +214,18 @@ class IntegrityManager:
 
         # P1: skip heal entirely for README_EXCLUDE_DIRS (configurable, no-heal).
         if self._is_readme_excluded(folder_path_str):
+            return False
+
+        # [SECURITY — 2026-07-07, Sovereign Redesign Cluster Stage 6, found via
+        # independent design review, ticket 20260705_doorway_lazy-scan-stale-readme]
+        # This method is called specifically because the caller's has_readme flag
+        # says the file doesn't exist — but that flag can be stale (scanner.py's
+        # carry-over logic copies forward has_readme from a prior snapshot without
+        # re-statting disk for children of a hash-stable parent). Re-verify against
+        # the actual filesystem before writing: if a README genuinely exists, this
+        # is a false-positive repair signal, not a real gap — do nothing rather
+        # than silently overwrite real content with boilerplate.
+        if target.exists():
             return False
 
         template_content = None

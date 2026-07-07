@@ -6,13 +6,12 @@ personality.md
 manifest/*
 implementation-plan/audits/*
 scripts/doorway/templates/*
-.history/
 .obsidian/
 
 # >>> Sovereign Suite — managed block (auto-generated; edit above/below, not inside) >>>
 # (managed by scripts/gitignore — re-run /sentinel to refresh; never edit between the markers)
 # --- Suite-generated / ingestion-banned (never tracked) ---
-.history/
+.history/quarantine/
 quarantine/
 .workflow_state/
 deprecated/

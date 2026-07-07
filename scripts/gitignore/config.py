@@ -29,7 +29,9 @@ DEFAULT_SEED = {
     "categories": {
         "suite": {
             "title": "Suite-generated / ingestion-banned (never tracked)",
-            "patterns": [".history/", "quarantine/", ".workflow_state/",
+            # [CORRECTED 2026-07-07, mirrors seed.toml] .history/ narrowed to
+            # .history/quarantine/ -- see seed.toml's comment for the rationale.
+            "patterns": [".history/quarantine/", "quarantine/", ".workflow_state/",
                          "deprecated/", ".doorway/"],
         },
         "security": {

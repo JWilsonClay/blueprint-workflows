@@ -13,8 +13,14 @@
 
 [categories.suite]
 title = "Suite-generated / ingestion-banned (never tracked)"
+# [CORRECTED 2026-07-07, Sovereign Redesign Cluster Stage 6] Was bare ".history/",
+# which also silently blocked .history/archive/ -- nodelete.md Pillar 6 explicitly
+# designed that subdirectory as NOT ingestion-banned (an Append-Only Ledger meant
+# to be a durable, human-readable, git-trackable record), distinct from
+# .history/quarantine/ (the actual ingestion-banned Quarantined Change Ledger).
+# Narrowed to the specific subdirectory this category's own title describes.
 patterns = [
-    ".history/",
+    ".history/quarantine/",
     "quarantine/",
     ".workflow_state/",
     "deprecated/",
