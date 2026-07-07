@@ -28,6 +28,13 @@ Data directory:
     All runtime state is stored in {workspace}/.doorway/ (hidden, workspace-local).
     This directory is auto-created on first run.
 
+Doorway Design Invariant [ADDED 2026-07-06, PR 01-06, PILLAR_01 §4.2]:
+    Agent context is delivered by the engine (JSON index + ownership file),
+    not by filesystem cardinality (N x README.md). Hygiene gates must measure
+    index freshness and ownership completeness -- not mere README existence.
+    Also stated verbatim in claude-commands/{role,sentinel}.md and
+    process_learnings/PROCESS_LEARNINGS.md.
+
 Extracted from .blueprints/governance/thedoorway/dynamic_contextualizer.py.
 Refactored 2026-05-09 for universal workspace-agnostic use.
 """

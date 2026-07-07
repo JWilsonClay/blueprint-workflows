@@ -3,7 +3,7 @@ description: "Senior Architect of Workflows — blueprint-workflows workspace id
 type: documentation
 grade: Hardened
 version: 2
-content_hash: "sha256:75ec89b929b9eac6"
+content_hash: "sha256:dd87054557107e63"
 last_hardened: "2026-05-21"
 strict_rule_count: 0
 phase_count: 0
@@ -76,6 +76,8 @@ Do-Not-Edit: "Never propose changes to Grok /design or /execute-plan SKILL.md. N
 
 Revival precedent: DevJournal pointer history (one canonical, multiple delivery). Used in P2/P3.
 
+**Doorway Design Invariant (ADDED 2026-07-06, PR 01-06, PILLAR_01 §4.2):** "Agent context is delivered by the engine (JSON index + ownership file), not by filesystem cardinality (N × README.md). Hygiene gates must measure index freshness and ownership completeness — not mere README existence." Also stated verbatim in `sentinel.md`, `scripts/doorway/doorway.py`'s module docstring, and `process_learnings/PROCESS_LEARNINGS.md`.
+
 ---
 
 ## III. THE SOVEREIGN SUITE — WHAT EXISTS
@@ -87,6 +89,7 @@ As of 2026-05-21 (Claude Code migration complete), the following workflows have 
 - `/continuous-verify` — verification gate (Sovereign)
 - `/deepcode` — deep code review
 - `/depreciate` — contradiction quarantine
+- `/design-orchestrator` — Sovereign Design Formula; native write + Independent Critique by default, Grok /design delegation only when capability-gated (Structured, added 2026-07-06 — not yet hardened)
 - `/divergence` — lateral thinking engine (Sovereign)
 - `/document` — project documentation writer
 - `/execute-build` — phase-gated build orchestrator (Sovereign)
@@ -220,3 +223,4 @@ That is the role.
 3. **2026-07-04**: `[RETIRED — /limitations merged into /personality]` Resolves a cross-ticket contradiction between `helpdesk-tickets/20260625_role_workflow.md` (wanted new halt-boundary content added to `/limitations`) and `helpdesk-tickets/20260625_limitations_workflow.md` (wanted `/limitations` deleted for a dead `conveyor/Concept.md` reference). Reconciled by retiring `/limitations` entirely: `claude-commands/limitations.md` and its symlink deleted; its one still-valid rule (workspace edit authorization) merged into `personality.md` Section 6 and mirrored into `~/.claude/CLAUDE.md`. Section III inventory line for `/limitations` removed accordingly. The `role_workflow` ticket's target for the halt-boundary work shifts to `/personality` (and this file) — addendum added to that ticket rather than editing its original body.
 4. **2026-07-04**: `[SUPERSEDED — Code authority, resolves helpdesk-tickets/CLOSED_20260704_ticket-remediation-authority_workflow.md]` Section V's "modifying project-level code files... out of scope" line struck through and preserved, not deleted, per user directive: it was never a capability restriction, it was an expression of how this role's partnership with the user chose to shape itself when the suite was pure markdown — the user's words, from the conversation that produced this entry: *"you aren't actually modifying a guardrail, you are modifying a core expression of your role that you created."* Added "On code authority" — bounded, ticket-instrumental authority to modify code under this repo's own `scripts/` (not downstream projects' application code) when a ticket's remediation requires it, tests-covered, suite-green. Third scope bullet ("closing tickets without completing the hardening") reworded — it assumed every ticket's fix was structural hardening; now explicitly forks to structural (`/harden-workflow`) vs. substantive/logic (direct remediation). Companion edits: `helpdesk-tickets.md` (root-cause classification + forked pipeline + Remediation Record template) and `harden-workflow.md` (early TICKET MODE redirect on a Logic-tagged ticket). See those files' own Change Logs for their halves of this same session.
 5. **2026-07-04**: `[RETARGETED — WORKFLOW_MANIFEST.md split, resolves helpdesk-tickets/CLOSED_20260704_workflow-manifest-growth_workflow.md]` Section II's architectural constants table (Append-only, Manifest location rows) and Section VI's "On session boundaries" onboarding instruction both retargeted from `WORKFLOW_MANIFEST.md` (one file, conflating a Live-State suite index with an unbounded Append-Only narrative, mandatory-full-read every session) to `manifest/SUITE_HEALTH.md` (the Live-State half — small, in-place-edited, this is now the mandatory read) plus `manifest/history/*.md` (the narrative half — sharded by quarter via the new `scripts/ledger/monitor.py`, read on demand, not mandatorily). Section VIII's workspace-state snapshot line retargeted the same way. Content_hash recomputed; grade/version left alone — a direct terminology-and-target update, not a `/harden-workflow` pass, matching the treatment already given `personality.md` for similar direct edits.
+6. **2026-07-06**: `[INJECTED — Sovereign Redesign Cluster Stage 3, PILLAR_02 PR 02-06, /nodelete]` Section III inventory: added `/design-orchestrator` (Structured grade, not yet hardened — Task 3.4 pending). Section II: added the Doorway Design Invariant statement (PR 01-06, Stage 2). Deliberately did NOT claim `/design-orchestrator` as Sovereign in this or any other cross-reference — it earns that grade only via an actual `/harden-workflow` pass, not by inventory listing.

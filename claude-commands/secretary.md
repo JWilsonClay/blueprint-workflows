@@ -3,7 +3,7 @@ description: "Sovereign Session Secretary — meta-layer orchestrator that close
 type: meta
 grade: Sovereign
 version: 5
-content_hash: "sha256:896a3ec1c4754119"
+content_hash: "sha256:dc6a84215a5c8b7d"
 last_hardened: "2026-07-05"
 strict_rule_count: 20
 phase_count: 8
@@ -70,6 +70,7 @@ This workflow does NOT:
 | **CONTRADICTION_REGISTRY.md** | **[ADDED 2026-07-04]** `~/blueprint-workflows/manifest/CONTRADICTION_REGISTRY.md` — deterministic aggregation of `.history/` ledgers and the ticket corpus, produced by `scripts/registry/registry.py`. Previously updated only by `/harden-workflow --ticket`'s Step TM-6; now also refreshed unconditionally every `/secretary` run (Phase 1, Step 1.0.5), independent of whether `/harden-workflow` was invoked this session. |
 | **SUITE_HEALTH.md** | **[ADDED 2026-07-04]** `~/blueprint-workflows/manifest/SUITE_HEALTH.md` — the Live-State half of what was `WORKFLOW_MANIFEST.md` before it was split by Retention Contract. One current value per workflow, in-place-edited, never appended. The mandatory session-start read. |
 | **TRIAGE_RECEIPTS.md** | **[ADDED pr-05-02]** Append-only triage reports in `.workflow_state/receipts/`. Consumed here for session summary + SUITE_HEALTH notes (P5 receipt family). |
+| **DESIGN_RECEIPTS.md** | **[ADDED 2026-07-06, Sovereign Redesign Cluster Stage 3]** Append-only `/design-orchestrator` receipts in `.workflow_state/receipts/`, exact heredoc parity to BUILD_RECEIPTS.md. Consumed here for session summary + SUITE_HEALTH notes, same treatment as TRIAGE_RECEIPTS.md. |
 | **manifest/history/** | **[ADDED 2026-07-04]** `~/blueprint-workflows/manifest/history/` — dated shard files (`WORKFLOW_MANIFEST_{YYYY-Q}.md`) holding the Append-Only session narrative that used to live in `WORKFLOW_MANIFEST.md`. Rolled over by `scripts/ledger/monitor.py` on a real calendar-quarter change or a within-quarter size safety valve. Read on demand, never mandatory at session start. |
 | **scripts/ledger/** | **[ADDED 2026-07-04]** The deterministic engine (Step 1.2) that performs narrative-shard rollover and the `SUITE_PHYLOGENY.md` growth warning, config-driven via `ledger_config.toml`. Always uses the real OS clock for quarter determination — never agent inference. |
 | **Retrospective Lag** | **[ADDED 2026-07-05]** Named failure shape: a session closes (Phase 1 writes its `manifest/history/` narrative entry) but its Phase 6 `/retrospective` entry never lands in `PROCESS_LEARNINGS.md` — and the gap persists silently across further sessions because nothing checks the *prior* session's Phase 6, only the current one's (ADDENDUM E). Closed by Step 0b.5's one-step-back consistency check. |
@@ -431,6 +432,14 @@ ls .workflow_state/receipts/TRIAGE_RECEIPTS.md 2>/dev/null && echo "TRIAGE_RECEI
 tail -n 5 .workflow_state/receipts/TRIAGE_RECEIPTS.md 2>/dev/null || true
 ```
 
+**[INJECTED 2026-07-06, Sovereign Redesign Cluster Stage 3, PILLAR_02 PR 02-06 — secretary DESIGN_RECEIPTS consumption, /nodelete]**
+Same treatment for `/design-orchestrator`'s receipt family member:
+
+```bash
+ls .workflow_state/receipts/DESIGN_RECEIPTS.md 2>/dev/null && echo "DESIGN_RECEIPTS present" || echo "DESIGN_RECEIPTS absent"
+tail -n 5 .workflow_state/receipts/DESIGN_RECEIPTS.md 2>/dev/null || true
+```
+
 ---
 
 ## PHASE 7 — SECRETARY RECEIPT
@@ -461,6 +470,7 @@ Sub-workflows triggered:
   /retrospective:        [COMPLETE — entry verified via tail -n 10 / FAILED: reason]
   RETROSPECTIVE LAG (Step 0b.5): [NO GAP — consistent as of [date] / GAP DETECTED — narrative through [date], PROCESS_LEARNINGS.md last [date]]
   TRIAGE_RECEIPTS:       [present (N entries) / absent] (P5 consumption for secretary + SUITE_HEALTH)
+  DESIGN_RECEIPTS:       [present (N entries) / absent] (PILLAR_02 consumption for secretary + SUITE_HEALTH)
 
 **[ADDENDUM B — Suite Health Score Re-Read Gate — INJECTED 2026-05-15, RETARGETED 2026-07-04, /harden-workflow --ticket 20260512_secretary_workflow.md + /nodelete]**
 Before emitting the Suite Health Score field below, re-read `SUITE_HEALTH.md` NOW (was `WORKFLOW_MANIFEST.md` before the split — this file is now small enough that a full read costs little, but `tail` is kept for consistency with the original gate's intent):
@@ -573,3 +583,4 @@ Output files:
 
 10. **2026-07-06**: `[INJECTED — P5 pr-05-00 linter excludes + hashes convention + dir gate, per Master Execution Plan Phase A / PILLAR_05]` Linter excludes for claude-commands/README.md (nav file with no frontmatter by design) added to models + lint_workflows.py filter (0 CRITICAL on nav README baseline). --fix-hashes convention decided: content hashes computed via `lint_workflows.py --fix-hashes` and pasted by hand (tool remains print-only; updated help + output phrasing). Dir gate generalized in checks.py + models (GROK_BUILD_DIR added); runtime availability now covers Grok Build (single INFO note pattern). Accurate convention phrasing recorded here; prior entries' "recomputed via" references clarified by this decision (no content change to hashes). See also execute-build.md and helpdesk-tickets.md Change Logs, DESIGN_Sovereign_Redesign_Cluster_Canonical.md, PILLAR_05. /nodelete observed (append). Smallest additive change.
 11. **2026-07-06**: `[INJECTED — pr-05-02, PILLAR_05, /nodelete]` Added TRIAGE_RECEIPTS.md consumption to secretary (explicit read/tail before Phase 7; GLOSSARY entry; note in SUITE_HEALTH Architecture Notes; entry in Phase 7 receipt template). Pairs with triage emission for secretary/SUITE_HEALTH consumption of TRIAGE_RECEIPTS per PILLAR_05 §4.5 and spec. Append-only; smallest change.
+12. **2026-07-06**: `[INJECTED — Sovereign Redesign Cluster Stage 3, PILLAR_02 PR 02-06, /nodelete]` Added DESIGN_RECEIPTS.md consumption, mirroring entry 11's TRIAGE_RECEIPTS treatment exactly: read/tail before Phase 7, GLOSSARY entry, Phase 7 receipt template line. Pairs with `/design-orchestrator`'s DESIGN_RECEIPTS emission for secretary/SUITE_HEALTH consumption per PILLAR_02 §4.2. Append-only; smallest change.
