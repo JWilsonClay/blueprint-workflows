@@ -3,7 +3,7 @@ description: "The Triage Desk — reads workspace state, recommends which workfl
 type: meta
 grade: Sovereign
 version: 3
-content_hash: "sha256:2a49b2990c5d1643"
+content_hash: "sha256:e7700507aaeb444b"
 last_hardened: "2026-05-25"
 strict_rule_count: 11
 phase_count: 3
@@ -421,7 +421,7 @@ After emitting the Triage Report to chat, persist a verbatim report block using 
 
 ```bash
 mkdir -p ".workflow_state/receipts"
-cat >> ".workflow_state/receipts/TRIAGE_RECEIPTS.md" << 'RECEIPT_EOF'
+cat >> ".workflow_state/receipts/TRIAGE_RECEIPTS.md" << RECEIPT_EOF
 ## $(date +%Y-%m-%d) — /triage — REPORT
 - Phase/Stage: TRIAGE
 - Grade/Status: REPORT ISSUED
@@ -491,3 +491,4 @@ Typical invocation triggers:
 8. **2026-06-02**: `[INJECTED — /quality Option-F wiring, /nodelete]` The `/quality` P3 audit trigger now names its deterministic source: `scripts/quality/quality_audit.py --workspace . --output-json` → `ledger.audit_trigger == "P3"`, replacing the hand-count heuristic (the engine recognizes both `## REVIEWED` and `[REVIEWED]` reset markers). All prior trigger wording preserved per /nodelete. Standard Version: 3.
 9. **2026-06-02**: `[INJECTED — /iterate-test Mock-Trap Detector wiring (Verification-Spine Campaign), /nodelete]` The `/iterate-test` Trigger Matrix block gains a deterministic-call row: `scripts/iterate/iterate_audit.py --workspace . --output-json` — a `MOCK_TRAP_CANDIDATE` (`verdict_hint: FINDINGS`) in a recently-built stage's test promotes the recommendation from receipt-absence to actual-finding evidence (P1; `HARDCODED_ASSERTION` → P2), mirroring the existing `harden_audit.py` and `lint_workflows.py --quiet` precedents. One-directional: the engine surfaces candidates; the PRIMARY/INFRASTRUCTURE classification stays with /iterate-test Step 4b. All prior trigger wording preserved per /nodelete. Standard Version: 3.
 10. **2026-07-06**: `[INJECTED — pr-05-02, PILLAR_05, /nodelete]` Added TRIAGE_RECEIPTS.md emission (atomic cat >> heredoc after report, matching BUILD_RECEIPTS format exactly). Added GLOSSARY entry, frontmatter produces, Phase 0 consumption read of TRIAGE_RECEIPTS.md. Implements triage persistence + handover record per PILLAR_05 §4.5. Smallest additive change; no overwrite.
+11. **2026-07-06**: `[FIXED — receipt heredoc evaluation, Sovereign Redesign Cluster Stage 2, /nodelete]` The STAGE 1a `TRIAGE_RECEIPTS.md` writer (added in entry 10, same day) used a quoted heredoc delimiter (`<< 'RECEIPT_EOF'`), which suppresses ALL `$()` command substitution inside the block. Discovered live the first time this pattern was actually exercised end-to-end: `$(date +%Y-%m-%d)` and `$(git rev-parse --short HEAD ...)` were never evaluated, and the resulting `TRIAGE_RECEIPTS.md` entry contained the literal shell syntax as text instead of a real date/commit hash. Fixed by unquoting the delimiter (`<< RECEIPT_EOF`); confirmed no backticks exist in the receipt body (unquoting a heredoc also enables backtick command substitution, a second failure mode if present — checked, absent). Verified with a live re-run producing a correctly-evaluated entry. The same defect, from the identical documented pattern, was found in and fixed for `execute-build.md`'s BUILD_RECEIPTS writer, `document.md`, `soc.md`, `harden.md`, and `iterate-test.md` — see their own Change Logs. `HARDEN_GRADES.md`'s and `DOCS_RECEIPTS.md`'s existing entries were checked and do not carry the defect (prior agents evidently pre-substituted real values by hand rather than relying on live evaluation) — this session's own first `BUILD_RECEIPTS.md` and `TRIAGE_RECEIPTS.md` entries are the first real instances of the bug actually manifesting in a persisted file, corrected in place via appended, dated notes per /nodelete.

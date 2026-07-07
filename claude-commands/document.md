@@ -3,7 +3,7 @@ description: "Documentation / DevJournal Workflow — Universal Autonomous Updat
 type: documentation
 grade: Sovereign
 version: 2
-content_hash: "sha256:1d6a130cd621b2e9"
+content_hash: "sha256:e8cbec7eb25e0a8c"
 last_hardened: "2026-05-15"
 strict_rule_count: 0
 phase_count: 0
@@ -105,7 +105,7 @@ Before ingesting or writing anything, anchor the workspace. All steps in this ph
    ```bash
    _WORKSPACE_ROOT="$(dirname <JOURNAL_FILE>)"
    mkdir -p "${_WORKSPACE_ROOT}/.workflow_state/receipts"
-   cat >> "${_WORKSPACE_ROOT}/.workflow_state/receipts/DOCS_RECEIPTS.md" << 'RECEIPT_EOF'
+   cat >> "${_WORKSPACE_ROOT}/.workflow_state/receipts/DOCS_RECEIPTS.md" << RECEIPT_EOF
 ## $(date +%Y-%m-%d) — /document — $(basename <JOURNAL_FILE>)
 - Phase/Stage: Journal Update
 - Grade/Status: DOCUMENTED
@@ -223,3 +223,4 @@ You are now live. Begin Phase 0.
    - HOW TO BEGIN expanded with phase sequence, confirmation gate for receipt write, and explicit no-print rules.
    - Grade: **Structured** (monolithic). Pointer/Payload migration deferred pending byte count growth.
 4. **2026-05-21**: `[PORTED — Claude Code migration]` Pointer/Payload architecture retired. Merged into single command file at `~/blueprint-workflows/claude-commands/document.md`. Grade line updated to reflect Claude Code port status.
+5. **2026-07-06**: `[FIXED — receipt heredoc evaluation, Sovereign Redesign Cluster Stage 2, /nodelete]` The `DOCS_RECEIPTS.md` writer used a quoted heredoc delimiter (`<< 'RECEIPT_EOF'`), suppressing all `$()` command substitution — `$(date +%Y-%m-%d)`, `$(basename <JOURNAL_FILE>)`, and the `$(git -C ... rev-parse ...)` commit line were never evaluated, writing literal shell syntax into the receipt instead of real values. Found live while exercising the identical pattern in `triage.md` this session. Fixed by unquoting the delimiter; confirmed no backticks in the receipt body (which an unquoted heredoc would also treat as command substitution). Same fix applied to `iterate-test.md`, `soc.md`, `harden.md`, `triage.md`, `execute-build.md` — see their own Change Logs.

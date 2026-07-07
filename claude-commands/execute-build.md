@@ -3,7 +3,7 @@ description: "Sovereign Build Agent — implements each phase of tasks.md with s
 type: execution
 grade: Sovereign
 version: 4
-content_hash: "sha256:b5e409a188959cf5"
+content_hash: "sha256:6935eb8e3bba8e2d"
 last_hardened: "2026-07-04"
 strict_rule_count: 16
 phase_count: 7
@@ -347,7 +347,7 @@ Workspace root is the parent directory of `<TASKS_FILE>`.
 
 ```bash
 mkdir -p "$(dirname <TASKS_FILE>)/.workflow_state/receipts"
-cat >> "$(dirname <TASKS_FILE>)/.workflow_state/receipts/BUILD_RECEIPTS.md" << 'RECEIPT_EOF'
+cat >> "$(dirname <TASKS_FILE>)/.workflow_state/receipts/BUILD_RECEIPTS.md" << RECEIPT_EOF
 ## $(date +%Y-%m-%d) — /execute-build — <ACTIVE_PHASE name>
 - Phase/Stage: <ACTIVE_PHASE name>
 - Grade/Status: PHASE COMPLETE
@@ -392,7 +392,7 @@ Emit the Final Build Receipt:
 
 ```bash
 mkdir -p "$(dirname <TASKS_FILE>)/.workflow_state/receipts"
-cat >> "$(dirname <TASKS_FILE>)/.workflow_state/receipts/BUILD_RECEIPTS.md" << 'RECEIPT_EOF'
+cat >> "$(dirname <TASKS_FILE>)/.workflow_state/receipts/BUILD_RECEIPTS.md" << RECEIPT_EOF
 ## $(date +%Y-%m-%d) — /execute-build — PROJECT COMPLETE
 - Phase/Stage: ALL PHASES
 - Grade/Status: PROJECT BUILD COMPLETE
@@ -475,6 +475,7 @@ Activation in Claude Code:
 7. **2026-07-04**: `[RETARGETED — .history/ split, resolves helpdesk-tickets/CLOSED_20260704_nodelete_workflow.md]` Step 5h.3's routing line retargeted from `.history/` to `.history/quarantine/` — `/nodelete` Pillar 6 split `.history/` into `quarantine/` (contradictions, this line's actual concern — Step 5h routes *dead* substrate) and `archive/` (completed history, unrelated to this step). No logic change; content_hash recomputed.
 
 8. **2026-07-06**: `[INJECTED — P5 pr-05-00 linter excludes + hashes convention + dir gate, per Master Execution Plan Phase A / PILLAR_05]` Linter excludes for claude-commands/README.md (nav file with no frontmatter by design) added to models + lint_workflows.py filter (0 CRITICAL on nav README baseline). --fix-hashes convention decided: content hashes computed via `lint_workflows.py --fix-hashes` and pasted by hand (tool remains print-only; updated help + output phrasing). Dir gate generalized in checks.py + models (GROK_BUILD_DIR added); runtime availability now covers Grok Build (single INFO note pattern). Accurate convention phrasing recorded here; prior entries' "recomputed via" references clarified by this decision (no content change to hashes). See also secretary.md and helpdesk-tickets.md Change Logs, DESIGN_Sovereign_Redesign_Cluster_Canonical.md, PILLAR_05. /nodelete observed (append). Smallest additive change.
+9. **2026-07-06**: `[FIXED — receipt heredoc evaluation, Sovereign Redesign Cluster Stage 2, /nodelete]` Both the Step 6 Phase Build Receipt writer and the Step 7 Final Build Receipt writer used a quoted heredoc delimiter (`<< 'RECEIPT_EOF'`), which suppresses ALL `$()` command substitution inside the block — `$(date +%Y-%m-%d)` and `$(git -C "$(dirname <TASKS_FILE>)" rev-parse --short HEAD ...)` were never evaluated, so a receipt written by literally following this file's own instructions would contain the literal shell syntax as text instead of a real date/commit hash. Discovered live this session: this exact cluster's own first two `BUILD_RECEIPTS.md` entries (Stage 0, Stage 1 of `implementation-plan/sovereign-redesign-cluster/tasks.md`) carry the unevaluated `$(git rev-parse --short HEAD ...)` text in their Commit line — corrected via appended, dated notes rather than rewritten, per /nodelete. Fixed by unquoting both delimiters (`<< RECEIPT_EOF`); confirmed no backticks in either receipt body (unquoting a heredoc also enables backtick command substitution, a second failure mode if present — checked, absent for both). The identical defect, from the identical documented pattern, was found in and fixed for `triage.md`, `document.md`, `soc.md`, `harden.md`, and `iterate-test.md` — see their own Change Logs. `HARDEN_GRADES.md` and `DOCS_RECEIPTS.md` (this repo's own pre-existing receipts) were checked and do not carry the defect — prior agents evidently pre-substituted real values by hand rather than relying on the documented live-evaluation mechanism, meaning this bug has been latent in the documented convention without ever previously manifesting in a persisted file until this session.
 
 **Hardening Certificate — /execute-build (2026-07-04)**
 

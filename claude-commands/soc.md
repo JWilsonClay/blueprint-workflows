@@ -3,7 +3,7 @@ description: "Separation of Concerns Refactor Workflow — 8-step SoC with Stran
 type: execution
 grade: Sovereign
 version: 3
-content_hash: "sha256:62e62dcd7875322b"
+content_hash: "sha256:7d5f67e63d4410f7"
 last_hardened: "2026-05-25"
 strict_rule_count: 0
 phase_count: 9
@@ -345,7 +345,7 @@ Persist to the receipt infrastructure using atomic append:
 
 ```bash
 mkdir -p .workflow_state/receipts
-cat >> .workflow_state/receipts/SOC_RECEIPTS.md << 'RECEIPT_EOF'
+cat >> .workflow_state/receipts/SOC_RECEIPTS.md << RECEIPT_EOF
 ## $(date +%Y-%m-%d) — /soc — <god_file>
 - Phase/Stage: SoC Complete
 - Grade/Status: SOC_COMPLETE
@@ -382,3 +382,4 @@ git commit -m "chore: soc complete for <module-name> -- receipt filed"
    Divergence D4 (soc_caller_scan.py automation script) deferred to separate ticket — requires new Python code outside workflow scope.
 4. **2026-05-21**: `[PORTED — Claude Code migration]` Pointer/Payload architecture retired. Merged into single command file at `~/blueprint-workflows/claude-commands/soc.md`. No content changes.
 5. **2026-05-25**: `[INJECTED — Automated CALLER MAP via verify.py, /nodelete]` Step 0: optional `verify.py --mode callers --file <god_file>` invocation added for automated CALLER MAP generation. Resolves helpdesk ticket 20260515_soc_caller_scan_script.md (Divergence D4 deferral). The standalone `soc_caller_scan.py` was consolidated into the Verification Substrate (`scripts/workstream/verify.py`) to avoid building two separate import-tracing scripts. Standard Version: 3.
+6. **2026-07-06**: `[FIXED — receipt heredoc evaluation, Sovereign Redesign Cluster Stage 2, /nodelete]` The SoC Completion Receipt writer (`SOC_RECEIPTS.md`, Step 8) used a quoted heredoc delimiter (`<< 'RECEIPT_EOF'`), suppressing all `$()` command substitution — `$(date +%Y-%m-%d)` and the `$(git rev-parse ...)` commit line were never evaluated, writing literal shell syntax into the receipt instead of real values. Found live while exercising the identical pattern in `triage.md` this session. Fixed by unquoting the delimiter; confirmed no backticks in the receipt body. Same fix applied to `iterate-test.md`, `document.md`, `harden.md`, `triage.md`, `execute-build.md` — see their own Change Logs.
