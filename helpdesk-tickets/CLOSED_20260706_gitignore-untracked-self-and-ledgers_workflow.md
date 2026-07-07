@@ -6,7 +6,7 @@
 **Subject**: `.gitignore` itself was untracked (never committed, in any prior session) — a fresh clone of this public repo would receive zero secrets protection. Two of its rules also silently excluded 9 open helpdesk tickets, 11 already-closed-but-not-yet-archived tickets, and the entire `process_learnings/` directory (including `PROCESS_LEARNINGS.md`, the suite's canonical append-only learning ledger) from ever being committed.
 **Urgency**: HIGH (public-repo secrets-protection gap + silent loss-of-durability risk for two records the suite treats as permanent)
 **Root Cause Type**: STRUCTURAL (repo configuration / governance gap — not workflow `.md` structure, not application code logic; remediated directly rather than via `/harden-workflow` since no workflow file is at fault)
-**Phylogeny Disposition**: PENDING
+**Phylogeny Disposition**: `NO TRANSFER` — a repo-configuration correction (three over-broad `.gitignore` rules narrowed), not a structural pattern that moved between workflow `.md` files. **[RESOLVED 2026-07-07]**
 **Status**: REMEDIATED (fixed in the same commit that files this ticket)
 **Verification**: See the commit this ticket ships in — `.gitignore` corrected, all newly-unblocked files added, secret-scanned first (see Section 3).
 

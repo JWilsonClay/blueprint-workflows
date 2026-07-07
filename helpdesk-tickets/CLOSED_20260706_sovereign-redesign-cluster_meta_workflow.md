@@ -6,9 +6,9 @@
 **Subject**: Master meta-ticket capturing the INITIAL BROAD/SHALLOW OUTLINE PHASE for the Sovereign Workflow Suite redesign cluster. Partitions all open tickets + related context into 5 core pillars with full traceability, high-level sequencing/dependencies, pointer/payload conventions for follow-on standalone pillar designs, and exhaustive citations. This document is structured to become the direct content of the canonical meta-ticket file (e.g., `helpdesk-tickets/20260706_sovereign-redesign-cluster_meta.md`).  
 **Urgency**: CRITICAL (Architectural) — spans multiple CRITICAL tickets; foundational for design-to-build "formula-in-a-formula" transition; affects every session-start, design, build, and archival path.  
 **Root Cause Type**: STRUCTURAL (primary; multiple tickets also carry SUBSTANTIVE-LOGIC elements; meta encompasses both)  
-**Phylogeny Disposition**: PENDING  
-**Status**: OPEN — meta outline complete; follow-on high-fidelity per-pillar designs and /implementation-plan + /harden-workflow --ticket paths pending user selection and execution.  
-**Verification**: PENDING — requires pillar-level designs, implementation, tests, receipts, SUITE_HEALTH updates, and closure per `/helpdesk-tickets.md` protocol (Phylogeny gate + Remediation Record or Hardening Certificate).
+**Phylogeny Disposition**: **CONFIRMED — lineage entry added** — `manifest/SUITE_PHYLOGENY.md`, "Lineage Entry — 2026-07-06 to 2026-07-07 — Sovereign Redesign Cluster" (three transfers: the Agent Capability Gate propagating across PILLAR_02/PILLAR_03; the Verified-Completion Gate's predicted arrival at `/execute-build`'s ecosystem via `implementation-plan.md`'s Completion Marking sub-pass; a partial, explicitly-not-yet-complete response to the 2026-07-05 entry's open `assert_within` consolidation recommendation). **[RESOLVED 2026-07-07]**
+**Status**: **REMEDIATED — all 5 pillars designed, natively built, tested, and receipted; see the Closure Record appended below. [RESOLVED 2026-07-07]**
+**Verification**: See "Closure Record" section, appended below, dated 2026-07-07.
 
 ---
 
@@ -672,3 +672,52 @@ This fulfills the task requirement for dedicated scope-expanded section modeled 
 
 **Native-Path Implementation Plan Landed (ADDED 2026-07-06, by Claude Code):**
 Canonical plan for the remaining scope: `implementation-plan/sovereign-redesign-cluster/implementation-plan.md` + companion `tasks.md` (8 stages: verify foundation, prototype-first pipeline proof, close P1/P5 backlog, build P2/P3 native, build P4, cross-cut integration, meta closure). Selected at a real `/implementation-plan` HITL Gate (Option F — prototype-first re-sequencing — over 5 alternatives) per explicit user selection, not assumed. Deliberately placed outside repo root: the root `implementation-plan.md` is a separate, unrelated, ongoing "Sovereign Verification-Spine Upgrade Campaign" with its own boot protocol — confirmed via direct read before choosing a location, not assumed compatible. This meta owns the pointer; the plan file owns the phase-by-phase substrate, per the same convention as the pillar pointers above.
+
+---
+
+## Closure Record (ADDED 2026-07-07, by Claude Code — Sovereign Redesign Cluster Stage 7, Meta Closure)
+
+This ticket's own **Root Cause Type** declares itself hybrid ("STRUCTURAL (primary; multiple tickets also carry SUBSTANTIVE-LOGIC elements; meta encompasses both)"). `helpdesk-tickets.md` Phase 4's fork model (Hardening Certificate for STRUCTURAL, Remediation Record for SUBSTANTIVE-LOGIC) was built for single-issue tickets; this closure synthesizes both dimensions honestly rather than forcing one template, citing the real evidence already on record rather than re-deriving it.
+
+### Per-Pillar Disposition (STRUCTURAL dimension)
+
+| Pillar | Delivered | Certification |
+|---|---|---|
+| **Pillar 1** — Context/Session Init | Recovered (10 real commits) + Stages 1-2 additions: `manifest.py` index-driven retarget, `phase_status.py`'s path-override fix, Doorway Design Invariant stated verbatim in 4 places. | No single workflow file to grade — constituent pieces verified via their own test suites (`test_doorway_auditor.py`, `test_integration.py`) and live runs, not a self-declared grade. |
+| **Pillar 2** — Design Orchestration | `design-orchestrator.md`, built from scratch (Stage 3). | Sovereign — genuine `/harden-workflow` pass, not self-declared: created at Structured, elevated only after all 6 structural criteria + 8 inter-workflow reference checks + linter gate verified. Full honest sequence preserved in that file's own Change Log entries 1-2. |
+| **Pillar 3** — Execution Delegation | `execute-build.md`'s Native Execution Trigger (Stage 4), exercised end-to-end twice — PR 05-04 (Stage 4) and PR 06-02 (Stage 6), on two genuinely different real backlog items, not the same prototype reused. | Sovereign (pre-existing grade, unchanged); the Trigger itself verified via two independent real executions, not a single demo. |
+| **Pillar 4** — Post-Build Hygiene/Archival | Completion Marking sub-pass (`implementation-plan.md` Phase 5), `templates/plan/`, `scripts/plan/ensure_plan_templates.py`, `/sentinel` Phase 1.6 (Stage 5); the mechanism's first-ever real `/nodelete --archive` invocation (Stage 6). | `implementation-plan.md` Sovereign (pre-existing, unchanged); `sentinel.md` Sovereign (pre-existing, unchanged); populator has 8 direct tests, `engine_utils.py` additions have 11. |
+| **Pillar 5** — Tooling/Linting/Governance | Distributed across every stage: receipt family (DESIGN_RECEIPTS/TRIAGE_RECEIPTS, Stage 2), linter test coverage (26 new tests, Stage 4), `helpdesk-tickets.md` Step 4d (Stage 6), cross-cutting Change Log sweep (Stage 6). | No single deliverable — verified piecemeal at each stage's own Build Audit, cited in `BUILD_RECEIPTS.md`. |
+
+### Real Defects Found and Fixed Along the Way (SUBSTANTIVE-LOGIC dimension)
+
+Not hypothetical, not manufactured to satisfy a checklist — each below was empirically discovered during real verification work, independent of what any stage set out to build:
+
+1. **Receipt heredoc bug** (Stage 2): a quoted heredoc delimiter suppressed all `$()` substitution across 6 workflow files' receipt-writing convention — every "atomic append" would have silently written literal `$(date...)` text. Fixed in all 6.
+2. **`check_glossary_usage` divider bug** (Stage 4): a markdown table's own divider row was matched as the GLOSSARY section terminator, permanently preventing unused-term detection. Named via ticket (`20260706_check-glossary-usage-divider-bug_workflow.md`, still open — code-logic fix explicitly out of that DESIGN's scope), not silently patched.
+3. **`.gitignore` never tracked** (Stage 4): a self-referential rule hid `.gitignore` from `git status` for 85 commits — a public-repo secrets-protection gap. Fixed, closed same-session (`CLOSED_20260706_gitignore-untracked-self-and-ledgers_workflow.md`).
+4. **`phase_status.py`'s hardcoded root-relative lookup** (Stage 1): couldn't verify a `tasks.md` outside workspace root. Fixed additively (optional path-override parameter), before three more stages could inherit the gap.
+5. **Doorway `create_readme()` data-loss defect** (Stage 6): no existence check before a destructive write — a stale carry-over signal could silently overwrite a real README. Found by a genuinely independent subagent review, not self-critique; fixed, closed with an honest Remediation Record correcting the original ticket's wrong "no data loss" framing (`CLOSED_20260705_doorway_lazy-scan-stale-readme_workflow.md`).
+6. **`.history/archive/` gitignored** (Stage 6): same failure shape as #3, different root cause (the gitignore-seeder's own seed config predated Pillar 6's archive/quarantine split). Fixed, closed same-session (`CLOSED_20260707_history-archive-gitignored_workflow.md`).
+
+### Verification
+
+- Full test suite: **238/238 → 295/295** (57 new tests across the cluster), zero silent regressions at any stage boundary.
+- Linter: **0 CRITICAL** maintained throughout every stage.
+- Every stage's `tasks.md` checkboxes carry cited evidence (commit hash, test count, or receipt reference) — not bare `[x]` marks.
+- `phase_status.py` independently confirms all of Stages 0-6 as `complete`/`found_complete` against the real tasks.md and `BUILD_RECEIPTS.md` — mechanically checked, not asserted (5 of those stages now also carry a live `**COMPLETED [ARCHIVE:...]**` marker from the Completion Marking sub-pass they themselves built).
+
+### Sibling & Source Ticket Disposition (per `helpdesk-tickets.md` Step 4d — no bulk-closure)
+
+**The 5 tickets this meta explicitly named as subsumed** (investigated directly in Stage 6 Task 6.1, not assumed from their own status fields): `20260704_lint-fix-hashes-gap` and `20260705_opencode-to-grok-build-transition` remain correctly, deliberately **OPEN** — both are explicit, prior user-directed deferrals, not defects awaiting a fix. `20260705_sentinel-doorway-redesign` and `20260705_triage-session-handover` remain **OPEN** with real, separate remaining work beyond this cluster's scope (confirmed via direct read of their own Section 4 checklists, not their status text). `20260705_doorway_lazy-scan-stale-readme` **CLOSED** (Stage 6, see above).
+
+**3 additional 2026-07-06 tickets, filed by Grok Build as primary source material for Pillars 2/3/4** (`20260706_execute-build_pointer_payload_formula_in_formula`, `20260706_implementation-plan-audit-nodelete-archival`, `20260706_sovereign-design-formula_pointer-payload`): all three remain **OPEN**. The substantive work each requested is now built, tested, and verified (see Per-Pillar Disposition above — these are the tickets Pillars 2, 3, and 4 were built to satisfy). **Deliberately not closed in this same pass**: each deserves its own proper Hardening Certificate (all three declare themselves STRUCTURAL, closing via `/harden-workflow --ticket`) citing the specific pillar evidence, rather than a rushed, undifferentiated triple-close appended to an already-long meta closure. Named explicitly here as near-term follow-up, not silently forgotten — the underlying design/build work is done; only the ticket-closure paperwork remains.
+
+**This meta ticket's own closure does not require any of the above to close first** — per the Step 4d protocol this cluster's own Stage 6 added to `helpdesk-tickets.md`, which this closure is itself the first real exercise of.
+
+### Deferred / Out of Scope (named, not silently dropped)
+
+- `20260706_check-glossary-usage-divider-bug_workflow.md` — code-logic fix, explicitly out of the DESIGN scope that found it.
+- `20260707_nested-tasks-md-receipt-title-mismatch_workflow.md` — a named, conservative-failure-direction limitation (refuses rather than mis-marks), not a defect requiring urgent action.
+- The 3 pillar-source tickets above — build work done, closure paperwork deferred.
+- Two unattributed files (`docs/workflow_length_analysis.html`, `scripts/suite/analyze_workflow_lengths.py`) appeared mid-Stage-6 from an untraced concurrent process — left untouched, excluded from every commit, flagged directly to the user.
