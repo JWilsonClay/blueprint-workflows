@@ -43,8 +43,12 @@ DEFAULT_SEED = {
         },
         "noise": {
             "title": "Common noise (build artifacts, caches, editor cruft)",
+            # [CORRECTED 2026-07-07, mirrors seed.toml] "dist/"/"build/" anchored
+            # to repo root -- unanchored, they silently ignored this suite's own
+            # scripts/build/ engine package. See seed.toml's comment for the
+            # rationale.
             "patterns": ["__pycache__/", "*.pyc", ".venv/", "node_modules/",
-                         "dist/", "build/", ".DS_Store", "*.log", ".idea/",
+                         "/dist/", "/build/", ".DS_Store", "*.log", ".idea/",
                          ".vscode/"],
         },
     }

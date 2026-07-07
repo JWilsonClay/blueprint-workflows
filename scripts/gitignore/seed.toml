@@ -51,8 +51,14 @@ patterns = [
     "*.pyc",
     ".venv/",
     "node_modules/",
-    "dist/",
-    "build/",
+    # [CORRECTED 2026-07-07] "dist/"/"build/" (unanchored) match at any depth,
+    # silently ignoring this suite's own scripts/build/ engine package (the
+    # /execute-build Build Evidence Engine, implementation-plan.md Phase 4.2)
+    # -- discovered live when it failed to appear in `git status`. Anchored to
+    # repo root: this workspace is a workflow library, not a bundled app, so
+    # there is no legitimate nested dist/build/ dir this repo itself produces.
+    "/dist/",
+    "/build/",
     ".DS_Store",
     "*.log",
     ".idea/",

@@ -1,10 +1,10 @@
 ---
-description: "Sovereign Build Agent — implements each phase of tasks.md with surgical precision, regression awareness, and a closed-loop audit gate. Run after /focus-plan and tasks.md generation."
+description: "Sovereign Build Agent — implements each phase of tasks.md with surgical precision, regression awareness, and a closed-loop audit gate. Run after /focus-plan and tasks.md generation. v6: script-backed by the Build Evidence Engine (scripts/build/build_audit.py) for Phase Map/receipt status and the Completeness Scan/Scope Diff gates."
 type: execution
 grade: Sovereign
-version: 5
-content_hash: "sha256:158d62cbfc3e8481"
-last_hardened: "2026-07-04"
+version: 6
+content_hash: "sha256:cdb1edcd500a4662"
+last_hardened: "2026-07-07"
 strict_rule_count: 18
 phase_count: 7
 context_retention: high
@@ -14,6 +14,8 @@ dependencies:
   - "/continuous-verify"
   - "/harden"
   - "/divergence"
+  - "scripts/build/build_audit.py"
+  - "scripts/focus/phase_status.py"
 triggers:
   - "/triage"
   - "/focus-plan"
@@ -63,6 +65,7 @@ You must follow the exact closed-loop workflow below for every phase. Never skip
 | **Substrate Hygiene Gate (5h)** | Advisory sub-gate invoking `/divergence --convergence`, scoped only to this phase's touched files, to catch dead substrate the build itself manufactured before it accumulates. Routes confirmed candidates to `/nodelete` (surgical) or `/depreciate` (heavy); never deletes directly. |
 | **Turn-Boundary Pause Protocol** | **[2026-07-04]** Canonical principle at `personality.md` Section 8, reinforced here by STRICT RULE 16: a user pause signal never halts a phase incomplete, and caps this workflow's own normal autonomous phase-to-phase continuation at the phase already underway. |
 | **Native Execution Trigger** | **[ADDED 2026-07-06, PILLAR_03_EXECUTION_DELEGATION_FORMULA.md §15]** Phase 0a's fallback when `<TASKS_FILE>` doesn't exist: detect a `docs/DESIGN_*.md` with a `## PR Plan`, run `/implementation-plan` against it to produce a real `tasks.md`, then continue Phase 0 normally. Glue to the existing engine — not new execution machinery, and not a Grok delegation adapter. The Grok-delegated alternative (§15's other branch) requires confirmed tool-calling capability and session authorization; native is the default. |
+| **Build Evidence Engine** | **[ADDED 2026-07-07, implementation-plan.md Phase 4.2]** `scripts/build/build_audit.py` — the read-only mechanical layer behind Step 0b/0d/6 (Phase Map + receipt status, via the existing `scripts/focus/phase_status.py`, not duplicated) and Step 5d/5f (Completeness Scan, Scope Diff). Reports facts only — marker matches, set differences, checkbox tallies — never judgment. Architectural sibling of `scripts/doorway/` (backs `/sentinel`) and `scripts/focus/` (backs `/focus-plan`). |
 
 ---
 
@@ -83,11 +86,22 @@ Before any build begins, anchor the workspace. This phase runs exactly once per 
     Store all found paths.
 
 0b. Parse tasks.md — Build the Phase Map
-    Read <TASKS_FILE> in full. Extract:
-    - Every phase (top-level grouping)
-    - Every task within each phase, with its current completion state: `[ ]`, `[/]`, or `[x]`
+    **[ENGINE-BACKED — ADDED 2026-07-07, implementation-plan.md Phase 4.2]** The phase/task
+    checkbox tally and receipt cross-reference are mechanical facts — get them from the engine,
+    not by eye:
+    ```bash
+    python3 ~/blueprint-workflows/scripts/build/build_audit.py --workspace {WORKSPACE} --tasks-md {TASKS_FILE} --output-json
+    ```
+    This reports each phase's title, checkbox tally (`done`/`open`/`in_progress`), derived
+    `status`, and `receipt_status` (cross-referenced against `BUILD_RECEIPTS.md`) — read
+    `phase_status.phases` from the JSON. If the engine is unavailable (Python 3 missing, script
+    not found): fall back to reading <TASKS_FILE> directly and extracting the same facts by eye;
+    note the fallback in the Build Log.
+
+    The engine reports facts only, never judgment — still read <TASKS_FILE> directly for:
     - Any explicit acceptance criteria or success conditions noted per task or phase
     - Dependencies between phases (Phase 3 may depend on Phase 2 completion)
+
     Produce a PHASE MAP — a numbered list of all phases and their task counts:
     ```
     PHASE MAP:
@@ -230,9 +244,22 @@ This is the most critical step. Do not mark a phase complete without passing thi
       → If NO: certify with: "Regression Guard: CLEAR — Phase N code does not contradict intent, prior contracts, or prior build artifacts."
 
 5d. **Completeness Scan**
-    Search every file created or modified in this phase for:
-    - `TODO`, `FIXME`, `HACK`, `PLACEHOLDER`, `pass` (in Python where non-trivial logic is expected), empty function bodies, `raise NotImplementedError`
-    Any of these found without explicit justification = the phase is not complete. Implement them now.
+    **[ENGINE-BACKED — ADDED 2026-07-07, implementation-plan.md Phase 4.2]** The marker search
+    itself is mechanical — a script cannot hallucinate whether `TODO` appears in a file:
+    ```bash
+    python3 ~/blueprint-workflows/scripts/build/build_audit.py --workspace {WORKSPACE} --phase-files {FILES_CREATED_OR_MODIFIED_THIS_PHASE} --output-json
+    ```
+    Read `completeness` from the JSON — a flat list of `{file, line, marker, snippet}` for every
+    `TODO`/`FIXME`/`HACK`/`PLACEHOLDER`/bare-`pass`/`raise NotImplementedError` match. If the
+    engine is unavailable: fall back to grepping the same markers by hand; note the fallback in
+    the Build Log.
+
+    **The engine reports matches only — it never judges whether a match is justified.** That
+    judgment stays here: for each match, decide whether it is explicit, warranted justification
+    (e.g. a `pass` in an abstract base method) or an unfinished stub. Any match without explicit
+    justification = the phase is not complete. Implement it now. A `0 markers found` result is
+    a fact about this phase's files, not a quality verdict — it says nothing about whether the
+    code is otherwise complete or correct.
 
 5e. **Syntax & Import Verification**
     ```bash
@@ -249,10 +276,24 @@ This is the most critical step. Do not mark a phase complete without passing thi
     If tests exist for this phase's code: run them now. All tests must pass.
 
 5f. **Scope Compliance Check**
-    List every file created or modified during this phase.
-    For each file: confirm it was within the declared scope of <ACTIVE_PHASE>.
-    If any out-of-scope file was modified: document why and whether it was warranted.
-    Unauthorized scope expansion = build drift = a finding to surface to the user.
+    **[ENGINE-BACKED — ADDED 2026-07-07, implementation-plan.md Phase 4.2]** The set of files
+    actually touched, versus what was declared, is a mechanical fact — a script cannot hallucinate
+    a `git status` result:
+    ```bash
+    python3 ~/blueprint-workflows/scripts/build/build_audit.py --workspace {WORKSPACE} --declared-scope {ACTIVE_PHASE_DECLARED_FILES} --output-json
+    ```
+    Read `scope_diff` from the JSON — `touched_not_declared` (files changed but not in scope),
+    `declared_not_touched` (declared but never touched — may be fine if a task turned out
+    unnecessary, or may signal an incomplete phase), and `declared_and_touched`. If
+    `git_available` is `false` (not a git repo, or git unavailable): this check is
+    **unverifiable, not scope-compliant by default** — fall back to manually listing touched
+    files and comparing against the declared scope; note the fallback in the Build Log.
+
+    **The engine reports the set difference only — it never judges whether a deviation was
+    warranted.** That judgment stays here: for each `touched_not_declared` file, document why it
+    was touched and whether it was warranted. Unauthorized scope expansion = build drift = a
+    finding to surface to the user. An empty `touched_not_declared` list is a fact about this
+    phase's file set, not a certification that the build itself stayed correctly scoped in intent.
 
 5g. **Continuous Plan Verification Gate** — [INJECTED 2026-05-07]
     *Invokes: `/continuous-verify` — full protocol at `~/.claude/commands/continuous-verify.md`*
@@ -453,6 +494,8 @@ This workflow is designed to operate in this sequence within the broader develop
   1. /focus-plan          → Verify implementation_plan.md is complete and contradiction-free
   2. [Generate tasks.md]  → Agent breaks implementation_plan.md into phased tasks.md
   3. /execute-build       → THIS WORKFLOW — implement each phase of tasks.md
+     └─ Step 0b/0d/6      → scripts/build/build_audit.py (Phase Map + receipt status, via scripts/focus/phase_status.py)
+     └─ Step 5d/5f        → scripts/build/build_audit.py (Completeness Scan, Scope Diff)
      └─ Step 5g           → /continuous-verify gate runs inside each phase's Build Audit
      └─ Step 5h           → /divergence --convergence detects dead substrate; routes to /nodelete or /depreciate
   4. /iterate-test        → Validate each built stage in isolation
@@ -482,6 +525,7 @@ Activation in Claude Code:
 8. **2026-07-06**: `[INJECTED — P5 pr-05-00 linter excludes + hashes convention + dir gate, per Master Execution Plan Phase A / PILLAR_05]` Linter excludes for claude-commands/README.md (nav file with no frontmatter by design) added to models + lint_workflows.py filter (0 CRITICAL on nav README baseline). --fix-hashes convention decided: content hashes computed via `lint_workflows.py --fix-hashes` and pasted by hand (tool remains print-only; updated help + output phrasing). Dir gate generalized in checks.py + models (GROK_BUILD_DIR added); runtime availability now covers Grok Build (single INFO note pattern). Accurate convention phrasing recorded here; prior entries' "recomputed via" references clarified by this decision (no content change to hashes). See also secretary.md and helpdesk-tickets.md Change Logs, DESIGN_Sovereign_Redesign_Cluster_Canonical.md, PILLAR_05. /nodelete observed (append). Smallest additive change.
 9. **2026-07-06**: `[FIXED — receipt heredoc evaluation, Sovereign Redesign Cluster Stage 2, /nodelete]` Both the Step 6 Phase Build Receipt writer and the Step 7 Final Build Receipt writer used a quoted heredoc delimiter (`<< 'RECEIPT_EOF'`), which suppresses ALL `$()` command substitution inside the block — `$(date +%Y-%m-%d)` and `$(git -C "$(dirname <TASKS_FILE>)" rev-parse --short HEAD ...)` were never evaluated, so a receipt written by literally following this file's own instructions would contain the literal shell syntax as text instead of a real date/commit hash. Discovered live this session: this exact cluster's own first two `BUILD_RECEIPTS.md` entries (Stage 0, Stage 1 of `implementation-plan/sovereign-redesign-cluster/tasks.md`) carry the unevaluated `$(git rev-parse --short HEAD ...)` text in their Commit line — corrected via appended, dated notes rather than rewritten, per /nodelete. Fixed by unquoting both delimiters (`<< RECEIPT_EOF`); confirmed no backticks in either receipt body (unquoting a heredoc also enables backtick command substitution, a second failure mode if present — checked, absent for both). The identical defect, from the identical documented pattern, was found in and fixed for `triage.md`, `document.md`, `soc.md`, `harden.md`, and `iterate-test.md` — see their own Change Logs. `HARDEN_GRADES.md` and `DOCS_RECEIPTS.md` (this repo's own pre-existing receipts) were checked and do not carry the defect — prior agents evidently pre-substituted real values by hand rather than relying on the documented live-evaluation mechanism, meaning this bug has been latent in the documented convention without ever previously manifesting in a persisted file until this session.
 10. **2026-07-06**: `[INJECTED — Sovereign Redesign Cluster Stage 4, PILLAR_03_EXECUTION_DELEGATION_FORMULA.md §15, /nodelete]` Added the Native Execution Trigger to Phase 0a: when `<TASKS_FILE>` is absent, check for a `docs/DESIGN_*.md` with a `## PR Plan` before informing the user — if present, run `/implementation-plan` against it to produce `<TASKS_FILE>`, then continue Phase 0 unmodified. This is glue between three already-existing engines (`/design-orchestrator`, `/implementation-plan`, this workflow's own Phase 0-7 loop), not new execution machinery, and explicitly not a Grok delegation adapter — the Grok-delegated alternative from the original PILLAR_03 design remains available but is gated on confirmed tool-calling capability and session authorization, never assumed. GLOSSARY term added (Native Execution Trigger). STRICT RULES 17-18 added (16→18): never assume Grok availability (17); traceable provenance for the native handoff in the Build Log — no unattributed `tasks.md` appearing from nowhere (18, the Ghost-Logic guard for this specific trigger). INTEGRATION section updated. `strict_rule_count` 16→18, `version` 4→5.
+11. **2026-07-07**: `[BUILT — Build Evidence Engine, Verification-Spine Upgrade, implementation-plan.md Phase 4.1-4.2, /nodelete]` Ran Honest-Design Discipline fresh against this file (the 2026-06-02 seed design predates the STRICT RULE 15-16 additions and this workflow's current shape) — result staged at `docs/compression-staging/execute-build-honest-design.md`. **Built `scripts/build/`**: a read-only engine (`evidence.py`, `reporter.py`, `build_audit.py` CLI, 15 passing tests including a not-a-git-repo degradation case, a rename-handling case, and an explicit read-only invariant test) providing two genuinely new mechanical checks — a Completeness Scan marker-match list (Step 5d: `TODO`/`FIXME`/`HACK`/`PLACEHOLDER`/bare-`pass`/`raise NotImplementedError`, fence-aware) and a Scope Diff set-difference (Step 5f: declared file scope vs. `git status --porcelain`, both read-only, neither judging "justified" or "warranted" — that stays with the model). Deliberately does NOT duplicate `scripts/focus/phase_status.py`'s existing Phase Map/receipt-cross-reference logic (built 2026-06-30/07-04 for `/focus-plan` + `/nodelete`, discovered already covering 3 of the seed design's original 4 proposed mechanical items) — Steps 0b/0d/6 now call it directly instead. The seed design's 4th item (frontmatter `phase_count` coherence) did not survive re-application of the Mock-Trap test and was dropped, not built — see the staged design doc for why. **Wired**: Step 0b (Phase Map via engine, judgment items — acceptance criteria, dependencies — still read directly), Step 5d (Completeness Scan via engine, justification judgment retained), Step 5f (Scope Diff via engine, warranted-deviation judgment retained). Each wired step keeps an explicit manual-fallback instruction if the engine is unavailable. GLOSSARY term added (Build Evidence Engine). `scripts/build/build_audit.py` and `scripts/focus/phase_status.py` added to frontmatter `dependencies`. No STRICT RULE added — the existing STRICT RULES already require Acceptance Criteria verification (5a), the Regression Guard (8), and scope discipline (9); the engine changes how facts are gathered for those rules, not what the rules require. Frontmatter: version 5→6, `last_hardened` 2026-07-07, `content_hash` recomputed via `--fix-hashes`. `strict_rule_count` unchanged at 18. Resolves `helpdesk-tickets/CLOSED_20260707_execute-build-engine-gap_workflow.md`.
 
 **Hardening Certificate — /execute-build (2026-07-04)**
 
