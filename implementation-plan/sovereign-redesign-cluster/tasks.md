@@ -116,14 +116,14 @@
 **Read before starting:** `claude-commands/helpdesk-tickets.md` Phase 4 (Phylogeny Disposition, Remediation Record, closure protocol) in full.
 **Dependencies:** Stage 6.
 
-- [ ] 7.1 Resolve Phylogeny Disposition for the meta-ticket: `NO TRANSFER` or a `SUITE_PHYLOGENY.md` entry, per protocol.
-- [ ] 7.2 Attach a Remediation Record (if any element of this cluster is ultimately classified SUBSTANTIVE-LOGIC) or Hardening Certificate (STRUCTURAL) — per the fork this suite's own protocol already uses.
-- [ ] 7.3 Rename `helpdesk-tickets/20260706_sovereign-redesign-cluster_meta_workflow.md` → `CLOSED_20260706_sovereign-redesign-cluster_meta_workflow.md`.
-- [ ] 7.4 Supersede any still-open SUITE_HEALTH advisories this cluster resolves.
-- [ ] 7.5 Append to `process_learnings/PROCESS_LEARNINGS.md` — including this session's own lessons (Grok Build's real cost surprised the user; a "successful" git merge silently truncated real content and needed line-by-line re-verification to catch) as named, reusable lessons, not just cluster-specific notes.
-- [ ] 7.6 Run `/secretary` + `/retrospective` for full session close.
+- [x] 7.1 Resolve Phylogeny Disposition for the meta-ticket: `NO TRANSFER` or a `SUITE_PHYLOGENY.md` entry, per protocol. **Done: real lineage entry, not defaulted — 3 genuine transfers documented (Agent Capability Gate across PILLAR_02/03; the Verified-Completion Gate's predicted 2026-06-12 arrival at /execute-build's ecosystem; a partial, honestly-incomplete response to a still-open 2026-07-05 `assert_within` recommendation).**
+- [x] 7.2 Attach a Remediation Record (if any element of this cluster is ultimately classified SUBSTANTIVE-LOGIC) or Hardening Certificate (STRUCTURAL) — per the fork this suite's own protocol already uses. **Done: a hybrid Closure Record (the ticket declares itself both) — per-pillar certification table, 6 real defects found and fixed cited with evidence, 238→295 test delta, honest sibling/source ticket disposition.**
+- [x] 7.3 Rename `helpdesk-tickets/20260706_sovereign-redesign-cluster_meta_workflow.md` → `CLOSED_20260706_sovereign-redesign-cluster_meta_workflow.md`. **Done — actual filesystem rename executed, git confirms as a tracked rename.**
+- [x] 7.4 Supersede any still-open SUITE_HEALTH advisories this cluster resolves. **Done — already fully resolved in Stage 6; reverified zero ADVISORY entries remain, not assumed.**
+- [x] 7.5 Append to `process_learnings/PROCESS_LEARNINGS.md` — including this session's own lessons (Grok Build's real cost surprised the user; a "successful" git merge silently truncated real content and needed line-by-line re-verification to catch) as named, reusable lessons, not just cluster-specific notes. **Done, plus two new named patterns this cluster itself generated: independent review catching what self-critique cannot even under /quality Maximum (with a concrete cited instance), and a workflow improvement proposal (mechanical ticket-closure-mismatch detector) directly motivated by a gap this very stage caught by hand.**
+- [x] 7.6 Run `/secretary` + `/retrospective` for full session close. **Done: HANDOFF.md rewritten (pre-flight anomaly scan clean), ANOMALY_LOG.md appended (NO ANOMALIES), Retrospective Lag check run (found and worked around a minor multi-shard command limitation in secretary.md's own prescribed check; answered correctly by direct verification — NO GAP), TRIAGE_RECEIPTS/DESIGN_RECEIPTS consumed, Secretary Receipt emitted.**
 
-**Acceptance criteria:** meta-ticket is `CLOSED_`, Phylogeny resolved, Remediation Record/Hardening Certificate attached, PROCESS_LEARNINGS updated, `/secretary` close completed with a clean HANDOFF.md.
+**Acceptance criteria:** meta-ticket is `CLOSED_`, Phylogeny resolved, Remediation Record/Hardening Certificate attached, PROCESS_LEARNINGS updated, `/secretary` close completed with a clean HANDOFF.md. **Met — see Stage 7 Phase Build Receipt below. Full cluster complete: all 7 stages `[x]` with receipts on file.**
 
 ---
 
