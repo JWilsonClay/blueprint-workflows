@@ -1,10 +1,10 @@
 ---
-description: "The Triage Desk — reads workspace state, recommends which workflows to run. Optional intent passed as argument after the command."
+description: "The Triage Desk — reads workspace state, recommends which workflows to run. Optional intent passed as argument after the command. v4: script-backed by the Triage Evidence Engine (scripts/triage/triage_audit.py) for task/phase state, receipt coverage, and Trigger Matrix completeness."
 type: meta
 grade: Sovereign
-version: 3
-content_hash: "sha256:b28ffa5fec758631"
-last_hardened: "2026-05-25"
+version: 4
+content_hash: "sha256:dc3b9ab8df123119"
+last_hardened: "2026-07-07"
 strict_rule_count: 11
 phase_count: 3
 context_retention: medium
@@ -14,6 +14,7 @@ dependencies:
   - "/workstream"
   - "/implementation-plan"
   - "/quality"
+  - "scripts/triage/triage_audit.py"
 triggers:
   - "/sentinel"
   - "/harden-workflow"
@@ -55,6 +56,7 @@ platform_requirements:
 | **Failure pattern** | A named class of agent failure documented in the Sovereign Suite. Relevant patterns for /triage: Hallucinated Success, Context Erosion, Ghost Logic. See Finding hooks in Phase 1. |
 | **Hallucinated Success** | Agent reports a workflow as complete or unnecessary without verifiable evidence. In /triage context: recommending "NO ACTION NEEDED" for a workflow without actually evaluating its triggers. |
 | **Context Erosion** | Triage analysis becomes less rigorous over a long session — triggers evaluated shallowly, evidence becomes vague. Countermeasure: re-read STRICT RULES before producing the report. |
+| **Triage Evidence Engine** | **[ADDED 2026-07-07, implementation-plan.md Phase 4.5]** `scripts/triage/triage_audit.py` — the read-only mechanical layer behind Phase 0b/0c (task/phase state and receipt coverage, via direct reuse of `scripts/focus/phase_status.py` and `scripts/receipt/coverage.py` — not duplicated) and the Phase 2 Trigger Matrix Completeness Gate. Reports facts only — checkbox tallies, receipt presence, workflow-name presence in report text — never whether a trigger was evaluated with genuine rigor or which priority a finding deserves. Architectural sibling of `scripts/build/` and `scripts/secretary/`. |
 
 ---
 
@@ -98,18 +100,25 @@ git log --oneline -20               # recent commit history, frequency, message 
 git log --since="7 days ago" --oneline | wc -l  # velocity proxy
 ```
 
-**0b. Tasks & Plan State**
-- Does `tasks.md` exist? Read it fully.
-  - Count tasks by state: `[ ]` (pending), `[/]` (orphaned in-progress), `[x]` (complete)
-  - Note the last completed phase and whether any phase is partially done
+**0b. Tasks & Plan State** **[ENGINE-BACKED — ADDED 2026-07-07, implementation-plan.md Phase 4.5]**
+
+The checkbox tally and orphaned-in-progress detection are mechanical facts — get them from the engine rather than hand-counting (this reuses `scripts/focus/phase_status.py` directly, not a new parser):
+
+```bash
+python3 ~/blueprint-workflows/scripts/triage/triage_audit.py --workspace . --output-json
+```
+
+Read `phase_status.phases` from the JSON — each phase's checkbox tally and derived `status` (`in_progress` IS the orphaned-in-progress signal). If the engine is unavailable: fall back to reading `tasks.md` directly and counting `[ ]`/`[/]`/`[x]` by eye; note the fallback in the report.
+
 - Does `implementation_plan.md` exist? Note its last-modified timestamp.
 - Is `implementation_plan.md` newer than the last known verification activity?
 
-**0c. Receipt State** (check `.workflow_state/receipts/` if it exists)
-- Are Build Receipts present? For which phases?
-- Are Validation Receipts present? For which stages?
-- Are Harden Grades recorded? For which files? What grades?
-- Is TRIAGE_RECEIPTS.md present? Note last date or count of entries (P5 consumption).
+**0c. Receipt State** **[ENGINE-BACKED — ADDED 2026-07-07, implementation-plan.md Phase 4.5]**
+
+Receipt-file presence is a mechanical fact — the same `triage_audit.py` call above also returns `receipt_coverage` (reusing `scripts/receipt/coverage.py` directly, the same engine `/receipt-check` already uses):
+
+Read `receipt_coverage.receipt_files_present` from the JSON — `build`/`validation`/`harden`/`docs`/`design`/`triage` booleans. If `tasks_md_found: false` or the engine is unavailable: fall back to manually checking `.workflow_state/receipts/` for each receipt file; note the fallback in the report.
+
 - If receipts directory does not exist: this is itself a signal — receipt infrastructure not yet established.
 
 **0d. File Modification State**
@@ -423,6 +432,16 @@ FAILURE SIGNALS DETECTED: [none / list pattern names and evidence source]
 **[INJECTION — 2026-05-11] /nodelete discipline — Report Records:**
 If Triage Reports are appended to a governance or journal file: append only. Never overwrite a prior report. Each report is a dated record. Two triage runs on the same day produce two dated entries. Prior reports are historical; the most recent is current. A prior report is never deleted to make room for a new one.
 
+**[ENGINE-BACKED — ADDED 2026-07-07, implementation-plan.md Phase 4.5]** Trigger Matrix Completeness Gate — after drafting the report above, before presenting it to the user, confirm mechanically that every Trigger Matrix workflow is actually mentioned (STRICT RULES 3 and 9 both name this as the same guarantee, restated a third time by Phase 1's own "Completeness requirement" — this gate is the structural backing all three already ask for):
+
+```bash
+python3 ~/blueprint-workflows/scripts/triage/triage_audit.py --workspace . --report-text "{DRAFT_REPORT_TEXT}" --output-json
+```
+
+Read `completeness.missing_from_report` from the JSON. If non-empty: the draft is incomplete — add the missing workflow(s) to "NO ACTION NEEDED" (with genuine trigger evaluation, not a rubber-stamp addition to pass the check) or to RECOMMENDATIONS if a trigger genuinely fires, before presenting the report. If the engine is unavailable: fall back to manually cross-checking the report against the Trigger Matrix's block headers below; note the fallback in the report.
+
+**What this gate does NOT verify, stated honestly**: mechanical presence of a workflow's name in the report text is not proof its triggers were evaluated with genuine rigor — a name could still be pasted into "NO ACTION NEEDED" without real evaluation. This gate closes the narrower, purely mechanical failure STRICT RULES 3/9 actually describe (a workflow silently missing from the report entirely), not the deeper judgment failure of a shallow evaluation. Do not read a `missing_from_report: []` result as proof of rigor — only as proof of mention.
+
 **[STAGE 1a — TRIAGE_RECEIPTS.md writer — INJECTED 2026-07-06, pr-05-02, PILLAR_05, /nodelete]**
 After emitting the Triage Report to chat, persist a verbatim report block using atomic append (exact heredoc parity to BUILD_RECEIPTS in execute-build.md:350). Use workspace root for the receipts dir. This implements triage handover persistence (P5 / P1 cross; on user signals like "wrap up", "handover", "close session", "end", "reset", "finish" in SESSION_INTENT or at session end; always safe to emit as the triage report itself is the handover record).
 
@@ -474,6 +493,8 @@ This workflow operates at the intake layer of the workspace:
 
   1. /sentinel or session start → THIS WORKFLOW
   2. /triage   → Recommends execution pathways
+     └─ Phase 0b/0c → scripts/triage/triage_audit.py (task/phase state via phase_status.py, receipt coverage via coverage.py)
+     └─ Phase 2      → scripts/triage/triage_audit.py (Trigger Matrix Completeness Gate)
   3. /[recommended workflow] → Execution
 
 Activation in Claude Code:
@@ -500,3 +521,4 @@ Typical invocation triggers:
 10. **2026-07-06**: `[INJECTED — pr-05-02, PILLAR_05, /nodelete]` Added TRIAGE_RECEIPTS.md emission (atomic cat >> heredoc after report, matching BUILD_RECEIPTS format exactly). Added GLOSSARY entry, frontmatter produces, Phase 0 consumption read of TRIAGE_RECEIPTS.md. Implements triage persistence + handover record per PILLAR_05 §4.5. Smallest additive change; no overwrite.
 11. **2026-07-06**: `[FIXED — receipt heredoc evaluation, Sovereign Redesign Cluster Stage 2, /nodelete]` The STAGE 1a `TRIAGE_RECEIPTS.md` writer (added in entry 10, same day) used a quoted heredoc delimiter (`<< 'RECEIPT_EOF'`), which suppresses ALL `$()` command substitution inside the block. Discovered live the first time this pattern was actually exercised end-to-end: `$(date +%Y-%m-%d)` and `$(git rev-parse --short HEAD ...)` were never evaluated, and the resulting `TRIAGE_RECEIPTS.md` entry contained the literal shell syntax as text instead of a real date/commit hash. Fixed by unquoting the delimiter (`<< RECEIPT_EOF`); confirmed no backticks exist in the receipt body (unquoting a heredoc also enables backtick command substitution, a second failure mode if present — checked, absent). Verified with a live re-run producing a correctly-evaluated entry. The same defect, from the identical documented pattern, was found in and fixed for `execute-build.md`'s BUILD_RECEIPTS writer, `document.md`, `soc.md`, `harden.md`, and `iterate-test.md` — see their own Change Logs. `HARDEN_GRADES.md`'s and `DOCS_RECEIPTS.md`'s existing entries were checked and do not carry the defect (prior agents evidently pre-substituted real values by hand rather than relying on live evaluation) — this session's own first `BUILD_RECEIPTS.md` and `TRIAGE_RECEIPTS.md` entries are the first real instances of the bug actually manifesting in a persisted file, corrected in place via appended, dated notes per /nodelete.
 12. **2026-07-06**: `[INJECTED — Sovereign Redesign Cluster Stage 3, PILLAR_02 PR 02-06, /nodelete]` Added a Trigger Matrix block for `/design-orchestrator`: fires P1 (P0 if intent names "design"/"architect") when a stated design intent has no governing DESIGN_*.md or implementation-plan.md yet. Pairs with the workflow's own creation this same stage.
+13. **2026-07-07**: `[BUILT — Triage Evidence Engine, Verification-Spine Upgrade, implementation-plan.md Phase 4.4-4.5, /nodelete]` Ran Honest-Design Discipline fresh against this file — result staged at `docs/compression-staging/triage-honest-design.md`. **Finding**: `/triage` already reuses three existing engines directly in its Trigger Matrix (`harden_audit.py`, `iterate_audit.py`, `quality_audit.py`) plus `lint_workflows.py --quiet` — confirmed as a working precedent, no correction needed there. Two Phase 0 steps duplicated engine logic that exists elsewhere: 0b hand-counted what `scripts/focus/phase_status.py` already computes; 0c hand-checked what `scripts/receipt/coverage.py`'s `compute_coverage()` already computes. Neither needed new code — pure wiring. One genuinely new mechanical check: **Trigger Matrix completeness**, directly defending STRICT RULES 3 and 9 (both independently state the same guarantee — omitting a workflow from the report is Hallucinated Success) and Phase 1's own injected "Completeness requirement," which restates it a third time. **Built `scripts/triage/`**: a read-only engine (`matrix_completeness.py` — `extract_matrix_workflows()` regex-parses `triage.md`'s own `### Trigger Matrix` block headers, scoped to that section only; `check_report_completeness()` reports which matrix workflows are absent from a given report text as a pure set-difference; `reporter.py`; `triage_audit.py` CLI, which also directly imports and calls `phase_status.build_phase_status_report()` and `receipt.coverage.compute_coverage()` rather than re-parsing either). 13 new tests (`scripts/tests/test_triage_evidence.py`) including a read-only invariant test; caught and fixed a real regex bug during test-writing — the `/quality` header's annotation ("(audit trigger)") sits INSIDE the same bold span as the name, so the closing `**` does not immediately follow the name's backtick the way plain headers' does; the original regex required exactly that, silently missing every annotated header. Fixed by dropping the trailing `**` requirement, anchoring only on "line starts with `**` immediately followed by a backtick-wrapped name." Full suite 355/355 passing (up from 342 pre-task). Live-run against this actual `triage.md` confirmed correct extraction (25 distinct workflow entries, correctly distinguishing flagged variants like `/implementation-plan --workstreams` from the bare `/implementation-plan` row, correctly deduping `/focus-plan`'s two annotated blocks to one entry). **Wired**: Phase 0b (task/phase state via engine), Phase 0c (receipt state via engine), and a new Trigger Matrix Completeness Gate in Phase 2 (before the report is presented) — each keeps an explicit manual-fallback instruction and an explicit, honest statement of what the completeness gate does NOT verify (mechanical presence of a name is not proof of genuine trigger-evaluation rigor). GLOSSARY term added (Triage Evidence Engine). `scripts/triage/triage_audit.py` added to frontmatter `dependencies`. No STRICT RULE added — existing Rules 3/9 already require the guarantee this engine backs; the engine changes how completeness is confirmed, not what the rules require. Frontmatter: version 3→4, `last_hardened` 2026-07-07, `content_hash` recomputed via `--fix-hashes`. `strict_rule_count` unchanged at 11. Resolves `helpdesk-tickets/CLOSED_20260707_triage-engine-gap_workflow.md`.
