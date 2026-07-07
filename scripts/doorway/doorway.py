@@ -104,13 +104,22 @@ class DoorwayContextualizer:
         workspace:    Resolved absolute Path to the target workspace root.
         quiet:        Suppress verbose console output.
         output_json:  Emit results as JSON instead of human-readable output.
+        readme_autoheal: Opt-in override for README.md self-healing (default
+            False — see Doorway Design Invariant, module docstring, and
+            IntegrityManager's 2026-07-07 entry). Exists so callers that
+            specifically need the legacy materialize-on-demand behavior
+            (e.g. targeted regression tests) can request it explicitly.
     """
 
-    def __init__(self, workspace: Path, quiet: bool = False, output_json: bool = False, context_only: bool = False):
+    def __init__(
+        self, workspace: Path, quiet: bool = False, output_json: bool = False,
+        context_only: bool = False, readme_autoheal: bool = False,
+    ):
         self.workspace = workspace
         self.quiet = quiet
         self.output_json = output_json
         self.context_only = context_only  # PR 01-01 CLI for minimal substrate payload
+        self.readme_autoheal = readme_autoheal
 
         # Data directory: {workspace}/.doorway/
         self.data_dir = workspace / DOORWAY_DATA_DIR_NAME
@@ -139,7 +148,12 @@ class DoorwayContextualizer:
         self.scanner = WorkspaceScanner(workspace, IGNORE_DIRS, README_EXCLUDE_DIRS)
         self.breadcrumb_manager = BreadcrumbManager(workspace, self.update_log)
         self.integrity_manager = IntegrityManager(
-            workspace, self.primary_templates, self.backup_templates, README_EXCLUDE_DIRS
+            workspace, self.primary_templates, self.backup_templates, README_EXCLUDE_DIRS,
+            autoheal_enabled=self.readme_autoheal,  # [2026-07-07] Doorway Design Invariant
+                                      # (L31-36): context comes from substrate_index.json, not
+                                      # README cardinality. Opt-in, default False; threaded from
+                                      # the constructor rather than hardcoded so callers that
+                                      # genuinely need it (e.g. targeted tests) can opt in.
         )
         self.auditor = StructuralAuditor(
             workspace,

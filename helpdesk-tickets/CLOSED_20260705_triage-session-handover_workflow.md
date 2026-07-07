@@ -220,10 +220,29 @@ Add an optional **Phase 2b — Report Persistence** to `/triage`: when the user 
 
 ---
 
-**Status**: **OPEN**
-**Verification**: PENDING — incoming agent acknowledges read order, re-runs verification commands in Section 4, and either executes prioritized work or files a follow-up ticket with updated state.
+## 6. Remediation Record (2026-07-07, Sovereign Scaling Cluster)
+
+**Verified, not assumed:** this ticket's one live, unimplemented recommendation (§5 — a `TRIAGE_RECEIPTS.md` persistence channel) was independently confirmed already built, checked directly against the live file rather than trusted from any prior claim:
+
+- `.workflow_state/receipts/TRIAGE_RECEIPTS.md` exists on disk.
+- `claude-commands/triage.md:426` — `**[STAGE 1a — TRIAGE_RECEIPTS.md writer — INJECTED 2026-07-06, pr-05-02, PILLAR_05, /nodelete]**`, with a `cat >> ".workflow_state/receipts/TRIAGE_RECEIPTS.md"` heredoc writer at `:431`, matching the exact `cat >>` append-only pattern this suite uses for BUILD_RECEIPTS.md.
+- `claude-commands/triage.md` GLOSSARY, `:50`: `TRIAGE_RECEIPTS.md` is a defined term — "Emitted on handover signal. Consumed by /secretary and SUITE_HEALTH."
+
+This was built under Pillar 5 (PILLAR_05_TOOLING_LINTING_RUNTIME_GOVERNANCE) during the Sovereign Redesign Cluster — a different initiative than this ticket, which independently arrived at the same need. The rest of this ticket's content (frozen triage report, user disposition table, prioritized work queue) was a point-in-time handover artifact for a session boundary that has long since passed; every item on its own work queue is either done (this ticket's remediation, the doorway lazy-scan fix, `/document`/`/sentinel` runs already completed) or superseded by a later, more specific ticket (the doorway architectural redesign has its own sibling ticket, `20260705_sentinel-doorway-redesign_workflow.md`, which remains open on its own merits). Nothing here is being silently left undone by this closure — it is fully consumed.
+
+**Root Cause Type reconciliation:** filed as STRUCTURAL (a durability gap), but the actual closure path here is verification that the gap was already closed by unrelated work, not a `/harden-workflow` pass against this ticket's own faulting workflow — there is no faulting workflow left to harden.
+
+---
+
+**Status**: **REMEDIATED**
+**Verification**: `TRIAGE_RECEIPTS.md` existence + `triage.md:426-431,50` cited above, checked directly 2026-07-07.
 
 ---
 *Signed,*
 **Grok**
 *(Session agent — Grok Build inaugural blueprint-workflows session)*
+
+---
+*Closure verified by,*
+**Claude**
+*(Session Agent — Senior Architect of Workflows role, 2026-07-07)*

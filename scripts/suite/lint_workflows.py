@@ -25,6 +25,7 @@ SoC decomposition (2026-05-25):
 import argparse
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -39,6 +40,33 @@ from suite.checks import (
 )
 from suite.graph import generate_dependency_graph
 from suite.report import print_report
+from engine_utils import atomic_write
+
+
+def _write_content_hash(content, new_hash):
+    """
+    Replace the content_hash value inside the frontmatter block only (never
+    the body -- a prose mention of "content_hash" elsewhere must not match).
+    Returns content unchanged if there's no frontmatter or no existing
+    content_hash field (never silently injects a new field into a file that
+    doesn't already declare one).
+    """
+    if not content.startswith("---"):
+        return content
+    end = content.find("---", 3)
+    if end == -1:
+        return content
+    frontmatter, rest = content[:end], content[end:]
+    new_frontmatter, count = re.subn(
+        r'^content_hash:\s*.*$',
+        f'content_hash: "sha256:{new_hash}"',
+        frontmatter,
+        count=1,
+        flags=re.MULTILINE,
+    )
+    if count == 0:
+        return content
+    return new_frontmatter + rest
 
 
 def lint_single(workspace_root, wf_file, all_files, report):
@@ -78,7 +106,9 @@ def main():
     parser.add_argument("--generate-graph", action="store_true",
                         help="Generate dependency_graph.json in manifest/")
     parser.add_argument("--fix-hashes", action="store_true",
-                        help="Recompute and print content hashes for all workflows (paste by hand into frontmatter per convention)")
+                        help="Recompute and print content hashes for all workflows (paste by hand into frontmatter, unless --write is also given)")
+    parser.add_argument("--write", action="store_true",
+                        help="With --fix-hashes: actually patch content_hash into each file's frontmatter in place, instead of print-only (resolves helpdesk-tickets/CLOSED_20260704_lint-fix-hashes-gap_workflow.md). Has no effect without --fix-hashes.")
     parser.add_argument("--fix-pointers", action="store_true",
                         help="Auto-create missing pointer files for all 3 platforms")
     parser.add_argument("--quiet", action="store_true", help="Suppress INFO findings")
@@ -96,11 +126,24 @@ def main():
     all_files = [f for f in all_files if f not in LINT_EXCLUDE_FILES]
 
     if args.fix_hashes:
-        print("Content hashes (computed via --fix-hashes and pasted by hand into frontmatter):")
+        mode_desc = "computed via --fix-hashes and written to frontmatter" if args.write \
+            else "computed via --fix-hashes and pasted by hand into frontmatter"
+        print(f"Content hashes ({mode_desc}):")
+        written, skipped = 0, 0
         for wf_file in all_files:
-            content = (commands_dir / wf_file).read_text(encoding="utf-8", errors="replace")
+            wf_path = commands_dir / wf_file
+            content = wf_path.read_text(encoding="utf-8", errors="replace")
             h = compute_content_hash(content)
             print(f"  {wf_file}: sha256:{h}")
+            if args.write:
+                new_content = _write_content_hash(content, h)
+                if new_content != content:
+                    atomic_write(wf_path, new_content)
+                    written += 1
+                else:
+                    skipped += 1
+        if args.write:
+            print(f"\nWrite complete: {written} file(s) updated, {skipped} skipped (no frontmatter or no existing content_hash field).")
         sys.exit(0)
 
     if args.fix_pointers:

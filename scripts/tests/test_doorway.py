@@ -25,6 +25,15 @@ both fixes:
      "repair" (see test_stale_readme_with_no_other_repairs_still_resolves).
 
 Run via scripts/run_tests.sh (unittest discover, PYTHONPATH=scripts/).
+
+[UPDATED 2026-07-07 — Sovereign Scaling Cluster] README self-heal is now
+opt-in by default (autoheal_enabled=False in IntegrityManager, completing
+the Doorway Design Invariant doorway.py already declared but never finished
+enforcing). This file's scenarios are specifically about self-heal/lazy-scan
+behavior, so its _run() helper explicitly passes readme_autoheal=True to
+keep exercising the real code path each test protects against regression.
+TestReadmeAutohealDefaultOff below proves the new suite-wide default
+separately, without that override.
 """
 
 import json
@@ -65,7 +74,9 @@ class TestDoorwayStaleReadmeCarryOver(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def _run(self, full_scan: bool = False) -> dict:
-        ctx = DoorwayContextualizer(self.workspace, quiet=True, output_json=True)
+        ctx = DoorwayContextualizer(
+            self.workspace, quiet=True, output_json=True, readme_autoheal=True,
+        )
         result = ctx.run(full_scan=full_scan)
         result["metrics"] = dict(ctx.metrics)  # metrics lives on the instance, not in run()'s return dict
         return result
@@ -136,6 +147,48 @@ class TestDoorwayStaleReadmeCarryOver(unittest.TestCase):
         self._run(full_scan=True)  # establish clean baseline
         result = self._run(full_scan=False)
         self.assertEqual(result["metrics"]["repairs"], 0)
+
+
+class TestReadmeAutohealDefaultOff(unittest.TestCase):
+    """
+    [ADDED 2026-07-07 — Sovereign Scaling Cluster]
+    Proves the new suite-wide default: a directory with a genuinely missing
+    README.md is reported (missing_readme still names it — that reporting is
+    unconditional in auditor.py) but no file is materialized and no repair is
+    counted, unless the caller explicitly opts in via readme_autoheal=True.
+    """
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.workspace = self.tmp / "workspace"
+        self.workspace.mkdir()
+        self.bare_dir = self.workspace / "bare_dir"
+        self.bare_dir.mkdir()
+        _write(self.bare_dir / "marker.py", "# no README here yet\n")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_no_readme_created_by_default(self):
+        ctx = DoorwayContextualizer(self.workspace, quiet=True, output_json=True)
+        result = ctx.run(full_scan=True)
+        self.assertFalse(
+            (self.bare_dir / "README.md").exists(),
+            "README.md was created despite autoheal defaulting to off",
+        )
+        self.assertEqual(ctx.metrics["repairs"], 0)
+        self.assertIn("bare_dir", result.get("drift", {}).get("missing_readme", []))
+
+    def test_readme_created_when_explicitly_opted_in(self):
+        ctx = DoorwayContextualizer(
+            self.workspace, quiet=True, output_json=True, readme_autoheal=True,
+        )
+        ctx.run(full_scan=True)
+        self.assertTrue(
+            (self.bare_dir / "README.md").exists(),
+            "opting in via readme_autoheal=True should still materialize a README",
+        )
+        self.assertGreater(ctx.metrics["repairs"], 0)
 
 
 if __name__ == "__main__":

@@ -22,6 +22,16 @@ Refactored from .blueprints/governance/thedoorway/integrity_manager.py:
     enumerated directory listing from the target workspace, and expands
     {workspace} and {workspace_name} tokens. heal() now calls this before
     writing any template to disk, eliminating the verbatim-template clone bug.
+
+[HARDENED 2026-07-07 — Sovereign Scaling Cluster, resolves the gap between
+doorway.py's own stated "Doorway Design Invariant" (PR 01-06: "Agent context
+is delivered by the engine [substrate_index.json], not by filesystem
+cardinality") and this module's actual behavior, which kept auto-creating
+README.md everywhere except two hardcoded exclusions. create_readme() is now
+gated behind autoheal_enabled (default False) -- README materialization
+becomes opt-in, completing the invariant PR 01-01/01-06 already declared but
+never finished enforcing. heal() (Architecture.md/MANIFEST.md self-repair)
+is unaffected -- this gate is README-specific.]
 """
 
 from pathlib import Path
@@ -38,7 +48,14 @@ class IntegrityManager:
         primary_templates:  Path to the primary templates directory.
         backup_templates:   Path to the fallback templates directory.
         readme_exclude_dirs: Set of dirs whose READMEs are never auto-healed
-            (P1 pr-01-00 stabilization; e.g. claude-commands).
+            (P1 pr-01-00 stabilization; e.g. claude-commands). Only relevant
+            when autoheal_enabled is True.
+        autoheal_enabled:   Master switch for create_readme() (default False).
+            README materialization is opt-in, per the Doorway Design
+            Invariant this package already declares (see module docstring,
+            2026-07-07 entry) -- context comes from substrate_index.json,
+            not from N x README.md. heal() (Architecture.md/MANIFEST.md) is
+            unaffected by this flag.
     """
 
     def __init__(
@@ -47,11 +64,13 @@ class IntegrityManager:
         primary_templates: Path,
         backup_templates: Path,
         readme_exclude_dirs: set = None,
+        autoheal_enabled: bool = False,
     ):
         self.workspace = workspace
         self.primary_templates = primary_templates
         self.backup_templates = backup_templates
         self.readme_exclude_dirs = readme_exclude_dirs or set()
+        self.autoheal_enabled = autoheal_enabled
 
     # ------------------------------------------------------------------
     # Substrate bootstrap
@@ -202,6 +221,12 @@ class IntegrityManager:
             True if the README was created; False on failure or if a README
             already exists on disk (see existence re-check below).
         """
+        # [2026-07-07, Sovereign Scaling Cluster] Materialization is opt-in.
+        # See __init__ docstring and module docstring's Doorway Design
+        # Invariant entry.
+        if not self.autoheal_enabled:
+            return False
+
         target = self.workspace / folder_path_str / "README.md"
         name = Path(folder_path_str).name
 

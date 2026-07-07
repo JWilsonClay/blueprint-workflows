@@ -41,8 +41,23 @@ No preference recorded here; this is a judgment call for whoever picks this tick
 Whichever direction is chosen, the fix is narrow and low-risk (one script or one phrasing convention). Not urgent — flagged LOW rather than MEDIUM/HIGH because the actual hash values in the suite are correct today; this is about preventing a future session from trusting an unwritten "recomputed" claim at face value.
 
 ---
-**Status**: **OPEN — deliberately deferred, not now, per explicit user direction**
-**Verification**: N/A — no remediation attempted yet.
+
+## 6. Remediation Record (2026-07-07, Sovereign Scaling Cluster)
+
+**Direction chosen: Option 1 — give the tool a real write mode.** Judgment call made directly, since the ticket recorded no preference: a `--write` mode keeps the suite's move away from soft/manual conventions consistent (the same motivation behind the Coverage Ledger, the Diff Oracle, and this cluster's own Instruction Density Compression work), and directly serves the batch of frontmatter-touching work this cluster's Phase 1-2 tasks involve.
+
+**What was built:**
+- `scripts/suite/lint_workflows.py`: new `--write` flag (combined with `--fix-hashes`); `_write_content_hash()` helper replaces the `content_hash` value inside the frontmatter block only (regex-anchored, `re.MULTILINE`), verified not to match a prose mention of "content_hash" in a file's body; no-ops (does not silently inject a field) when a file has no frontmatter or no existing `content_hash` key.
+- `scripts/tests/test_lint_workflows_write.py` (new): 5 tests — the helper in isolation (replaces correctly, leaves body untouched, two no-op cases) plus a real subprocess CLI integration test proving `--fix-hashes` alone remains print-only (unchanged, backward compatible) while `--fix-hashes --write` actually patches the file and a subsequent lint run reports no hash mismatch.
+- Full suite: 303/303 passing after this change (includes the new file).
+
+**Convention going forward:** future Change Log entries should say "content hash written via `lint_workflows.py --fix-hashes --write`" — the print-only path still exists (no `--write` flag) for anyone who wants to review the value before applying it.
+
+**Root Cause Type reconciliation:** filed as SUBSTANTIVE-LOGIC; closed via direct remediation + this Remediation Record, per `helpdesk-tickets.md`'s two-path closure model — consistent with that classification, no `/harden-workflow` pass needed (the defect was in a script, not a workflow `.md`'s structure).
+
+---
+**Status**: **REMEDIATED**
+**Verification**: `scripts/tests/test_lint_workflows_write.py`, 5/5 passing; full suite 303/303; live-verified via the CLI integration test's own re-lint step.
 
 ---
 *Signed,*

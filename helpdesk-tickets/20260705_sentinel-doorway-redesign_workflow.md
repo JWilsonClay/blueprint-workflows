@@ -239,6 +239,23 @@ Consider `/triage` trigger: "inaugural doorway scan on workspace" → route to i
 
 ---
 
+## 7. Provenance Note (2026-07-07, Sovereign Scaling Cluster) — partial progress, NOT a closure
+
+While investigating a user question about README breadcrumb cleanup, this ticket's Phase 0 §1 item ("Doorway skip list") was found to have been only partially addressed (a two-directory hardcoded exclude list, not the "materialize on demand, default off" model this ticket's Phase 1 Option A/D actually calls for). That gap is now closed:
+
+- `IntegrityManager.autoheal_enabled` (default `False`) added; `create_readme()` no longer fires by default anywhere. `DoorwayContextualizer.readme_autoheal` passthrough threaded explicitly. 6 tests (4 updated to opt back in for their own regression scenarios + 2 new proving the default) — see `scripts/doorway/integrity.py`, `scripts/doorway/doorway.py`, `scripts/tests/test_doorway.py`.
+- Existing breadcrumb README files removed from the workspace (working tree + normal `git rm`, not a history rewrite).
+
+**Also found, worth recording here since it changes this ticket's own premise slightly:** `doorway.py`'s module docstring already carries a "Doorway Design Invariant" note (added under Pillar 1, PR 01-06) stating context should come from `substrate_index.json`, not README cardinality — and `substrate_index.json` emission already exists (PR 01-01). So this ticket's Phase 1 preferred direction (Option A/D) was *partially* built under a separate initiative (Pillar 1) before this ticket was ever addressed directly — the JSON index exists; what was missing was turning off the old README behavior to match, which is now done.
+
+**What remains genuinely open, unchanged:** Phase 2 (tiered zero-finding redefinition), Phase 3 (`/sentinel` Phase 1.5 rewrite — still describes a README walk that no longer reflects actual behavior), Phase 4 (`scanner.py`/`auditor.py`/`manifest.py`/`breadcrumb.py` changes), Phase 5 (documentation/onboarding updates), and the verification checklist in Section 4. This is real, substantial, well-specified work — folded into `tasks.md` (repo root) Phase 8 as a strong candidate for this session's new Gemini single-engineer delegation pilot, precisely because it's already this well-specified. Not closed. Do not treat this note as resolving anything beyond the two bullets above.
+
+*Noted by,*
+**Claude**
+*(Session Agent — Senior Architect of Workflows role, 2026-07-07)*
+
+---
+
 ## 6. Handover Context (for incoming agent — read if no conversation history)
 
 **Workspace:** `~/blueprint-workflows` — Sovereign Workflow Suite (32 slash commands in `claude-commands/`, symlinked to `~/.claude/commands/`).
