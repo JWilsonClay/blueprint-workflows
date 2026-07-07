@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sovereign vs Grok: Architectural Analysis</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; color: #e0e0e0; background-color: #121212; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2 { color: #ffffff; border-bottom: 2px solid #333; padding-bottom: 5px; margin-top: 40px; }
+        h3 { color: #cccccc; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.5); background: #1e1e1e; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #333; }
+        th { background-color: #2c2c2c; font-weight: 600; color: #ffffff; position: sticky; top: 0; }
+        tr:hover { background-color: #2a2a2a; }
+        .summary-card { background: #1e1e1e; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #333; }
+        .timestamp { color: #888; font-size: 0.9em; margin-top: -10px; margin-bottom: 30px; }
+        .highlight { background-color: #3b2a00; }
+        .highlight td:first-child { font-weight: bold; color: #ffcc00; }
+        .note { font-size: 0.9em; color: #aaa; font-style: italic; }
+        .flex-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        .flex-child { flex: 1; min-width: 300px; }
+    </style>
+</head>
+<body>
+    <h1>Sovereign vs Grok: Architectural Analysis</h1>
+    <p class="timestamp">Generated on: 2026-07-07 13:21:19</p>
+
+    <h2 id="summary">Section 1: High-Level Summary Statistics</h2>
+    <div class="summary-card">
+        <table>
+            <tr>
+                <th>Metric (Averages)</th>
+                <th>Sovereign Suite (N=33)</th>
+                <th>Grok Build (N=5)</th>
+            </tr>
+            <tr>
+                <td><strong>Word Count</strong></td>
+                <td>3811 words</td>
+                <td>7479 words</td>
+            </tr>
+            <tr>
+                <td><strong>Total Lines</strong></td>
+                <td>410 lines</td>
+                <td>819 lines</td>
+            </tr>
+            <tr>
+                <td><strong>Avg. Structural Imbalance Score</strong><br><span class="note">Lower is more balanced/flat</span></td>
+                <td>9.76</td>
+                <td>2.72</td>
+            </tr>
+        </table>
+    </div>
+    
+    <h2 id="behavior">Section 2: Behavioral Mechanics & Logic</h2>
+    <div class="summary-card">
+        <p>Analyzing the raw executable nature of the text, cognitive load, and logical structures.</p>
+        <table>
+            <tr>
+                <th>Behavioral Metric (Averages)</th>
+                <th>Sovereign</th>
+                <th>Grok Build</th>
+            </tr>
+            <tr>
+                <td><strong>Readability (Flesch-Kincaid Grade Level)</strong><br><span class="note">Higher = denser, more complex sentence structure. Lower = declarative, direct.</span></td>
+                <td>11.3</td>
+                <td>10.3</td>
+            </tr>
+            <tr>
+                <td><strong>Execution Density</strong><br><span class="note">% of words existing inside code blocks (commands, JSON, Python, etc.)</span></td>
+                <td>11.3%</td>
+                <td>18.2%</td>
+            </tr>
+            <tr>
+                <td><strong>Branching Logic Density</strong><br><span class="note">Mentions of if/else/fallback/error per 1000 words.</span></td>
+                <td>7.1</td>
+                <td>16.4</td>
+            </tr>
+            <tr>
+                <td><strong>Subagent / State Density</strong><br><span class="note">Mentions of payload, state, launch, JSON, implementer per 1000 words.</span></td>
+                <td>6.8</td>
+                <td>19.1</td>
+            </tr>
+        </table>
+    </div>
+    
+    <h2 id="patterns">Section 3: Core Templating Patterns</h2>
+    <p>Headers appearing in >40% of workflows, defining the implicit "Charter" vs "API" structure.</p>
+    <div class="flex-container">
+        <div class="flex-child summary-card">
+            <h3>Sovereign Core Pattern</h3>
+            <ul>
+<li><strong>change log</strong> (33 files)</li><li><strong>frontmatter</strong> (33 files)</li><li><strong>glossary</strong> (26 files)</li><li><strong>strict rules</strong> (25 files)</li>
+            </ul>
+        </div>
+        <div class="flex-child summary-card">
+            <h3>Grok Build Core Pattern</h3>
+            <ul>
+<li><strong>frontmatter</strong> (5 files)</li><li><strong>todo scaffold</strong> (4 files)</li><li><strong>rules</strong> (4 files)</li><li><strong>invocation</strong> (4 files)</li><li><strong>in-progress reporting</strong> (4 files)</li><li><strong>cleanup</strong> (4 files)</li><li><strong>persona injection</strong> (4 files)</li><li><strong>final report</strong> (4 files)</li><li><strong>setup</strong> (4 files)</li><li><strong>tool-call discipline</strong> (3 files)</li><li><strong>safety guardrails</strong> (2 files)</li><li><strong>memory retrieval (past issues briefing)</strong> (2 files)</li><li><strong>parsing & formatting</strong> (2 files)</li><li><strong>build the update spec</strong> (2 files)</li><li><strong>past issues to avoid</strong> (2 files)</li><li><strong>memory flush</strong> (2 files)</li><li><strong>read path</strong> (2 files)</li><li><strong>collect & categorize this run's patterns</strong> (2 files)</li><li><strong>graceful degradation</strong> (2 files)</li><li><strong>additional focus areas (from implementation summary)</strong> (2 files)</li><li><strong>invoke the helper</strong> (2 files)</li><li><strong>harmonize phrasing against existing entries</strong> (2 files)</li><li><strong>escalate to user</strong> (2 files)</li><li><strong>exit condition</strong> (2 files)</li>
+            </ul>
+        </div>
+    </div>
+
+    <h2 id="behemoths">Section 4: The Behemoths Deep Dive</h2>
+    <p class="note">Highlighting applied to any single section that consumes > 15% of the total document word count.</p>
+    <h3>Top Grok Files</h3>
+    <div class="summary-card">
+        <h4>SKILL.md <span class="note">(11293 words | Flesch-Kincaid: 9.6)</span></h4>
+        <table>
+            <tr><th>Section Header</th><th>Lines</th><th>Words</th><th>% of Total Words</th></tr>
+<tr class="">
+            <td>Frontmatter / Preamble</td><td>7</td><td>75</td><td>0.7%</td>
+        </tr><tr class="">
+            <td># Execute Plan Skill</td><td>6</td><td>91</td><td>0.8%</td>
+        </tr><tr class="">
+            <td>## Two Assembly Modes</td><td>13</td><td>340</td><td>3.0%</td>
+        </tr><tr class="">
+            <td>## Subagent Worktree Protocol</td><td>31</td><td>284</td><td>2.5%</td>
+        </tr><tr class="">
+            <td>## Tool-Call Discipline (Anti-Hallucination)</td><td>4</td><td>113</td><td>1.0%</td>
+        </tr><tr class="">
+            <td>## Todo Scaffold</td><td>13</td><td>115</td><td>1.0%</td>
+        </tr><tr class="">
+            <td>## Persona Injection</td><td>13</td><td>149</td><td>1.3%</td>
+        </tr><tr class="">
+            <td>## Invocation</td><td>22</td><td>365</td><td>3.2%</td>
+        </tr><tr class="">
+            <td>## Setup</td><td>76</td><td>756</td><td>6.7%</td>
+        </tr><tr class="">
+            <td>## Step 0.5: Tool Detection (Graphite & gh)</td><td>28</td><td>388</td><td>3.4%</td>
+        </tr><tr class="">
+            <td>## Step 0: Memory Retrieval (Past Issues Briefing)</td><td>4</td><td>58</td><td>0.5%</td>
+        </tr><tr class="">
+            <td>### Resolve the helper path</td><td>14</td><td>117</td><td>1.0%</td>
+        </tr><tr class="">
+            <td>### Read Path</td><td>18</td><td>88</td><td>0.8%</td>
+        </tr><tr class="">
+            <td>### Parsing & Formatting</td><td>10</td><td>33</td><td>0.3%</td>
+        </tr><tr class="">
+            <td>## Past Issues to Avoid</td><td>12</td><td>64</td><td>0.6%</td>
+        </tr><tr class="">
+            <td>### Graceful Degradation</td><td>4</td><td>33</td><td>0.3%</td>
+        </tr><tr class="">
+            <td>## Step 1: Parse PR Plan DAG</td><td>63</td><td>513</td><td>4.5%</td>
+        </tr><tr class="">
+            <td>## Step 2: DAG Processing and Linearization</td><td>2</td><td>7</td><td>0.1%</td>
+        </tr><tr class="">
+            <td>### Level Assignment</td><td>11</td><td>41</td><td>0.4%</td>
+        </tr><tr class="">
+            <td>### Linearization for Stack Assembly</td><td>19</td><td>106</td><td>0.9%</td>
+        </tr><tr class="">
+            <td>### Compute Branch Names</td><td>11</td><td>24</td><td>0.2%</td>
+        </tr><tr class="">
+            <td>### Report</td><td>9</td><td>33</td><td>0.3%</td>
+        </tr><tr class="">
+            <td>### Dry-Run Exit</td><td>4</td><td>27</td><td>0.2%</td>
+        </tr><tr class="">
+            <td>## Step 3: Branch Preparation</td><td>40</td><td>262</td><td>2.3%</td>
+        </tr><tr class="">
+            <td>## Step 4: Execution Loop</td><td>34</td><td>118</td><td>1.0%</td>
+        </tr><tr class="">
+            <td>### Step 4a: Launch Implementer</td><td>25</td><td>144</td><td>1.3%</td>
+        </tr><tr class="">
+            <td>## Your PR</td><td>6</td><td>20</td><td>0.2%</td>
+        </tr><tr class="">
+            <td>## Context from Design Document</td><td>10</td><td>56</td><td>0.5%</td>
+        </tr><tr class="">
+            <td>## User Instructions</td><td>5</td><td>18</td><td>0.2%</td>
+        </tr><tr class="">
+            <td>## Instructions</td><td>26</td><td>122</td><td>1.1%</td>
+        </tr><tr class="">
+            <td>### Step 4b: Process Completion</td><td>40</td><td>277</td><td>2.5%</td>
+        </tr><tr class="">
+            <td>## Step 5: Orchestrator-Level Review</td><td>4</td><td>40</td><td>0.4%</td>
+        </tr><tr class="">
+            <td>### Step 5a: Launch Reviewer</td><td>30</td><td>126</td><td>1.1%</td>
+        </tr><tr class="">
+            <td>## User Instructions</td><td>6</td><td>22</td><td>0.2%</td>
+        </tr><tr class="">
+            <td>## Additional focus areas (from implementation summary)</td><td>8</td><td>19</td><td>0.2%</td>
+        </tr><tr class="">
+            <td>### Issue N -- Severity: bug|suggestion|nit</td><td>11</td><td>64</td><td>0.6%</td>
+        </tr><tr class="">
+            <td>### Step 5b: Check Review Results</td><td>25</td><td>191</td><td>1.7%</td>
+        </tr><tr class="">
+            <td>### Step 5c: Fix Cycle</td><td>35</td><td>181</td><td>1.6%</td>
+        </tr><tr class="">
+            <td>## User Instructions</td><td>39</td><td>222</td><td>2.0%</td>
+        </tr><tr class="">
+            <td>### Issue N -- Severity: bug|suggestion|nit</td><td>14</td><td>67</td><td>0.6%</td>
+        </tr><tr class="">
+            <td>## User Instructions</td><td>25</td><td>244</td><td>2.2%</td>
+        </tr><tr class="">
+            <td>## Step 6: Failure Handling</td><td>4</td><td>18</td><td>0.2%</td>
+        </tr><tr class="">
+            <td>### Cascade-Skip</td><td>24</td><td>94</td><td>0.8%</td>
+        </tr><tr class="">
+            <td>## Step 7: Resumption</td><td>40</td><td>463</td><td>4.1%</td>
+        </tr><tr class="">
+            <td>## Step 8: Stack Assembly</td><td>11</td><td>82</td><td>0.7%</td>
+        </tr><tr class="">
+            <td>### Step 8a (Graphite mode): Build the Stack</td><td>47</td><td>487</td><td>4.3%</td>
+        </tr><tr class="">
+            <td>### Step 8a (plain-git mode): Build the Stack</td><td>19</td><td>238</td><td>2.1%</td>
+        </tr><tr class="">
+            <td># Free the branch name (Rule 3 of the Subagent Worktree Protocol).</td><td>1</td><td>12</td><td>0.1%</td>
+        </tr><tr class="">
+            <td># Idempotent — no-op when the WT is already gone, missing, or was never</td><td>1</td><td>14</td><td>0.1%</td>
+        </tr><tr class="">
+            <td># assigned (e.g., a failed/skipped PR). Without this, `git checkout -B</td><td>1</td><td>11</td><td>0.1%</td>
+        </tr><tr class="">
+            <td># "&lt;pr.branch&gt;"` can fail with</td><td>1</td><td>5</td><td>0.0%</td>
+        </tr><tr class="">
+            <td># `cannot force update the branch '&lt;pr.branch&gt;' used by worktree at '&lt;WT&gt;'`.</td><td>35</td><td>359</td><td>3.2%</td>
+        </tr><tr class="">
+            <td>### Step 8b (Graphite mode): Collect PR URLs</td><td>12</td><td>45</td><td>0.4%</td>
+        </tr><tr class="">
+            <td>### Step 8b (plain-git mode): Collect PR URLs</td><td>65</td><td>669</td><td>5.9%</td>
+        </tr><tr class="">
+            <td>## Step 9: Cleanup</td><td>11</td><td>26</td><td>0.2%</td>
+        </tr><tr class="">
+            <td># PR worktrees are normally cleaned during Step 8a (per-PR prologue) so the</td><td>1</td><td>13</td><td>0.1%</td>
+        </tr><tr class="">
+            <td># stack branches can be safely manipulated. This loop is the safety net for</td><td>1</td><td>14</td><td>0.1%</td>
+        </tr><tr class="">
+            <td># any worktree that escaped Step 8a — e.g., the WT belonged to a `failed` or</td><td>1</td><td>16</td><td>0.1%</td>
+        </tr><tr class="">
+            <td># `skipped` PR (Step 8a never reaches them) or Step 8a crashed before</td><td>1</td><td>13</td><td>0.1%</td>
+        </tr><tr class="">
+            <td># reaching this PR. The check on `worktree_cleaned` keeps Step 9 idempotent</td><td>1</td><td>12</td><td>0.1%</td>
+        </tr><tr class="">
+            <td># on `--resume`.</td><td>20</td><td>127</td><td>1.1%</td>
+        </tr><tr class="">
+            <td>## Step 10: Memory Flush</td><td>4</td><td>55</td><td>0.5%</td>
+        </tr><tr class="">
+            <td>### Step 10a: Collect & Categorize This Run's Patterns</td><td>13</td><td>252</td><td>2.2%</td>
+        </tr><tr class="">
+            <td>### Step 10b: Harmonize Phrasing Against Existing Entries</td><td>8</td><td>82</td><td>0.7%</td>
+        </tr><tr class="">
+            <td>### Step 10c: Build the Update Spec</td><td>28</td><td>156</td><td>1.4%</td>
+        </tr><tr class="">
+            <td>### Step 10d: Invoke the Helper</td><td>30</td><td>98</td><td>0.9%</td>
+        </tr><tr class="">
+            <td>### Graceful Degradation</td><td>8</td><td>47</td><td>0.4%</td>
+        </tr><tr class="">
+            <td>## Final Report</td><td>23</td><td>368</td><td>3.3%</td>
+        </tr><tr class="">
+            <td>## In-Progress Reporting</td><td>24</td><td>310</td><td>2.7%</td>
+        </tr><tr class="">
+            <td>## Safety Guardrails</td><td>20</td><td>471</td><td>4.2%</td>
+        </tr><tr class="">
+            <td>## Rules</td><td>25</td><td>723</td><td>6.4%</td>
+        </tr></table></div>
+    <div class="summary-card">
+        <h4>SKILL.md <span class="note">(9929 words | Flesch-Kincaid: 11.6)</span></h4>
+        <table>
+            <tr><th>Section Header</th><th>Lines</th><th>Words</th><th>% of Total Words</th></tr>
+<tr class="">
+            <td>Frontmatter / Preamble</td><td>12</td><td>69</td><td>0.7%</td>
+        </tr><tr class="">
+            <td># Implement Skill</td><td>6</td><td>113</td><td>1.1%</td>
+        </tr><tr class="">
+            <td>## Tool-Call Discipline (Anti-Hallucination)</td><td>10</td><td>377</td><td>3.8%</td>
+        </tr><tr class="">
+            <td>## Todo Scaffold</td><td>19</td><td>249</td><td>2.5%</td>
+        </tr><tr class="">
+            <td>## Persona Injection</td><td>14</td><td>177</td><td>1.8%</td>
+        </tr><tr class="">
+            <td>## Invocation</td><td>21</td><td>214</td><td>2.2%</td>
+        </tr><tr class="">
+            <td>## Setup</td><td>32</td><td>326</td><td>3.3%</td>
+        </tr><tr class="">
+            <td>## Specialization Selection</td><td>4</td><td>80</td><td>0.8%</td>
+        </tr><tr class="">
+            <td>### Specialization Catalog</td><td>15</td><td>185</td><td>1.9%</td>
+        </tr><tr class="">
+            <td>### Decision Algorithm</td><td>5</td><td>13</td><td>0.1%</td>
+        </tr><tr class="">
+            <td># Step 1: Determine total reviewer slots from effort</td><td>8</td><td>31</td><td>0.3%</td>
+        </tr><tr class="">
+            <td># Step 2: Identify relevant specialists from description</td><td>15</td><td>53</td><td>0.5%</td>
+        </tr><tr class="">
+            <td># Step 3: Allocate slots</td><td>1</td><td>5</td><td>0.1%</td>
+        </tr><tr class="">
+            <td># Cap specialists by available slots (total - 1, since at least 1 general)</td><td>3</td><td>19</td><td>0.2%</td>
+        </tr><tr class="">
+            <td># Remaining slots become additional general reviewers</td><td>12</td><td>87</td><td>0.9%</td>
+        </tr><tr class="">
+            <td>### Building reviewer_configs</td><td>7</td><td>33</td><td>0.3%</td>
+        </tr><tr class="">
+            <td># Add general reviewers</td><td>10</td><td>42</td><td>0.4%</td>
+        </tr><tr class="">
+            <td># Add specialist reviewers</td><td>14</td><td>96</td><td>1.0%</td>
+        </tr><tr class="">
+            <td>### Announce Specializations</td><td>12</td><td>191</td><td>1.9%</td>
+        </tr><tr class="">
+            <td>## Step 0: Memory Retrieval (Past Issues Briefing)</td><td>12</td><td>132</td><td>1.3%</td>
+        </tr><tr class="">
+            <td>### Resolve the helper path once</td><td>16</td><td>284</td><td>2.9%</td>
+        </tr><tr class="">
+            <td>### Read Path</td><td>33</td><td>444</td><td>4.5%</td>
+        </tr><tr class="">
+            <td>### Parsing & Formatting</td><td>10</td><td>54</td><td>0.5%</td>
+        </tr><tr class="">
+            <td>## Past Issues to Avoid</td><td>14</td><td>97</td><td>1.0%</td>
+        </tr><tr class="">
+            <td>### Graceful Degradation</td><td>4</td><td>40</td><td>0.4%</td>
+        </tr><tr class="">
+            <td>## Step 1: Implement</td><td>37</td><td>232</td><td>2.3%</td>
+        </tr><tr class="">
+            <td>### Prepare reviewer focus areas</td><td>11</td><td>100</td><td>1.0%</td>
+        </tr><tr class="">
+            <td>## Step 2: Review</td><td>6</td><td>21</td><td>0.2%</td>
+        </tr><tr class="">
+            <td>### Effort = 1 (Single Reviewer)</td><td>26</td><td>75</td><td>0.8%</td>
+        </tr><tr class="">
+            <td>## Additional focus areas (from implementation summary)</td><td>13</td><td>65</td><td>0.7%</td>
+        </tr><tr class="">
+            <td>### Effort &gt;= 2 (Parallel Reviewers)</td><td>27</td><td>187</td><td>1.9%</td>
+        </tr><tr class="">
+            <td>## Specialized Review Prompts</td><td>6</td><td>42</td><td>0.4%</td>
+        </tr><tr class="">
+            <td>### General Reviewer</td><td>19</td><td>46</td><td>0.5%</td>
+        </tr><tr class="">
+            <td>## Additional focus areas (from implementation summary)</td><td>9</td><td>42</td><td>0.4%</td>
+        </tr><tr class="">
+            <td>### Tests Specialist</td><td>31</td><td>177</td><td>1.8%</td>
+        </tr><tr class="">
+            <td>### Security Specialist</td><td>40</td><td>179</td><td>1.8%</td>
+        </tr><tr class="">
+            <td>### Plan Alignment Specialist</td><td>34</td><td>206</td><td>2.1%</td>
+        </tr><tr class="">
+            <td>## Step 3: Merge & Check Exit Condition</td><td>4</td><td>15</td><td>0.2%</td>
+        </tr><tr class="">
+            <td>### Effort = 1</td><td>6</td><td>48</td><td>0.5%</td>
+        </tr><tr class="">
+            <td>### Effort &gt;= 2 (Merge)</td><td>14</td><td>132</td><td>1.3%</td>
+        </tr><tr class="">
+            <td>## Review Issues</td><td>2</td><td>3</td><td>0.0%</td>
+        </tr><tr class="">
+            <td>### Issue 1 [General] — Severity: bug</td><td>6</td><td>27</td><td>0.3%</td>
+        </tr><tr class="">
+            <td>### Issue 2 [Security] — Severity: bug</td><td>6</td><td>27</td><td>0.3%</td>
+        </tr><tr class="">
+            <td>### Issue 3 [Tests] — Severity: suggestion</td><td>9</td><td>61</td><td>0.6%</td>
+        </tr><tr class="">
+            <td>### Stalemate Detection</td><td>8</td><td>90</td><td>0.9%</td>
+        </tr><tr class="">
+            <td>### Decision Logic</td><td>8</td><td>64</td><td>0.6%</td>
+        </tr><tr class="">
+            <td>### Step 3a: Escalate to User</td><td>9</td><td>99</td><td>1.0%</td>
+        </tr><tr class="">
+            <td>## Step 4: Fix (resume implementer)</td><td>35</td><td>230</td><td>2.3%</td>
+        </tr><tr class="">
+            <td>## Step 5: Re-review</td><td>6</td><td>20</td><td>0.2%</td>
+        </tr><tr class="">
+            <td>### Effort = 1 (Single Reviewer Re-review)</td><td>31</td><td>168</td><td>1.7%</td>
+        </tr><tr class="">
+            <td>### Effort &gt;= 2 (Parallel Re-review)</td><td>41</td><td>297</td><td>3.0%</td>
+        </tr><tr class="">
+            <td>## Exit Condition</td><td>6</td><td>74</td><td>0.7%</td>
+        </tr><tr class="">
+            <td>## Step 6: Memory Flush</td><td>11</td><td>170</td><td>1.7%</td>
+        </tr><tr class="">
+            <td>### Step 6a: Collect & Categorize This Run's Patterns</td><td>13</td><td>295</td><td>3.0%</td>
+        </tr><tr class="">
+            <td>### Step 6b: Harmonize Phrasing Against Existing Entries</td><td>14</td><td>213</td><td>2.1%</td>
+        </tr><tr class="">
+            <td>### Step 6c: Build the Update Spec</td><td>35</td><td>652</td><td>6.6%</td>
+        </tr><tr class="">
+            <td>### Step 6d: Invoke the Helper</td><td>37</td><td>179</td><td>1.8%</td>
+        </tr><tr class="">
+            <td>### Memory File Format</td><td>10</td><td>49</td><td>0.5%</td>
+        </tr><tr class="">
+            <td># Implementation Review Patterns</td><td>6</td><td>42</td><td>0.4%</td>
+        </tr><tr class="">
+            <td>## Common Issues</td><td>2</td><td>3</td><td>0.0%</td>
+        </tr><tr class="">
+            <td>### Error Handling</td><td>5</td><td>33</td><td>0.3%</td>
+        </tr><tr class="">
+            <td>### Testing</td><td>5</td><td>37</td><td>0.4%</td>
+        </tr><tr class="">
+            <td>### Security</td><td>4</td><td>23</td><td>0.2%</td>
+        </tr><tr class="">
+            <td>### Code Quality</td><td>5</td><td>32</td><td>0.3%</td>
+        </tr><tr class="">
+            <td>## Recent Runs</td><td>2</td><td>3</td><td>0.0%</td>
+        </tr><tr class="">
+            <td>### 2026-04-23 — "Add retry logic to blackbox client"</td><td>6</td><td>37</td><td>0.4%</td>
+        </tr><tr class="">
+            <td>### 2026-04-22 — "Implement user auth endpoints"</td><td>14</td><td>338</td><td>3.4%</td>
+        </tr><tr class="">
+            <td>### Graceful Degradation</td><td>11</td><td>160</td><td>1.6%</td>
+        </tr><tr class="">
+            <td>## Cleanup</td><td>10</td><td>49</td><td>0.5%</td>
+        </tr><tr class="">
+            <td>## Final Report</td><td>13</td><td>199</td><td>2.0%</td>
+        </tr><tr class="">
+            <td>## In-Progress Reporting</td><td>17</td><td>249</td><td>2.5%</td>
+        </tr><tr class="">
+            <td>## Rules</td><td>28</td><td>1028</td><td>10.4%</td>
+        </tr></table></div><h3>Top Sovereign Files</h3>
+    <div class="summary-card">
+        <h4>implementation-plan.md <span class="note">(8086 words | Flesch-Kincaid: 11.9)</span></h4>
+        <table>
+            <tr><th>Section Header</th><th>Lines</th><th>Words</th><th>% of Total Words</th></tr>
+<tr class="">
+            <td>Frontmatter / Preamble</td><td>41</td><td>102</td><td>1.3%</td>
+        </tr><tr class="">
+            <td># /implementation-plan — Sovereign Implementation Plan Generator</td><td>6</td><td>47</td><td>0.6%</td>
+        </tr><tr class="">
+            <td>## GLOSSARY</td><td>25</td><td>693</td><td>8.6%</td>
+        </tr><tr class="">
+            <td>## PHASE 0 — INTAKE & INTENT CLARIFICATION</td><td>8</td><td>44</td><td>0.5%</td>
+        </tr><tr class="">
+            <td>## PHASE 1 — COMPREHENSIVE INVESTIGATION</td><td>17</td><td>108</td><td>1.3%</td>
+        </tr><tr class="">
+            <td>## PHASE 2 — OPTION GENERATION (3 Surgical + 3 High-Fidelity)</td><td>18</td><td>70</td><td>0.9%</td>
+        </tr><tr class="">
+            <td>## PHASE 3 — HITL GATE & SELECTION</td><td>9</td><td>168</td><td>2.1%</td>
+        </tr><tr class="">
+            <td>## PHASE 4 — TWO-PART IMPLEMENTATION PLAN</td><td>4</td><td>19</td><td>0.2%</td>
+        </tr><tr class="">
+            <td>### Part 1 — Universal Structural (Mandatory)</td><td>9</td><td>61</td><td>0.8%</td>
+        </tr><tr class="">
+            <td>## [INTENT] User Objective</td><td>19</td><td>150</td><td>1.9%</td>
+        </tr><tr class="">
+            <td>### Part 2 — Improvisational / Creative</td><td>21</td><td>172</td><td>2.1%</td>
+        </tr><tr class="highlight">
+            <td>## PHASE 5 — ADVERSARIAL POST-EXECUTION AUDIT (Separate Invocation)</td><td>104</td><td>1325</td><td>16.4%</td>
+        </tr><tr class="">
+            <td>## DIVERGENCE INTEGRATIONS (2026-05-13)</td><td>2</td><td>4</td><td>0.0%</td>
+        </tr><tr class="">
+            <td>### Divergence 1: Plan Template Library (Coding-Focused)</td><td>15</td><td>99</td><td>1.2%</td>
+        </tr><tr class="">
+            <td>### Divergence 2: Campaign Planning Structure</td><td>3</td><td>31</td><td>0.4%</td>
+        </tr><tr class="">
+            <td>### Divergence 3: Multi-Request Planning Support</td><td>3</td><td>31</td><td>0.4%</td>
+        </tr><tr class="">
+            <td>### Divergence 4: Adversarial Post-Audit (`--audit` flag)</td><td>5</td><td>46</td><td>0.6%</td>
+        </tr><tr class="">
+            <td>## PHASE 6 — WORKSTREAM DESIGN (`--workstreams` flag)</td><td>8</td><td>50</td><td>0.6%</td>
+        </tr><tr class="">
+            <td>### 6a. Intake — Read Architect Directive + Determine Iteration</td><td>49</td><td>416</td><td>5.1%</td>
+        </tr><tr class="">
+            <td>### 6b. Investigation — Parity Analysis</td><td>16</td><td>138</td><td>1.7%</td>
+        </tr><tr class="">
+            <td>### 6c. Workstream Design</td><td>40</td><td>316</td><td>3.9%</td>
+        </tr><tr class="">
+            <td>### 6d. HITL Gate — Workstream Approval</td><td>31</td><td>112</td><td>1.4%</td>
+        </tr><tr class="">
+            <td>### 6e. Write implementation-plan.md</td><td>10</td><td>116</td><td>1.4%</td>
+        </tr><tr class="">
+            <td>## Pre-Execution Mandate (ALL AGENTS — non-negotiable)</td><td>5</td><td>34</td><td>0.4%</td>
+        </tr><tr class="">
+            <td>### Step 1: Refresh workflow context</td><td>7</td><td>39</td><td>0.5%</td>
+        </tr><tr class="">
+            <td>### Step 2: Confirm understanding</td><td>9</td><td>62</td><td>0.8%</td>
+        </tr><tr class="">
+            <td>### Step 3: Execute Pre-Flight (Phase 2.5)</td><td>31</td><td>171</td><td>2.1%</td>
+        </tr><tr class="">
+            <td>## PHASE 7 — WORKSTREAM AUDIT (`--audit --workstreams` flag)</td><td>10</td><td>93</td><td>1.2%</td>
+        </tr><tr class="">
+            <td>### 7a. Intake — Read All State + Generate Diff Oracle</td><td>50</td><td>357</td><td>4.4%</td>
+        </tr><tr class="">
+            <td>### 7b. Per-Workstream Audit</td><td>19</td><td>198</td><td>2.4%</td>
+        </tr><tr class="">
+            <td>### 7c. Cross-Workstream Analysis</td><td>10</td><td>110</td><td>1.4%</td>
+        </tr><tr class="">
+            <td>### 7d. Adversarial Quality Evaluation</td><td>79</td><td>574</td><td>7.1%</td>
+        </tr><tr class="">
+            <td>### 7e. Write PM Oversight Report to file</td><td>113</td><td>496</td><td>6.1%</td>
+        </tr><tr class="">
+            <td>### 7f. Persist the Audit</td><td>24</td><td>105</td><td>1.3%</td>
+        </tr><tr class="highlight">
+            <td>## STRICT RULES (never violate)</td><td>83</td><td>1516</td><td>18.7%</td>
+        </tr><tr class="">
+            <td>### Change Log</td><td>4</td><td>13</td><td>0.2%</td>
+        </tr></table></div>
+    <div class="summary-card">
+        <h4>harden-workflow.md <span class="note">(6740 words | Flesch-Kincaid: 11.3)</span></h4>
+        <table>
+            <tr><th>Section Header</th><th>Lines</th><th>Words</th><th>% of Total Words</th></tr>
+<tr class="">
+            <td>Frontmatter / Preamble</td><td>32</td><td>89</td><td>1.3%</td>
+        </tr><tr class="">
+            <td># /harden-workflow — Sovereign Workflow Hardening Protocol</td><td>16</td><td>194</td><td>2.9%</td>
+        </tr><tr class="">
+            <td>## GLOSSARY — Key Terms for This Protocol</td><td>19</td><td>400</td><td>5.9%</td>
+        </tr><tr class="">
+            <td>## THE SOVEREIGN STANDARD — Hardening Grades</td><td>15</td><td>206</td><td>3.1%</td>
+        </tr><tr class="">
+            <td>## THE POINTER/PAYLOAD DECISION</td><td>15</td><td>175</td><td>2.6%</td>
+        </tr><tr class="highlight">
+            <td>## PHASE 0 — INTAKE</td><td>136</td><td>1044</td><td>15.5%</td>
+        </tr><tr class="">
+            <td>## PHASE 1 — CURRENT STATE ASSESSMENT</td><td>53</td><td>410</td><td>6.1%</td>
+        </tr><tr class="">
+            <td>## PHASE 2 — STRUCTURAL HARDENING</td><td>26</td><td>250</td><td>3.7%</td>
+        </tr><tr class="">
+            <td># /[workflow-name] — [One-Line Description]</td><td>10</td><td>48</td><td>0.7%</td>
+        </tr><tr class="">
+            <td>## GLOSSARY — Key Terms</td><td>10</td><td>33</td><td>0.5%</td>
+        </tr><tr class="">
+            <td>## PHASE 0 — [INTAKE / INITIALIZATION / SETUP]</td><td>13</td><td>51</td><td>0.8%</td>
+        </tr><tr class="">
+            <td>## PHASE 1 — [FIRST ACTIVE PHASE]</td><td>6</td><td>29</td><td>0.4%</td>
+        </tr><tr class="">
+            <td>## PHASE N — [FINAL PHASE / OUTPUT]</td><td>17</td><td>53</td><td>0.8%</td>
+        </tr><tr class="">
+            <td>## STRICT RULES (never violate)</td><td>39</td><td>188</td><td>2.8%</td>
+        </tr><tr class="">
+            <td>### Change Log</td><td>19</td><td>103</td><td>1.5%</td>
+        </tr><tr class="">
+            <td>## PHASE 3 — FRONTMATTER HARDENING</td><td>21</td><td>116</td><td>1.7%</td>
+        </tr><tr class="">
+            <td>## PHASE 4 — EXECUTION HARDENING</td><td>56</td><td>378</td><td>5.6%</td>
+        </tr><tr class="">
+            <td>## PHASE 5 — INTEGRATION HARDENING</td><td>32</td><td>155</td><td>2.3%</td>
+        </tr><tr class="">
+            <td>## PHASE 6 — OBSERVABILITY HARDENING</td><td>23</td><td>125</td><td>1.9%</td>
+        </tr><tr class="">
+            <td>### Change Log</td><td>12</td><td>68</td><td>1.0%</td>
+        </tr><tr class="">
+            <td>## PHASE 7 — VALIDATION</td><td>57</td><td>367</td><td>5.4%</td>
+        </tr><tr class="">
+            <td>## PHASE 8 — GRADE CERTIFICATION</td><td>58</td><td>338</td><td>5.0%</td>
+        </tr><tr class="">
+            <td>## PHASE 9 — PHYLOGENY & GENETIC ARCHIVE (Divergence #3)</td><td>21</td><td>154</td><td>2.3%</td>
+        </tr><tr class="">
+            <td>## PHASE 10 — ECOSYSTEM IMMUNITY LAYER (Divergence #2)</td><td>26</td><td>242</td><td>3.6%</td>
+        </tr><tr class="">
+            <td>## STRICT RULES (never violate)</td><td>27</td><td>875</td><td>13.0%</td>
+        </tr><tr class="">
+            <td>## SUITE-WIDE AUDIT MODE</td><td>93</td><td>636</td><td>9.4%</td>
+        </tr><tr class="">
+            <td>### Change Log</td><td>4</td><td>13</td><td>0.2%</td>
+        </tr></table></div>
+    <div class="summary-card">
+        <h4>refactor.md <span class="note">(6461 words | Flesch-Kincaid: 8.6)</span></h4>
+        <table>
+            <tr><th>Section Header</th><th>Lines</th><th>Words</th><th>% of Total Words</th></tr>
+<tr class="">
+            <td>Frontmatter / Preamble</td><td>25</td><td>56</td><td>0.9%</td>
+        </tr><tr class="">
+            <td># 🏗️ /refactor — Sovereign Refactor Protocol: Master Index</td><td>9</td><td>53</td><td>0.8%</td>
+        </tr><tr class="">
+            <td>## 🧠 The Core Principle (The Law)</td><td>9</td><td>57</td><td>0.9%</td>
+        </tr><tr class="">
+            <td>## 🗺️ The Five Phases</td><td>12</td><td>84</td><td>1.3%</td>
+        </tr><tr class="">
+            <td>## 🛡️ Universal Agent Constraints (Apply to ALL Phases)</td><td>14</td><td>118</td><td>1.8%</td>
+        </tr><tr class="">
+            <td>## 🚫 Anti-Patterns (Forbidden in All Phases)</td><td>13</td><td>133</td><td>2.1%</td>
+        </tr><tr class="">
+            <td>## 🔍 The Diff Review Node (The Gatekeeper)</td><td>22</td><td>172</td><td>2.7%</td>
+        </tr><tr class="">
+            <td>## 📎 References</td><td>5</td><td>24</td><td>0.4%</td>
+        </tr><tr class="">
+            <td>## PHASE 0 — Cryogenic Snapshot</td><td>8</td><td>42</td><td>0.7%</td>
+        </tr><tr class="">
+            <td>## 🎯 Your Objective This Session</td><td>12</td><td>55</td><td>0.9%</td>
+        </tr><tr class="">
+            <td>## Step 1: Verify Clean Working Tree</td><td>11</td><td>32</td><td>0.5%</td>
+        </tr><tr class="">
+            <td>## Step 2: Create the Refactor Branch</td><td>9</td><td>19</td><td>0.3%</td>
+        </tr><tr class="">
+            <td>## Step 3: Generate the Import Graph</td><td>7</td><td>40</td><td>0.6%</td>
+        </tr><tr class="">
+            <td># Python projects:</td><td>5</td><td>20</td><td>0.3%</td>
+        </tr><tr class="">
+            <td># JavaScript/TypeScript projects:</td><td>14</td><td>39</td><td>0.6%</td>
+        </tr><tr class="">
+            <td>## Step 4: Write the REFACTOR_MANIFEST.md</td><td>7</td><td>37</td><td>0.6%</td>
+        </tr><tr class="">
+            <td># REFACTOR MANIFEST: &lt;Project Name&gt;</td><td>1</td><td>5</td><td>0.1%</td>
+        </tr><tr class="">
+            <td># Generated: &lt;Date&gt;</td><td>1</td><td>3</td><td>0.0%</td>
+        </tr><tr class="">
+            <td># Status: AWAITING USER APPROVAL</td><td>2</td><td>5</td><td>0.1%</td>
+        </tr><tr class="">
+            <td>## Target Architecture Summary</td><td>3</td><td>12</td><td>0.2%</td>
+        </tr><tr class="">
+            <td>## Current → Target File Map</td><td>9</td><td>85</td><td>1.3%</td>
+        </tr><tr class="">
+            <td>## New Directories to Create</td><td>4</td><td>9</td><td>0.1%</td>
+        </tr><tr class="">
+            <td>## Files to Archive (Delete in Phase 4)</td><td>3</td><td>10</td><td>0.2%</td>
+        </tr><tr class="">
+            <td>## Verification Gate Command</td><td>7</td><td>23</td><td>0.4%</td>
+        </tr><tr class="">
+            <td>## Step 5: Await User Approval</td><td>14</td><td>74</td><td>1.1%</td>
+        </tr><tr class="">
+            <td>## **[INJECTION — Script Integration — 2026-05-01]**</td><td>7</td><td>52</td><td>0.8%</td>
+        </tr><tr class="">
+            <td>### Automated Scout: `refactor_scout.py`</td><td>3</td><td>5</td><td>0.1%</td>
+        </tr><tr class="">
+            <td># From any directory — point --project-root at the project being refactored:</td><td>4</td><td>17</td><td>0.3%</td>
+        </tr><tr class="">
+            <td># Explicit language flag (auto-detected by default):</td><td>21</td><td>136</td><td>2.1%</td>
+        </tr><tr class="">
+            <td>## Phase 0 Completion Checklist</td><td>12</td><td>63</td><td>1.0%</td>
+        </tr><tr class="">
+            <td>## PHASE 1 — Shim Layer Creation</td><td>11</td><td>67</td><td>1.0%</td>
+        </tr><tr class="">
+            <td>## 🎯 Your Objective This Session</td><td>14</td><td>83</td><td>1.3%</td>
+        </tr><tr class="">
+            <td>## Step 1: Read the Manifest</td><td>9</td><td>37</td><td>0.6%</td>
+        </tr><tr class="">
+            <td>## Step 2: Create New Directory Structure</td><td>12</td><td>39</td><td>0.6%</td>
+        </tr><tr class="">
+            <td>## Step 3: Write a Shim at Each Target Path</td><td>4</td><td>22</td><td>0.3%</td>
+        </tr><tr class="">
+            <td>### Python Shim Template</td><td>2</td><td>5</td><td>0.1%</td>
+        </tr><tr class="">
+            <td># ⚠️ SHIM FILE — Phase 1 of Sovereign Refactor Protocol</td><td>1</td><td>11</td><td>0.2%</td>
+        </tr><tr class="">
+            <td># This file is a temporary compatibility bridge. DO NOT REMOVE until Phase 4.</td><td>1</td><td>14</td><td>0.2%</td>
+        </tr><tr class="">
+            <td># Logic currently lives at: &lt;current/path/file.py&gt;</td><td>1</td><td>6</td><td>0.1%</td>
+        </tr><tr class="">
+            <td># This shim will be replaced by the real file in Phase 2 (git mv).</td><td>4</td><td>24</td><td>0.4%</td>
+        </tr><tr class="">
+            <td>### JavaScript / TypeScript Shim Template</td><td>8</td><td>36</td><td>0.6%</td>
+        </tr><tr class="">
+            <td>### For `SPLIT` rows:</td><td>7</td><td>34</td><td>0.5%</td>
+        </tr><tr class="">
+            <td>## Step 4: Verification Gate</td><td>13</td><td>39</td><td>0.6%</td>
+        </tr><tr class="">
+            <td>## Step 5: Commit the Shim Layer</td><td>11</td><td>25</td><td>0.4%</td>
+        </tr><tr class="">
+            <td>## **[INJECTION — Script Integration — 2026-05-01]**</td><td>6</td><td>44</td><td>0.7%</td>
+        </tr><tr class="">
+            <td>### Automated Bridge: `refactor_bridge.py`</td><td>3</td><td>5</td><td>0.1%</td>
+        </tr><tr class="">
+            <td># Normal run — creates all shims from the approved manifest:</td><td>4</td><td>16</td><td>0.2%</td>
+        </tr><tr class="">
+            <td># Preview without writing any files:</td><td>22</td><td>111</td><td>1.7%</td>
+        </tr><tr class="">
+            <td>## **[INJECTION — Diff Review Node — 2026-05-01]**</td><td>7</td><td>59</td><td>0.9%</td>
+        </tr><tr class="">
+            <td>### Diff Review: `refactor_diff.py --phase p1`</td><td>31</td><td>138</td><td>2.1%</td>
+        </tr><tr class="">
+            <td>## Phase 1 Completion Checklist</td><td>16</td><td>109</td><td>1.7%</td>
+        </tr><tr class="">
+            <td>## PHASE 2 — Physical Migration</td><td>12</td><td>81</td><td>1.3%</td>
+        </tr><tr class="">
+            <td>## 🎯 Your Objective This Session</td><td>11</td><td>60</td><td>0.9%</td>
+        </tr><tr class="">
+            <td>## Step 1: Read the Manifest</td><td>8</td><td>32</td><td>0.5%</td>
+        </tr><tr class="">
+            <td>## Step 2: Move the File (git mv ONLY)</td><td>13</td><td>48</td><td>0.7%</td>
+        </tr><tr class="">
+            <td>## Step 3: Replace the Old Location with a Reverse Shim</td><td>5</td><td>41</td><td>0.6%</td>
+        </tr><tr class="">
+            <td>### Python Reverse Shim Template</td><td>2</td><td>6</td><td>0.1%</td>
+        </tr><tr class="">
+            <td># ⚠️ REVERSE SHIM — Phase 2 of Sovereign Refactor Protocol</td><td>1</td><td>11</td><td>0.2%</td>
+        </tr><tr class="">
+            <td># DO NOT REMOVE until Phase 4 (all references have been surgically updated).</td><td>1</td><td>13</td><td>0.2%</td>
+        </tr><tr class="">
+            <td># This file exists to preserve import compatibility during migration.</td><td>1</td><td>10</td><td>0.2%</td>
+        </tr><tr class="">
+            <td># Logic has MOVED to: &lt;new/path/file.py&gt;</td><td>4</td><td>15</td><td>0.2%</td>
+        </tr><tr class="">
+            <td>### JavaScript / TypeScript Reverse Shim Template</td><td>10</td><td>38</td><td>0.6%</td>
+        </tr><tr class="">
+            <td>## Step 4: Verification Gate</td><td>13</td><td>39</td><td>0.6%</td>
+        </tr><tr class="">
+            <td>## Step 5: Commit This Module's Migration</td><td>9</td><td>22</td><td>0.3%</td>
+        </tr><tr class="">
+            <td>## Step 6: Repeat for Next Module</td><td>9</td><td>35</td><td>0.5%</td>
+        </tr><tr class="">
+            <td>## **[INJECTION — Script Integration — 2026-05-01]**</td><td>6</td><td>40</td><td>0.6%</td>
+        </tr><tr class="">
+            <td>### Automated Migrator: `refactor_migrate.py`</td><td>3</td><td>5</td><td>0.1%</td>
+        </tr><tr class="">
+            <td># Migrate one module (RECOMMENDED — one module per session):</td><td>5</td><td>18</td><td>0.3%</td>
+        </tr><tr class="">
+            <td># Migrate all MOVE entries sequentially (stops on first failure):</td><td>3</td><td>15</td><td>0.2%</td>
+        </tr><tr class="">
+            <td># Preview without moving anything:</td><td>22</td><td>116</td><td>1.8%</td>
+        </tr><tr class="">
+            <td>## **[INJECTION — Diff Review Node — 2026-05-01]**</td><td>6</td><td>43</td><td>0.7%</td>
+        </tr><tr class="">
+            <td>### Diff Review: `refactor_diff.py --phase p2`</td><td>30</td><td>137</td><td>2.1%</td>
+        </tr><tr class="">
+            <td>## Phase 2 Completion Checklist</td><td>16</td><td>124</td><td>1.9%</td>
+        </tr><tr class="">
+            <td>## PHASE 3 — Reference Surgery</td><td>13</td><td>99</td><td>1.5%</td>
+        </tr><tr class="">
+            <td>## 🎯 Your Objective This Session</td><td>14</td><td>72</td><td>1.1%</td>
+        </tr><tr class="">
+            <td>## Step 1: Identify the Current Module</td><td>10</td><td>48</td><td>0.7%</td>
+        </tr><tr class="">
+            <td>## Step 2: Find All Outdated Import Statements</td><td>14</td><td>54</td><td>0.8%</td>
+        </tr><tr class="">
+            <td>## Step 3: Perform Surgical Import Updates</td><td>20</td><td>54</td><td>0.8%</td>
+        </tr><tr class="">
+            <td>## Step 4: Verification Gate</td><td>16</td><td>51</td><td>0.8%</td>
+        </tr><tr class="">
+            <td>## Step 5: Commit This Module's Surgery</td><td>9</td><td>24</td><td>0.4%</td>
+        </tr><tr class="">
+            <td>## Step 6: Mark the Manifest</td><td>10</td><td>40</td><td>0.6%</td>
+        </tr><tr class="">
+            <td>## **[INJECTION — Script Integration — 2026-05-01]**</td><td>7</td><td>51</td><td>0.8%</td>
+        </tr><tr class="">
+            <td>### Automated Auditor: `refactor_audit.py`</td><td>34</td><td>176</td><td>2.7%</td>
+        </tr><tr class="">
+            <td>## **[INJECTION — Diff Review Node — 2026-05-01]**</td><td>6</td><td>45</td><td>0.7%</td>
+        </tr><tr class="">
+            <td>### Diff Review: `refactor_diff.py --phase p3`</td><td>31</td><td>154</td><td>2.4%</td>
+        </tr><tr class="">
+            <td>## Phase 3 Completion Criteria</td><td>18</td><td>126</td><td>2.0%</td>
+        </tr><tr class="">
+            <td>## PHASE 4 — Shim Removal & Merge</td><td>14</td><td>107</td><td>1.7%</td>
+        </tr><tr class="">
+            <td>## 🎯 Your Objective This Session</td><td>9</td><td>38</td><td>0.6%</td>
+        </tr><tr class="">
+            <td>## Step 1: Identify All Remaining Shims</td><td>14</td><td>66</td><td>1.0%</td>
+        </tr><tr class="">
+            <td>## Step 2: Verify Each Shim is Truly Dead</td><td>5</td><td>22</td><td>0.3%</td>
+        </tr><tr class="">
+            <td># Replace old/path/file with the actual old path (dots for Python)</td><td>9</td><td>52</td><td>0.8%</td>
+        </tr><tr class="">
+            <td>## Step 3: Remove Each Shim (One at a Time)</td><td>22</td><td>59</td><td>0.9%</td>
+        </tr><tr class="">
+            <td>## Step 4: Remove Refactor Artifacts</td><td>12</td><td>31</td><td>0.5%</td>
+        </tr><tr class="">
+            <td>## Step 5: Final Full Verification</td><td>12</td><td>34</td><td>0.5%</td>
+        </tr><tr class="">
+            <td>## Step 6: Update Documentation</td><td>13</td><td>43</td><td>0.7%</td>
+        </tr><tr class="">
+            <td>## Step 7: Merge to Main</td><td>17</td><td>52</td><td>0.8%</td>
+        </tr><tr class="">
+            <td>## **[INJECTION — Script Integration — 2026-05-01]**</td><td>6</td><td>44</td><td>0.7%</td>
+        </tr><tr class="">
+            <td>### Automated Cleaner: `refactor_clean.py`</td><td>3</td><td>5</td><td>0.1%</td>
+        </tr><tr class="">
+            <td># Remove all removable shims (blocked shims are reported, not touched):</td><td>4</td><td>16</td><td>0.2%</td>
+        </tr><tr class="">
+            <td># Remove a single specific shim:</td><td>3</td><td>12</td><td>0.2%</td>
+        </tr><tr class="">
+            <td># Preview without removing anything:</td><td>16</td><td>104</td><td>1.6%</td>
+        </tr><tr class="">
+            <td># Clean up refactor artifacts</td><td>11</td><td>45</td><td>0.7%</td>
+        </tr><tr class="">
+            <td>## **[INJECTION — Diff Review Node — 2026-05-01]**</td><td>6</td><td>49</td><td>0.8%</td>
+        </tr><tr class="">
+            <td>### Diff Review Post-Clean: `refactor_diff.py --phase p4`</td><td>3</td><td>8</td><td>0.1%</td>
+        </tr><tr class="">
+            <td># After refactor_clean.py — verify cleanup is complete:</td><td>12</td><td>62</td><td>1.0%</td>
+        </tr><tr class="">
+            <td>### Diff Review Pre-Merge: `refactor_diff.py --phase p4 --pre-merge`</td><td>3</td><td>9</td><td>0.1%</td>
+        </tr><tr class="">
+            <td># Run this immediately before git merge — the final gate:</td><td>30</td><td>123</td><td>1.9%</td>
+        </tr><tr class="">
+            <td>## Phase 4 Completion Checklist</td><td>18</td><td>104</td><td>1.6%</td>
+        </tr><tr class="">
+            <td># 🔍 /refactor-diff — Diff Review Node</td><td>8</td><td>40</td><td>0.6%</td>
+        </tr><tr class="">
+            <td>## 🎯 Purpose</td><td>12</td><td>73</td><td>1.1%</td>
+        </tr><tr class="">
+            <td>## 🔁 The Loop-Back Mechanism</td><td>25</td><td>97</td><td>1.5%</td>
+        </tr><tr class="">
+            <td>## 📋 What Each Phase Checks</td><td>2</td><td>6</td><td>0.1%</td>
+        </tr><tr class="">
+            <td>### Phase P1 Check (after `refactor_bridge.py`)</td><td>11</td><td>103</td><td>1.6%</td>
+        </tr><tr class="">
+            <td>### Phase P2 Check (after `refactor_migrate.py`, per module)</td><td>10</td><td>89</td><td>1.4%</td>
+        </tr><tr class="">
+            <td>### Phase P3 Check (during surgery, on demand)</td><td>9</td><td>61</td><td>0.9%</td>
+        </tr><tr class="">
+            <td>### Phase P4 Check (after `refactor_clean.py`)</td><td>10</td><td>80</td><td>1.2%</td>
+        </tr><tr class="">
+            <td>### Phase P4 `--pre-merge` (stricter, run just before `git merge`)</td><td>11</td><td>67</td><td>1.0%</td>
+        </tr><tr class="">
+            <td>## 🖥️ Invocation</td><td>3</td><td>4</td><td>0.1%</td>
+        </tr><tr class="">
+            <td># After Phase 1 — validate shim layer:</td><td>5</td><td>16</td><td>0.2%</td>
+        </tr><tr class="">
+            <td># After each Phase 2 module migration:</td><td>3</td><td>13</td><td>0.2%</td>
+        </tr><tr class="">
+            <td># During Phase 3 (on demand, between surgery sessions):</td><td>3</td><td>15</td><td>0.2%</td>
+        </tr><tr class="">
+            <td># After Phase 4 shim cleanup:</td><td>3</td><td>12</td><td>0.2%</td>
+        </tr><tr class="">
+            <td># Final pre-merge check (strictest):</td><td>3</td><td>12</td><td>0.2%</td>
+        </tr><tr class="">
+            <td># View what the manifest intends (no filesystem checks):</td><td>6</td><td>16</td><td>0.2%</td>
+        </tr><tr class="">
+            <td>## 📖 Reading the Output</td><td>32</td><td>118</td><td>1.8%</td>
+        </tr><tr class="">
+            <td>## 🔗 Integration with Phase Workflow Files</td><td>10</td><td>48</td><td>0.7%</td>
+        </tr><tr class="">
+            <td>## Phase Boundary Reference</td><td>10</td><td>56</td><td>0.9%</td>
+        </tr><tr class="">
+            <td>## 🏆 Refactor Complete</td><td>7</td><td>22</td><td>0.3%</td>
+        </tr><tr class="">
+            <td>### Change Log</td><td>3</td><td>81</td><td>1.3%</td>
+        </tr></table></div>
+    <div class="summary-card">
+        <h4>workstream.md <span class="note">(6371 words | Flesch-Kincaid: 10.0)</span></h4>
+        <table>
+            <tr><th>Section Header</th><th>Lines</th><th>Words</th><th>% of Total Words</th></tr>
+<tr class="">
+            <td>Frontmatter / Preamble</td><td>40</td><td>99</td><td>1.6%</td>
+        </tr><tr class="">
+            <td># /workstream — Multi-Agent Workstream Orchestrator</td><td>15</td><td>266</td><td>4.2%</td>
+        </tr><tr class="">
+            <td>## GLOSSARY — Key Terms</td><td>23</td><td>590</td><td>9.3%</td>
+        </tr><tr class="">
+            <td>## PHASE 0 — INTAKE & ENVIRONMENT DETECTION</td><td>68</td><td>356</td><td>5.6%</td>
+        </tr><tr class="">
+            <td>## PHASE 1 — STATE INGESTION</td><td>57</td><td>255</td><td>4.0%</td>
+        </tr><tr class="">
+            <td>## PHASE 2 — ROLE ACTIVATION</td><td>4</td><td>20</td><td>0.3%</td>
+        </tr><tr class="">
+            <td>### ENGINEER ROLES (--claude, --gemini, --grok)</td><td>75</td><td>334</td><td>5.2%</td>
+        </tr><tr class="">
+            <td>### PM ROLE (--pm)</td><td>65</td><td>292</td><td>4.6%</td>
+        </tr><tr class="">
+            <td>## PHASE 2.5 — PRE-FLIGHT MANIFEST (Engineer Roles Only)</td><td>46</td><td>328</td><td>5.1%</td>
+        </tr><tr class="">
+            <td>## PHASE 3 — EXECUTION GUARDRAILS</td><td>38</td><td>274</td><td>4.3%</td>
+        </tr><tr class="">
+            <td>## PHASE 4 — STATUS UPDATE & HANDOFF</td><td>16</td><td>114</td><td>1.8%</td>
+        </tr><tr class="">
+            <td>### ENGINEER HANDOFF (--claude, --gemini, --grok)</td><td>7</td><td>66</td><td>1.0%</td>
+        </tr><tr class="">
+            <td>## Workstream [A/B/C] ([Agent Name])</td><td>64</td><td>253</td><td>4.0%</td>
+        </tr><tr class="">
+            <td>### PM HANDOFF (--pm)</td><td>7</td><td>15</td><td>0.2%</td>
+        </tr><tr class="">
+            <td>## PM Oversight — Iteration [N]</td><td>88</td><td>440</td><td>6.9%</td>
+        </tr><tr class="">
+            <td>## [Project Name] — Iteration [N] Checkpoint ([YYYY-MM-DD])</td><td>13</td><td>106</td><td>1.7%</td>
+        </tr><tr class="">
+            <td>## APPENDIX A — Shared File Templates (Scaffold Mode)</td><td>2</td><td>9</td><td>0.1%</td>
+        </tr><tr class="">
+            <td>### Template: implementation-plan.md</td><td>5</td><td>19</td><td>0.3%</td>
+        </tr><tr class="">
+            <td># [Project Name] — Multi-Agent Implementation Plan</td><td>2</td><td>7</td><td>0.1%</td>
+        </tr><tr class="">
+            <td>## Iteration: 1</td><td>1</td><td>3</td><td>0.0%</td>
+        </tr><tr class="">
+            <td>## Date: [YYYY-MM-DD]</td><td>1</td><td>3</td><td>0.0%</td>
+        </tr><tr class="">
+            <td>## Designed by: PM (Grok OpenCode)</td><td>4</td><td>7</td><td>0.1%</td>
+        </tr><tr class="">
+            <td>## Roles</td><td>12</td><td>88</td><td>1.4%</td>
+        </tr><tr class="">
+            <td>## Guardrails</td><td>10</td><td>45</td><td>0.7%</td>
+        </tr><tr class="">
+            <td>## Workstream A — Claude Code</td><td>17</td><td>66</td><td>1.0%</td>
+        </tr><tr class="">
+            <td>## Workstream B — Antigravity Gemini</td><td>17</td><td>21</td><td>0.3%</td>
+        </tr><tr class="">
+            <td>## Workstream C — Grok OpenCode</td><td>17</td><td>21</td><td>0.3%</td>
+        </tr><tr class="">
+            <td>## Escalation Rules</td><td>11</td><td>50</td><td>0.8%</td>
+        </tr><tr class="">
+            <td>## Communication Cadence</td><td>10</td><td>56</td><td>0.9%</td>
+        </tr><tr class="">
+            <td>## Reporting Format (Engineer Daily Status)</td><td>17</td><td>55</td><td>0.9%</td>
+        </tr><tr class="">
+            <td>### Template: WORKSTREAM_STATUS.md</td><td>3</td><td>4</td><td>0.1%</td>
+        </tr><tr class="">
+            <td># WORKSTREAM_STATUS.md</td><td>7</td><td>23</td><td>0.4%</td>
+        </tr><tr class="">
+            <td>## Workstream A (Claude Code)</td><td>13</td><td>26</td><td>0.4%</td>
+        </tr><tr class="">
+            <td>## Workstream B (Antigravity Gemini)</td><td>13</td><td>26</td><td>0.4%</td>
+        </tr><tr class="">
+            <td>## Workstream C (Grok OpenCode)</td><td>13</td><td>26</td><td>0.4%</td>
+        </tr><tr class="">
+            <td>## PM Oversight</td><td>17</td><td>46</td><td>0.7%</td>
+        </tr><tr class="">
+            <td>### Template: DECISIONS.md</td><td>3</td><td>4</td><td>0.1%</td>
+        </tr><tr class="">
+            <td># DECISIONS.md — Append-Only Decision & Escalation Log</td><td>11</td><td>46</td><td>0.7%</td>
+        </tr><tr class="">
+            <td>## [Entry #] — [YYYY-MM-DD HH:MM] [Title]</td><td>17</td><td>77</td><td>1.2%</td>
+        </tr><tr class="">
+            <td>## APPENDIX B — Escalation Entry Format</td><td>5</td><td>20</td><td>0.3%</td>
+        </tr><tr class="">
+            <td>## [Entry #] — [YYYY-MM-DD HH:MM] [Descriptive Title]</td><td>27</td><td>131</td><td>2.1%</td>
+        </tr><tr class="">
+            <td>## APPENDIX C — The Full Iteration Cycle</td><td>41</td><td>222</td><td>3.5%</td>
+        </tr><tr class="highlight">
+            <td>## STRICT RULES (never violate)</td><td>83</td><td>1449</td><td>22.7%</td>
+        </tr><tr class="">
+            <td>### Change Log</td><td>4</td><td>13</td><td>0.2%</td>
+        </tr></table></div>
+    <h2 id="tables">Section 5: Full Suite Data Tables</h2>
+    <h3>Sovereign Workflows (All)</h3><table><tr><th>File</th><th>Words</th><th>Readability Grade</th><th>Imbalance Score</th><th>Conformity</th></tr><tr><td><strong>implementation-plan.md</strong></td><td>8086</td><td>11.9</td><td>4.17</td><td>100%</td></tr><tr><td><strong>harden-workflow.md</strong></td><td>6740</td><td>11.3</td><td>3.77</td><td>100%</td></tr><tr><td><strong>refactor.md</strong></td><td>6461</td><td>8.6</td><td>0.62</td><td>50%</td></tr><tr><td><strong>workstream.md</strong></td><td>6371</td><td>10.0</td><td>3.84</td><td>100%</td></tr><tr><td><strong>focus-plan.md</strong></td><td>6258</td><td>10.9</td><td>4.88</td><td>100%</td></tr><tr><td><strong>execute-build.md</strong></td><td>6050</td><td>10.8</td><td>8.00</td><td>100%</td></tr><tr><td><strong>triage.md</strong></td><td>5479</td><td>10.5</td><td>10.14</td><td>100%</td></tr><tr><td><strong>nodelete.md</strong></td><td>5344</td><td>10.7</td><td>5.06</td><td>100%</td></tr><tr><td><strong>secretary.md</strong></td><td>5293</td><td>11.6</td><td>4.41</td><td>100%</td></tr><tr><td><strong>harden.md</strong></td><td>5207</td><td>12.0</td><td>4.03</td><td>100%</td></tr><tr><td><strong>iterate-test.md</strong></td><td>4955</td><td>11.9</td><td>5.69</td><td>100%</td></tr><tr><td><strong>helpdesk-tickets.md</strong></td><td>4786</td><td>12.8</td><td>7.66</td><td>100%</td></tr><tr><td><strong>sentinel.md</strong></td><td>4781</td><td>11.7</td><td>3.54</td><td>100%</td></tr><tr><td><strong>quality.md</strong></td><td>4715</td><td>11.9</td><td>14.22</td><td>100%</td></tr><tr><td><strong>divergence.md</strong></td><td>4666</td><td>11.9</td><td>7.69</td><td>100%</td></tr><tr><td><strong>investigate.md</strong></td><td>4440</td><td>10.6</td><td>5.34</td><td>100%</td></tr><tr><td><strong>gitclean.md</strong></td><td>3479</td><td>10.6</td><td>3.63</td><td>100%</td></tr><tr><td><strong>design-orchestrator.md</strong></td><td>3443</td><td>12.1</td><td>4.38</td><td>100%</td></tr><tr><td><strong>receipt-check.md</strong></td><td>3367</td><td>11.1</td><td>6.54</td><td>100%</td></tr><tr><td><strong>redteam.md</strong></td><td>3348</td><td>9.8</td><td>4.45</td><td>100%</td></tr><tr><td><strong>soc.md</strong></td><td>3074</td><td>10.4</td><td>4.69</td><td>50%</td></tr><tr><td><strong>role.md</strong></td><td>3052</td><td>12.8</td><td>6.19</td><td>50%</td></tr><tr><td><strong>continuous-verify.md</strong></td><td>2752</td><td>10.3</td><td>8.26</td><td>100%</td></tr><tr><td><strong>depreciate.md</strong></td><td>2681</td><td>13.3</td><td>10.80</td><td>100%</td></tr><tr><td><strong>personality.md</strong></td><td>2135</td><td>11.2</td><td>6.16</td><td>100%</td></tr><tr><td><strong>document.md</strong></td><td>1888</td><td>10.6</td><td>11.37</td><td>75%</td></tr><tr><td><strong>onboard.md</strong></td><td>1590</td><td>8.5</td><td>7.24</td><td>100%</td></tr><tr><td><strong>provenance.md</strong></td><td>1563</td><td>10.3</td><td>6.34</td><td>100%</td></tr><tr><td><strong>retrospective.md</strong></td><td>1427</td><td>10.3</td><td>5.00</td><td>100%</td></tr><tr><td><strong>deepcode.md</strong></td><td>1045</td><td>13.7</td><td>12.83</td><td>50%</td></tr><tr><td><strong>canvas.md</strong></td><td>693</td><td>12.7</td><td>53.16</td><td>50%</td></tr><tr><td><strong>testpackage.md</strong></td><td>402</td><td>14.1</td><td>59.45</td><td>50%</td></tr><tr><td><strong>nodeleteshort.md</strong></td><td>181</td><td>11.9</td><td>18.49</td><td>50%</td></tr></table><h3>Grok Build Skills (All)</h3><table><tr><th>File</th><th>Words</th><th>Readability Grade</th><th>Imbalance Score</th><th>Conformity</th></tr><tr><td><strong>execute-plan/SKILL.md</strong></td><td>11293</td><td>9.6</td><td>1.58</td><td>92%</td></tr><tr><td><strong>implement/SKILL.md</strong></td><td>9929</td><td>11.6</td><td>1.61</td><td>96%</td></tr><tr><td><strong>pr-babysit/SKILL.md</strong></td><td>7711</td><td>9.4</td><td>2.18</td><td>12%</td></tr><tr><td><strong>review/SKILL.md</strong></td><td>5730</td><td>9.3</td><td>4.46</td><td>33%</td></tr><tr><td><strong>design/SKILL.md</strong></td><td>2730</td><td>11.6</td><td>3.76</td><td>50%</td></tr></table>
+</body>
+</html>

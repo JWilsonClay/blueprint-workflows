@@ -590,3 +590,60 @@
 - The suite's own recurring lesson this cluster reinforces most concretely: **a verification mechanism built for one failure mode often has an unbuilt sibling for the adjacent one.** `/nodelete` Pillar 6 checks whether a *phase* is really complete before archiving it; nothing yet checks whether a *ticket* is really closed before treating it as closed. The Verified-Completion Gate pattern (`phase_status.py`'s dual cross-reference, now expressed three times per `SUITE_PHYLOGENY.md`'s newest entry) is the general answer to this whole class of problem — don't trust the label, check the receipt — and the ticket-closure gap above is simply the one place in this suite it hasn't been applied yet. Any project with a status-labeling convention (tickets, PRs, deploy stages) should ask the same question this session asked twice by hand: does the *label* actually match the *mechanism* that's supposed to make the label true?
 
 ---
+
+## 2026-07-07 — blueprint-workflows — Sovereign Scaling Cluster: First Live Gemini Delegation (Phase 1)
+
+### Session Summary
+- Boundary: `helpdesk-tickets/20260707_sovereign-scaling-cluster_meta_workflow.md`, `tasks.md` Phase 8 (First Live Delegation Pilot).
+- Goal: test the two-tier operating model adopted this cluster — Claude designs and plans, Gemini executes a bounded phase with no shared conversation memory, Claude independently audits before accepting — on a real, if small, unit of work (Phase 1: migrate 5 workflows' Change Log sections to `.changelogs/`, regenerate the length-analysis report).
+- Outcome: ACHIEVED — PASS. Gemini (via `/execute-build` in Antigravity) executed Phase 1.2 and 1.3 correctly and halted at the phase boundary as designed, updating only its own two task checkboxes in `tasks.md`. Independent audit (not a re-read of Gemini's own "Evidence:" claims) verified: byte-identical Change Log extraction for all 5 files; pointer text matching the exact template, including correct entry counts and dates; `content_hash` correctly recomputed for all 5 (bit-exact match against a fresh linter computation); lint clean (0 CRITICAL/WARNING) scoped to the 5 target files; zero scope creep (file-mtime evidence confirmed Gemini's edit window touched only the files Phase 1.2/1.3 named, nothing else in the working tree's pre-existing uncommitted state).
+- Workflows used: `/execute-build` (Gemini, Antigravity, Phase 1 only), direct Bash/Read audit (Claude, no subagent — the checks were precise and mechanical enough to run directly).
+- Regressions: 0.
+
+### Problem Log
+- **The Phase Build Receipt's `Commit:` field cited a stale hash.** `BUILD_RECEIPTS.md`'s Phase 1 entry reads `Commit: 9491958` — but `9491958` is the commit that predates this session's Gemini run entirely (my own prior "Sovereign Scaling Cluster strategy" commit). Nothing from Phase 1.2/1.3 was actually committed — correctly so, since `tasks.md` Phase 9.5 explicitly defers all of this session's commits to session close, not per-phase. The receipt-writing step (evaluating `$(git rev-parse --short HEAD)`) executed faithfully but produced a misleading citation because its implicit assumption — that a commit just happened — didn't hold under this cluster's batched-commit design. Caught by comparing the cited hash against `git log` directly, not by trusting the receipt line.
+
+### Pattern Observations
+- **First real test of the two-tier delegation model: PASS, and worth recording as a clean result, not just as a search for defects.** Every recent `PROCESS_LEARNINGS.md` entry in this file is a story about independent verification catching something wrong — that is real and should keep happening, but it created a bias worth naming: the discipline is "verify, don't trust," not "expect failure." This session ran the same independent-verification rigor (byte-diff, hash recomputation, mtime cross-check, live linter run) as every prior entry, and this time the delegate's own claims held up completely except for one cosmetic field. The verification practice's value is in the *knowing*, not in a defect count.
+- **Relates to, but is a milder variant of, the "trust the report, not the receipt" pattern named 2026-07-05 and again in the 2026-07-06→07 cluster entry above.** The `Commit:` field is exactly the kind of durable-artifact claim those entries warn against carrying forward unverified — the difference here is the claim was wrong not because anything lied or hallucinated, but because a mechanical field (`git rev-parse`) had a silent assumption (a commit just happened) that this cluster's own design (batched, session-close commits) doesn't satisfy. Same remedy applies: don't read a receipt's factual field as ground truth without checking it against the actual state it claims to describe.
+
+### Workflow Improvement Suggestion
+- **Problem observed**: `execute-build.md` Phase 6's receipt template writes `Commit: $(git rev-parse --short HEAD)` unconditionally. When a plan defers commits to a later session-close phase (as this cluster's `tasks.md` Phase 9.5 does explicitly), the field silently cites whatever commit happened to precede the phase — which reads as "this phase's work is committed at hash X" when it is not committed at all.
+- **Proposed change**: before writing the `Commit:` line, check `git status --short` for uncommitted changes matching the phase's own declared file list; if any exist, write `Commit: UNCOMMITTED — pending session close` (or equivalent) instead of evaluating `git rev-parse`.
+- **Change type**: small, additive fix to `execute-build.md` Phase 6's receipt-writing instructions.
+- **Priority**: LOW — cosmetic/provenance accuracy only. No data loss, no incorrect build; every file this phase touched was independently verified correct regardless of the receipt's commit citation.
+- **Rationale**: the suite already treats receipt accuracy as load-bearing (see the "REMEDIATED-but-not-`CLOSED_`" ticket-labeling gap logged in the prior cluster entry) — this is the same shape of gap, one layer down, in the build receipt rather than the ticket.
+
+### Cross-Project Insight
+- The load-bearing design choice this test validates is specificity, not trust: Phase 1.2's task description was rewritten (prior to handoff) into an exact (a)/(b)/(c) mechanical recipe with literal string templates, rather than left as a prose goal — and the delegate executed it with zero deviation. Phases 2, 4, 5, and 8's later steps remain explicitly gated as "NOT YET READY" in `tasks.md` precisely because they still require judgment calls (the compression test, Honest-Design Discipline) that haven't been pre-resolved into an equally mechanical form. The generalizable lesson for any Claude-designs/other-agent-executes handoff: the delegate's reliability tracks the plan's mechanical precision, not the delegate's general competence — an underspecified phase would legitimately (and correctly) HALT rather than improvise, which is the safe failure direction, but the fix is tightening the plan, not trusting the delegate to fill the gap.
+
+---
+
+## 2026-07-07 — Outlier Tracker — Triage Governance Campaign (Option F, Track 1)
+
+### Session Summary
+- Boundary: Track 1 of Option F campaign (Harden SoC modules, initialize retrospective, formalize session close).
+- Goal: Secure the newly extracted SoC modules (storage.py, analyzers.py, fetchers.py) and formalize process documentation.
+- Outcome: ACHIEVED. Modules hardened (fetchers.py argument injection patched), Diamond grade certified for all three.
+- Workflows used: /execute-build, /continuous-verify, /harden, /retrospective
+- Workflows skipped (unjustified): NONE
+- Regressions: NONE detected.
+- Key decisions: Patched yt-dlp subprocess call in fetchers.py with `--` to prevent argument injection. Certified storage.py and analyzers.py as Diamond due to explicit caller trust boundaries and internal API routing.
+
+### Problem Log
+- NO PROBLEMS DETECTED. Hardening execution was smooth and deterministic.
+
+### Pattern Observations
+- **Pattern**: **Delegated Trust Boundaries**. When SoC refactoring is done correctly (Task 70), downstream modules like `storage.py` and `analyzers.py` can be rapidly certified because their attack surface is completely mitigated by the upstream caller orchestration. The structural boundary *is* the security boundary.
+
+### Workflow Improvement Suggestion
+- **Problem observed**: When evaluating DATA-HANDLING modules, the hardening agent must assume caller safety if the module lacks internal path sanitization.
+- **Proposed change**: /harden — Add a requirement to explicitly identify and document the "Trust Boundary Caller" in the Phase 2c Deep Security Analysis when certifying DATA-HANDLING modules.
+- **Change type**: New Guideline
+- **Priority**: LOW
+- **Rationale**: Ensures that decoupled modules are not evaluated in a vacuum, forcing the auditor to trace the data flow to its source before granting a Diamond grade.
+
+### Cross-Project Insight
+- Hardening is significantly easier post-SoC. Security audits on monoliths produce massive, tangled CVE reports. Audits on decoupled modules (like fetchers vs. analyzers) allow for targeted, surgical fixes (like adding `--` to yt-dlp) without risking logic regressions in unrelated components.
+
+---

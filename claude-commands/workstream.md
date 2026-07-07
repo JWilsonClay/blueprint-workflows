@@ -1004,7 +1004,6 @@ Before assigning any agent to a workstream, the PM should confirm the agent's pl
 ---
 
 ### Change Log
-1. **2026-05-23**: `[CREATED]` Built via Sovereign Scaffold Generator (/harden-workflow --generator). Origin: user directive to create a multi-agent workstream orchestration workflow supporting four roles (--claude, --gemini, --grok, --pm) with HITL coordination, structured handoff blocks, append-only decision logging, binary escalation protocol, and scaffold-mode file generation. Designed as a platform-agnostic protocol readable by Claude Code, Grok OpenCode, and Antigravity Gemini. Standard Version: 3.
-2. **2026-05-24**: `[HARDENED — Post-Iteration-1 remediation + 5 divergences, /nodelete]` Seven findings from /investigate on Iteration 1 + five approved divergences. Fixes: Phase 4a REPLACE enforcement, Phase 4b/4d file output paths, Phase 4.0 mkdir-p gate, STRICT RULES 14-22. Divergences: Phase 2.5 Pre-Flight Manifest (BLOCKED halt), Phase 4e Iteration Ledger (10th-iter checkpoint), GLOSSARY +5 terms, Platform Invocation Requirement (31 OpenCode pointer files created, bulk-load retired). Standard Version: 3.
-3. **2026-05-25**: `[HARDENED — Agent signing + structural clarity, /nodelete]` STRICT RULE 23 (agent identity signing in handoff blocks). Change Log entries 2-5 consolidated for structural clarity — all information preserved, verbose entries compressed. Standard Version: 3.
-4. **2026-07-07**: `[INJECTED — Sovereign Redesign Cluster Stage 6, /nodelete]` Added a note (opening section, before GLOSSARY) cross-referencing the Agent Capability Gate (PILLAR_02/03 §15): native execution is the suite-wide default; this workflow's `--grok`/`--pm` roles require confirmed Grok tool-calling availability and explicit session authorization before use, never assumed. No protocol logic changed — this workflow's own phases and STRICT RULES are unaffected; the gate governs whether a Grok role is invoked at all. `version` 3→4.
+
+See `.changelogs/workstream.md` for the full history (4 entries, latest: 2026-07-07).
+

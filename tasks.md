@@ -11,32 +11,58 @@ this session; it is evidence for a future audit pass, not a substitute for one.
 **Checkbox states:** `[ ]` not started · `[/]` in progress · `[x]` complete (with cited evidence).
 
 **Companion documents:** `implementation-plan.md` (repo root) carries the rationale and Detailed
-Requirements per phase. `helpdesk-tickets/20260707_sovereign-scaling-cluster_meta_workflow.md`
-carries the full strategic argument. This file is the checkable driver `/execute-build` and a
-Gemini delegate both read.
+Requirements per phase, including the User Approval record (2026-07-07, satisfies `/execute-build.md`
+STRICT RULE 15 for a fresh Gemini session with no memory of the approving conversation) and the
+per-phase Execution-Readiness table. `helpdesk-tickets/20260707_sovereign-scaling-cluster_meta_workflow.md`
+carries the full strategic argument.
+
+**Handoff mechanism (resolved 2026-07-07):** open an Antigravity session, invoke `/execute-build`
+directly against this workspace. No `/workstream` extension needed — see `implementation-plan.md`'s
+corrected Phase 6 note. Gemini already has a pointer to `/execute-build.md`.
+
+**READY FOR GEMINI TODAY: Phase 1 only.** Phases 2, 4, 5, and 8 are NOT yet execution-ready — each
+requires a Claude design-tightening pass first (see `implementation-plan.md`'s Execution-Readiness
+table for the specific reason per phase). Do not hand these off as currently written; `/execute-build`
+Phase 2 will legitimately HALT on them as underspecified, which is the correct, safe behavior, not a
+bug to route around.
 
 ---
 
-## Phase 1 — Quick Wins
+## Phase 1 — Quick Wins — **READY FOR HANDOFF**
 <!-- Marker slot: leave blank until independently verified. -->
 
 - [x] 1.1 Build `lint_workflows.py --fix-hashes --write` mode. **Evidence:** `scripts/suite/lint_workflows.py` (`_write_content_hash()`, `--write` flag); `scripts/tests/test_lint_workflows_write.py`, 6/6 passing. Resolves `CLOSED_20260704_lint-fix-hashes-gap_workflow.md`.
-- [ ] 1.2 Create `.changelogs/` directory convention and migrate Change Log sections exceeding ~10% of total word count (per `scripts/suite/analyze_workflow_lengths.py` output) to `.changelogs/<workflow-name>.md`, leaving a short pointer in the live file. Candidates in priority order: `secretary.md` (44.1% combined w/ STRICT RULES), `nodelete.md` (35.8%), `harden-workflow.md` (two Change Log sections), `workstream.md`, `implementation-plan.md` (this suite's own command file, not this plan document).
-- [ ] 1.3 Re-run `analyze_workflow_lengths.py` after 1.2 and confirm the Imbalance Score drops for migrated files (directional check, not a target number — see governing ticket §3.2's dissent on treating the metric as a scored target).
+- [x] 1.2 Create `.changelogs/` directory. For each of `secretary.md`, `nodelete.md`, `harden-workflow.md`, `workstream.md`, `claude-commands/implementation-plan.md` (the suite's own command file, not this plan document) in that exact order: (a) copy that file's entire `### Change Log` section (heading through the last numbered entry, including any Hardening Certificate block that follows it) verbatim into a new file `.changelogs/<filename-without-.md>.md`, with a one-line header `# Change Log — /<workflow-name>` above the copied content; (b) in the original file, replace the `### Change Log` section with exactly: `### Change Log\n\nSee \`.changelogs/<filename-without-.md>.md\` for the full history ([N] entries, latest: [YYYY-MM-DD]).\n\n` where `[N]` and `[YYYY-MM-DD]` are the real count and date from what you just copied; (c) run `python3 scripts/suite/lint_workflows.py --workspace ~/blueprint-workflows --file <filename>` and confirm 0 CRITICAL/WARNING before moving to the next file — the content_hash will need recomputing via `--fix-hashes --write` since the body changed. Do not touch any other section of any file. Do not delete anything — the copy in step (a) must exist and be verified byte-identical to the original section before step (b) removes it from the live file. **Evidence:** Migrations performed via exact byte-copy scripts, linter confirmed 0 CRITICAL/WARNING for all 5 files.
+- [x] 1.3 Re-run `analyze_workflow_lengths.py` after 1.2 and confirm the Imbalance Score drops for migrated files (directional check, not a target number — see governing ticket §3.2's dissent on treating the metric as a scored target). **Evidence:** Script executed and HTML generated at `docs/workflow_length_analysis.html`.
 
 **Acceptance criteria:** 1.1 tested and merged (done). 1.2 complete for all files identified; each migration is a single `/nodelete`-compliant edit (pointer added, nothing deleted). 1.3 confirms the change had the intended directional effect.
 
 ---
 
-## Phase 2 — Instruction Density Compression
+## Phase 2 — Instruction Density Compression — **SPLIT 2026-07-07: 2a READY FOR HANDOFF, 2b NOT YET READY**
 
-- [ ] 2.1 Apply the compression test (`implementation-plan.md`, "Instruction Density Compression" section) to `secretary.md`'s STRICT RULES and Phase control-flow.
-- [ ] 2.2 Same for `nodelete.md`.
-- [ ] 2.3 Same for `harden-workflow.md`.
-- [ ] 2.4 Same for `workstream.md`.
-- [ ] 2.5 Lint CLEAN on every file touched (`lint_workflows.py --file <name>`, 0 CRITICAL/WARNING).
+Claude applied the compression test (`implementation-plan.md`, "Instruction Density Compression —
+the test") to `secretary.md`'s and `nodelete.md`'s STRICT RULES, rule by rule, 2026-07-07. Per-rule
+dispositions and reasoning: `docs/compression-staging/secretary-strict-rules.md` header. Phase
+control-flow sections (HOW TO BEGIN / Phase 0-N prose) were NOT yet assessed for any of the 4 files
+— folded into 2b below rather than silently skipped.
 
-**Acceptance criteria:** each compressed rule/phase is verified against the per-rule test before and after (does it change *what*, or only *how densely*); GLOSSARY/prose/Change Log sections are untouched; lint CLEAN; a genuine word-count reduction is observable in the STRICT RULES/Phase sections specifically.
+### 2a — Ready for handoff (secretary.md STRICT RULES + nodelete.md finding)
+
+- [x] 2.1 Apply the compression test to `secretary.md`'s STRICT RULES. **Evidence:** 8 of 20 rules compressed (2, 13, 15-20 — each had operative content plus historical narrative duplicating a `.changelogs/secretary.md` entry); 11 left verbatim (already single dense imperatives); rule 14 explicitly protected from compression (a `**[SUPERSEDED]**` marker preserved per `/nodelete`'s "never remove a STRICT RULE without a superseding replacement" doctrine — compressing provenance text would contradict the principle the compression test itself sits underneath). Measured: 995→738 words, 7120→5284 bytes (26% reduction) on the rules text, zero change in operative meaning per rule (verified individually). Final text staged at `docs/compression-staging/secretary-strict-rules.md`.
+- [x] 2.2 Apply the compression test to `nodelete.md`'s STRICT RULES. **Evidence:** all 14 rules reviewed individually; 13 already single dense imperatives with no historical narrative to remove; 1 (rule 14) is a substantive multi-clause operative rule, not narrative padding. **Finding: no compression available — the file is already at the density floor.** This is a real, verified negative result, not a skipped task; forcing edits that don't increase density would itself be the Depth Trap in reverse (padding disguised as work). No staging file created; `nodelete.md` requires no change for this task.
+- [x] 2.5a Mechanical apply for `secretary.md` only: (a) replace `claude-commands/secretary.md`'s `## STRICT RULES (never violate)` section's numbered rules 1-20 with the exact content of `docs/compression-staging/secretary-strict-rules.md` (from the line after its `---` to end of file) — leave the heading line and everything before/after the numbered rules untouched; (b) run `python3 scripts/suite/lint_workflows.py --workspace ~/blueprint-workflows --file secretary.md` and confirm 0 CRITICAL/WARNING; (c) recompute content_hash via `lint_workflows.py --fix-hashes --write`; (d) append a Change Log entry (in `.changelogs/secretary.md`, per the Phase 1 pointer convention) documenting the compression pass, citing this task and the word-count evidence above. Do not touch GLOSSARY, motivational prose, or the Change Log pointer itself. **Evidence:** `replace_file_content` used to exactly mirror staging file text into `claude-commands/secretary.md` lines 492-511; linter returned 0 CRITICAL/WARNING; hashes updated; changelog appended as entry 13.
+
+**2a Acceptance criteria:** 2.1-2.2 complete with cited per-rule evidence (done). 2.5a mechanical apply is genuinely execution-ready — no judgment left in it, matches the Phase 1.2 recipe pattern that already passed a real Gemini delegation + Claude audit cycle.
+
+### 2b — NOT YET READY (deferred, needs its own Claude design-tightening pass)
+
+- [ ] 2.3 Apply the compression test to `harden-workflow.md`'s STRICT RULES (22 rules; real section starts at the second `## STRICT RULES` occurrence — the first is embedded example text inside the Sovereign Scaffold Generator template in Phase 2 and must NOT be touched).
+- [ ] 2.4 Apply the compression test to `workstream.md`'s STRICT RULES (24 rules).
+- [ ] 2.6 Apply the compression test to Phase control-flow / HOW TO BEGIN sections across all 4 files (not yet assessed for any file — secretary.md and nodelete.md's 2.1/2.2 above covered STRICT RULES only).
+- [ ] 2.7 Lint CLEAN + hash recompute + Change Log entry for whichever of 2.3/2.4/2.6 produce actual changes (mirrors 2.5a's recipe once the judgment passes exist).
+
+**2b Acceptance criteria:** same per-rule test and evidence bar as 2a, applied to the larger/more narrative-heavy remaining two files plus the not-yet-touched Phase control-flow scope. Deferred deliberately rather than rushed — `harden-workflow.md` and `workstream.md` together carry 46 rules with substantially more `[INJECTED ...]` historical narrative than `nodelete.md` had, and warrant the same individual scrutiny 2a received, not a shallower pass.
 
 ---
 
@@ -53,7 +79,7 @@ Gemini delegate both read.
 
 ---
 
-## Phase 4 — Verification-Spine Re-Verification (4 workflows whose shape changed since 2026-06-02)
+## Phase 4 — Verification-Spine Re-Verification — **NOT YET READY** (Honest-Design Discipline is the campaign's own named judgment step; must be resolved by Claude before handoff, not performed by Gemini)
 
 - [ ] 4.1 Re-run Honest-Design Discipline against current `/execute-build` (Sovereign v5, 2026-07-06) — confirm or correct the archived seed design before building.
 - [ ] 4.2 Build `/execute-build`'s engine per the (confirmed or corrected) seed design, following the ten-step recipe in the archive file.
@@ -65,7 +91,7 @@ Gemini delegate both read.
 
 ---
 
-## Phase 5 — Verification-Spine Engine Extraction (remaining 5)
+## Phase 5 — Verification-Spine Engine Extraction (remaining 5) — **NOT YET READY** (same reason as Phase 4)
 
 - [ ] 5.1 `/redteam` — thin evidence rail (Ghost Logic collector); never script the adversarial verdict.
 - [ ] 5.2 `/sentinel` — augment existing `scripts/doorway/` with a drift-delta layer (see archive file seed design; note Phase 3's `substrate_index.json` findings are directly relevant here — check before building, don't duplicate).
@@ -77,36 +103,38 @@ Gemini delegate both read.
 
 ---
 
-## Phase 6 — Single-Engineer `/workstream` Mode (Delegation Fold 1)
+## Phase 6 — Handoff Mechanism
+**SUPERSEDED [QUARANTINE:2026-07-07]** — the 5 tasks below assumed a new `/workstream` mode was needed. It isn't. See `implementation-plan.md`'s corrected Phase 6. Struck through, not deleted, per `/nodelete`.
 
-- [ ] 6.1 Extend `/workstream` Phase 0a to recognize a workstream design with only Workstream B populated (A/C explicitly DORMANT in `implementation-plan.md`'s Roles table, not silently absent).
-- [ ] 6.2 Extend `/implementation-plan` Phase 6 (Workstream Design) to support generating a single-engineer design; skip rotation formula, cross-workstream conflict scan, PM/Architect ceremony when in this mode.
-- [ ] 6.3 Confirm Pre-Flight Manifest, Engineer Brief, Handoff Block work unmodified in single-engineer mode (they shouldn't need changes — verify, don't assume).
-- [ ] 6.4 Add the bounded-scope safety rule explicitly: single-engineer delegations MUST be scoped to one phase/slice, never an entire multi-phase plan in one hop. STRICT RULE addition to `/workstream`, citing the $200 Grok Build incident as the named precedent.
-- [ ] 6.5 Confirm `/implementation-plan --audit --workstreams` (or a solo-mode variant) runs cleanly against a single-populated workstream — verify the Coverage Ledger audit doesn't assume 3 workstreams exist.
+- [x] ~~6.1 Extend `/workstream` Phase 0a to recognize a workstream design with only Workstream B populated (A/C explicitly DORMANT in `implementation-plan.md`'s Roles table, not silently absent).~~ **Not needed — `/execute-build` already works directly.**
+- [x] ~~6.2 Extend `/implementation-plan` Phase 6 (Workstream Design) to support generating a single-engineer design...~~ **Not needed.**
+- [x] ~~6.3 Confirm Pre-Flight Manifest, Engineer Brief, Handoff Block work unmodified in single-engineer mode...~~ **Not needed — `/execute-build` has its own equivalent machinery (Phase 0 discovery, Phase Build Receipts).**
+- [x] 6.4 Bounded-scope safety principle — **carried forward, not superseded**: every Gemini delegation is scoped to one `tasks.md` phase at a time (already true by construction — `/execute-build` builds one phase, issues one receipt, and advances only on success). No new STRICT RULE needed; `/execute-build`'s own Phase 6 loop already enforces this shape.
+- [x] ~~6.5 Confirm /implementation-plan --audit --workstreams runs cleanly against a single-populated workstream...~~ **Not needed — not using `/workstream` for this.**
 
-**Acceptance criteria:** a real (even if trivial/synthetic) single-engineer workstream design + execution + audit cycle completes end-to-end before Phase 8's real pilot is attempted.
+**Resolution:** open an Antigravity session, invoke `/execute-build`, point it at this workspace. Done — verified 2026-07-07 by re-reading `execute-build.md` in full (no Claude-Code-specific assumptions found; format matches).
 
 ---
 
-## Phase 7 — User Training Guide (Delegation Fold 2)
+## Phase 7 — User Training Guide
 
-- [ ] 7.1 Write `docs/GEMINI_WORKSTREAM_GUIDE.md`: invocation steps for `/workstream --gemini` in single-engineer mode, the Engineer Brief / Handoff Block round-trip explained end to end for a human operator (not just an agent).
+- [ ] 7.1 Write `docs/GEMINI_EXECUTE_BUILD_GUIDE.md`: how to open an Antigravity session and invoke `/execute-build`, what the Phase Map / Phase Build Receipt output looks like, how to tell if a phase HALTed on underspecification vs. completed, and how to carry results back (a `git log`/`git diff` review is enough — no special handoff file format needed since `/execute-build` writes directly to the shared workspace).
 - [ ] 7.2 After Phase 8's pilot runs, add the worked example from that real run to the guide (not a hypothetical one).
 
-**Acceptance criteria:** the guide exists, is accurate against Phase 6's actual built behavior (not aspirational), and was genuinely used for Phase 8 rather than written after the fact from memory of how it went.
+**Acceptance criteria:** the guide exists, is accurate against `/execute-build`'s actual behavior (verified against the real file, not assumed), and was genuinely used for Phase 8 rather than written after the fact from memory of how it went.
 
 ---
 
 ## Phase 8 — First Live Delegation Pilot
 
-- [ ] 8.1 Select the doorway `substrate_index.json` architecture (`helpdesk-tickets/20260705_sentinel-doorway-redesign_workflow.md`, Phase 1-4) as the pilot target, or confirm a different, comparably well-specified and appropriately-small candidate.
-- [ ] 8.2 Claude produces the design/plan artifacts for the pilot slice (already largely done — that ticket has a JSON schema draft and verification checklist).
-- [ ] 8.3 Hand off to Gemini via the Phase 6 mechanism, one bounded slice.
-- [ ] 8.4 Claude runs the Coverage Ledger audit on the returned work before accepting it.
-- [ ] 8.5 Record the outcome (PASS/CONCERNS/FAIL, what worked, what didn't) in `PROCESS_LEARNINGS.md` — this is the pattern's first real test and the suite's own retrospective discipline applies to it same as anything else.
+- [x] 8.1 Confirm Phase 1 is still `[ ]`/unstarted at pilot time. **Evidence:** confirmed prior to user invoking Gemini — 1.2/1.3 were `[ ]` at time of handoff.
+- [x] 8.2 Open an Antigravity session in this workspace; invoke `/execute-build`. **Evidence:** user-confirmed, this session.
+- [x] 8.3 Let it run Phase 1 (1.2, 1.3 — 1.1 is already done) to completion or to a legitimate HALT. **Evidence:** `BUILD_RECEIPTS.md` — "2026-07-07 — /execute-build — Phase 1 — Quick Wins — PHASE COMPLETE"; Gemini halted at the phase boundary as designed (bounded-scope principle, Phase 6.4) and touched only `tasks.md`'s own 1.2/1.3 checkboxes as its final action.
+- [x] 8.4 Claude reviews the result. **Evidence:** independent audit performed 2026-07-07 (not a re-read of Gemini's "Evidence:" claims) — byte-diff confirmed identical Change Log extraction for all 5 `.changelogs/*.md` files against the pre-Gemini `git show HEAD:...` originals; pointer text verified against the exact template (entry counts and dates independently recounted via `grep -c`, not trusted from the pointer text itself); `content_hash` recomputed correctly for all 5 (bit-exact match against a fresh `lint_workflows.py --fix-hashes` computation); lint scan of the 5 target files confirmed 0 CRITICAL/WARNING (suite-wide WARNINGs present are all in unrelated pre-existing files — `design-orchestrator.md`, `nodeleteshort.md`, `refactor.md`); file-mtime evidence (13:20:53–13:21:44 window) confirmed zero scope creep — only the 5 workflow files, `.changelogs/`, the HTML report, and `tasks.md` were touched, not the pre-existing uncommitted scaffolding already sitting in the working tree. One minor finding: `BUILD_RECEIPTS.md`'s `Commit:` field cites `9491958`, a stale pre-Gemini hash (nothing was actually committed — correctly deferred to Phase 9.5) — cosmetic only, logged in `PROCESS_LEARNINGS.md`, does not affect acceptance. **Verdict: PASS.**
+- [x] 8.5 Record the outcome in `PROCESS_LEARNINGS.md`. **Evidence:** entry appended 2026-07-07, "Sovereign Scaling Cluster: First Live Gemini Delegation (Phase 1)" — PASS, one LOW-priority workflow-improvement suggestion logged (receipt `Commit:` field should detect the batched-commit case rather than citing a stale HEAD).
+- [ ] 8.6 Only after 8.1-8.5 succeed: begin the design-tightening pass on Phase 2, 4, or 5 (whichever the user prioritizes) so the NEXT delegation has a real precedent to build on, not just a hypothesis.
 
-**Acceptance criteria:** one real, bounded unit of work is genuinely built by Gemini and genuinely verified by Claude, with an honest retrospective regardless of outcome.
+**Acceptance criteria:** Phase 1 is genuinely built by Gemini and genuinely verified by Claude, with an honest retrospective regardless of outcome, before any other phase is attempted. **Met 2026-07-07.**
 
 ---
 
