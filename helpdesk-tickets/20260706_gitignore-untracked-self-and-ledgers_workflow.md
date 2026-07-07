@@ -46,6 +46,8 @@ While trying to `git add` a brand-new helpdesk ticket (`20260706_check-glossary-
 5. **Not done, and flagged rather than assumed:** whether "Silent Persistence Gap" (content assumed git-durable that was actually working-tree-only, invisible to routine review) belongs in the Failure Pattern Vocabulary in `~/.claude/CLAUDE.md` is the user's call, not mine to silently add — that file is outside this workspace's edit boundary per the Workspace Edit Boundary rule.
 6. Recommend a one-time repo-wide audit (`git ls-files` vs `find` diff, or equivalent) to check whether any OTHER path is silently excluded the same way, now that this class of bug is known. Not performed here — out of scope for Stage 4 Task 4.4's immediate blocker, called out as a follow-up rather than assumed clean.
 
+**[CORRECTION — 2026-07-06, /nodelete]** Item 4's counts above were written before a precise recount. The exact, `git ls-tree`-verified split (parent commit vs. `66313dd`) is: **10 open tickets** and **12 root-level `CLOSED_*` tickets** newly tracked (22 ticket files total, not 20 as first stated), plus both READMEs and `process_learnings/` in full — 26 files in the commit, unchanged. Original prose above preserved per /nodelete; this note is the corrected figure of record. Does not change Section 4's Impact assessment or the fix itself, only the descriptive count.
+
 ## 6. References
 
 - `.gitignore` (the file, before and after this commit).
