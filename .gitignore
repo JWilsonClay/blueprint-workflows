@@ -40,3 +40,4 @@ build/
 .idea/
 .vscode/
 # <<< Sovereign Suite — managed block <<<
+MANIFEST.md
