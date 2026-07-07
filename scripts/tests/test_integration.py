@@ -126,5 +126,27 @@ class TestIntegration(unittest.TestCase):
         self.assertIn("substrate_index", p2)
         self.assertNotIn("drift", p2)  # minimal omits full
 
+    def test_manifest_sync_is_index_driven(self):
+        """PR 01-03: ManifestManager.sync() derives entries from substrate_index,
+        not raw current_map, and surfaces breadcrumb_summary per entry."""
+        # Give src/ a README so it's eligible for a MANIFEST entry.
+        (self.root / "src" / "README.md").write_text("# src\n")
+        # Minimal MANIFEST.md with the Auto-Synced marker manifest.py looks for.
+        manifest_path = self.root / "MANIFEST.md"
+        manifest_path.write_text(
+            "# Manifest\n\n## Root Directories (Auto-Synced)\n- placeholder\n\n---\n"
+        )
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(self.scripts_dir)
+        cmd = ["python3", "-m", "doorway.doorway", "--workspace", str(self.root), "--quiet"]
+        res = subprocess.run(cmd, capture_output=True, text=True, env=env)
+        self.assertEqual(res.returncode, 0, f"doorway failed: {res.stderr}")
+        synced = manifest_path.read_text()
+        self.assertIn("/src", synced)
+        # The breadcrumb_summary format is "FILES:N PY:M SUBDIRS:K ..." (build_substrate_index).
+        self.assertIn("FILES:", synced)
+        self.assertIn("PY:", synced)
+        self.assertNotIn("- placeholder", synced)  # old content replaced, not appended alongside
+
 if __name__ == '__main__':
     unittest.main()

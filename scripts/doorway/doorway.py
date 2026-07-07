@@ -271,8 +271,8 @@ class DoorwayContextualizer:
         # Step 5 — Persist snapshot.
         self._save_snapshot(current_map)
 
-        # Step 6 — MANIFEST sync.
-        self.manifest_manager.sync(current_map)
+        # Step 6 — MANIFEST sync (PR 01-03: index-driven, not raw current_map).
+        self.manifest_manager.sync(substrate_index)
 
         # Step 7 — Protocol recommendations.
         recommendations = self.recommender.recommend(drift)

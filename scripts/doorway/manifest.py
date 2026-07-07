@@ -38,14 +38,24 @@ class ManifestManager:
         self.workspace = workspace
         self.manifest_file = manifest_file
 
-    def sync(self, current_map: dict) -> None:
+    def sync(self, substrate_index: dict) -> None:
         """
         Main sync entry point. Updates MANIFEST.md with all discovered
         README directories. Optionally updates Architecture.md's Global API Map
         if any directories expose an <!-- INTERFACE --> tag.
 
+        [RETARGETED 2026-07-06 — PR 01-03, Sovereign Redesign Cluster Stage 1]
+        Previously re-derived directory facts (has_readme, display name) from
+        the raw scanner map on every call — a second code path deriving the
+        same facts substrate_index.json already computes canonically. Now
+        consumes the index directly (single source of truth) and surfaces
+        each directory's breadcrumb_summary in the MANIFEST entry, where
+        before only a bare link was shown.
+
         Args:
-            current_map: Workspace map dict produced by WorkspaceScanner.scan().
+            substrate_index: The dict produced by auditor.build_substrate_index()
+                (same shape as the persisted substrate_index.json), containing
+                a "directories" map keyed by relative path.
         """
         if not self.manifest_file.exists():
             # Not all workspaces have a MANIFEST.md — skip silently.
@@ -54,17 +64,22 @@ class ManifestManager:
         try:
             discovered_readmes = []
             api_map_entries = []
+            directories = substrate_index.get("directories", {})
 
-            for path, info in current_map.items():
+            for path, info in directories.items():
                 if info.get("has_readme"):
                     abs_path = self.workspace / path
                     abs_readme = abs_path / "README.md"
 
-                    # Build MANIFEST entry.
+                    # Build MANIFEST entry, including the index's breadcrumb
+                    # summary (already a short, single-line, field-delimited
+                    # string — no truncation needed).
                     display_name = f"/{path}" if path != "." else "/root"
+                    summary = info.get("breadcrumb_summary", "")
                     entry = (
                         f"- [{display_name}](file://{abs_path}/) : "
                         f"[README](file://{abs_readme})"
+                        + (f" — {summary}" if summary else "")
                     )
                     discovered_readmes.append((path, entry))
 
