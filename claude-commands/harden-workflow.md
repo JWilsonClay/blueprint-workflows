@@ -1,10 +1,10 @@
 ---
-description: "Sovereign Workflow Hardening Protocol — Audits and elevates workflow .md files to the highest hardening grade using established Sovereign Suite quality patterns. v4: ticket mode redirects SUBSTANTIVE-LOGIC tickets instead of silently discovering they're out of scope."
+description: "Sovereign Workflow Hardening Protocol — Audits and elevates workflow .md files to the highest hardening grade using established Sovereign Suite quality patterns. v4: ticket mode redirects SUBSTANTIVE-LOGIC tickets instead of silently discovering they're out of scope. v5: script-backed by the Structural Assessment Evidence Engine (scripts/harden_workflow/harden_workflow_audit.py) for Phase 1 facts + Degradation Check, Phase 5b /triage gap check, and Phase 7c Completeness Check."
 type: meta
 grade: Sovereign
-version: 4
-content_hash: "sha256:da5a55f8861de8a3"
-last_hardened: "2026-07-04"
+version: 5
+content_hash: "sha256:22ad83604755cd0d"
+last_hardened: "2026-07-07"
 strict_rule_count: 22
 phase_count: 13
 context_retention: high
@@ -15,6 +15,7 @@ flags:
 dependencies:
   - "/helpdesk-tickets"
   - "/triage"
+  - "scripts/harden_workflow/harden_workflow_audit.py"
 triggers:
   - "/triage"
   - "/helpdesk-tickets"
@@ -59,6 +60,7 @@ This workflow does NOT harden code, scripts, or business logic. It hardens the w
 | **Sovereign grade** | The highest hardening grade. A workflow at Sovereign grade has all structural elements present and verified: single merged command file in `~/blueprint-workflows/claude-commands/`, YAML frontmatter (description field), HOW TO BEGIN activation point, STRICT RULES enforcement block, structured output (receipt, report, or certificate), Change Log, and GLOSSARY. |
 | **Hardening Certificate** | The structured output emitted by this workflow at Phase 8 upon completing a hardening session. It records the grade achieved, all criteria evaluated, changes made, and the hardening standard version under which the grade was certified. |
 | **Standard version** | The version of the Sovereign Standard under which a Hardening Certificate was issued. When new criteria are added to the Sovereign Standard, the standard version increments and previously certified workflows may need re-certification. See Phase 1 Degradation Check. |
+| **Structural Assessment Evidence Engine** | **[ADDED 2026-07-07, implementation-plan.md Phase 4.5]** `scripts/harden_workflow/harden_workflow_audit.py` — the read-only mechanical layer behind Phase 1 (structural facts + Degradation Check), Phase 5b (`/triage` gap check), and Phase 7c (Completeness Check). Reuses `scripts/suite/checks.py`'s existing functions directly rather than re-parsing the same facts a fourth time. Its `grade_hint` output is one-directional and advisory ONLY — never a certified grade; presence of a structural element is mechanical, but whether that element is *complete* (STRICT RULE 4b) stays entirely with the agent. Architectural sibling of `scripts/build/`, `scripts/secretary/`, `scripts/triage/`. |
 
 **Current Standard Version: 3**
 *(v1: original eight criteria. v2: added standard_version stamping, Degradation Check, Sovereign Scaffold Generator, and GLOSSARY — 2026-05-07. v3: Pointer/Payload architecture retired, migrated to Claude Code single-file commands, `view_file` → Read tool, `run_command`/`list_dir` → Bash tool — 2026-05-21)*
@@ -233,6 +235,17 @@ If the workflow is **completely new** (command file absent or blank): skip Phase
 
 ## PHASE 1 — CURRENT STATE ASSESSMENT
 
+**[ENGINE-BACKED — ADDED 2026-07-07, implementation-plan.md Phase 4.5]** The structural presence facts below are mechanical — get them from the engine rather than re-reading the file a fourth time for the same questions Phase 4d/5b/7a/7c also ask (this reuses `scripts/suite/checks.py`'s already-tested functions directly, not a new parser):
+
+```bash
+python3 ~/blueprint-workflows/scripts/harden_workflow/harden_workflow_audit.py \
+  --workflow-name [name] --workspace ~/blueprint-workflows --output-json
+```
+
+Read `facts` (presence booleans + counts), `grade_hint` (advisory — see below), `degradation` (Standard Version comparison), and `triage_gap` (the /triage membership check, feeding Phase 5b) from the JSON in one call. If the engine is unavailable: fall back to reading the file directly and checking each criterion by eye; note the fallback in the certificate.
+
+**`grade_hint` is one-directional and advisory, never a certified grade** — mirrors the `/quality` v4 smell-linter precedent exactly: a hint of "Sovereign" means no missing structural element was found, NEVER that the workflow's content is good. `structured_output_present` cannot be reliably auto-detected (its shape varies too much across receipts/reports/certificates) and is always reported as unknown, capping the hint at "Hardened" — confirm this criterion by reading the file, exactly as before. The actual grade is still certified only after Phase 4's content-quality judgment (rule completeness, decision-branch coverage) passes — never from the hint alone.
+
 For each target workflow, evaluate the current content against the Sovereign Standard criteria. Produce an **Assessment Card**:
 
 ```
@@ -267,18 +280,21 @@ HARDENING DELTA: [list of missing criteria]
 - **Batch mode**: Output the Assessment Card, record in the session summary, and advance to the next workflow in the batch. Do NOT halt the entire batch session.
 - In either case: do not modify the file. A Sovereign workflow touched without cause is a regression risk.
 
-**Degradation Check — [INJECTED v2, 2026-05-07]**
+**Degradation Check — [INJECTED v2, 2026-05-07. ENGINE-BACKED — ADDED 2026-07-07, implementation-plan.md Phase 4.5]**
 
-A Sovereign grade is not permanent. New criteria added to the Sovereign Standard (i.e., when the Standard Version increments) mean a previously certified workflow may no longer meet current requirements. Perform the Degradation Check whenever assessing an existing Sovereign workflow:
+A Sovereign grade is not permanent. New criteria added to the Sovereign Standard (i.e., when the Standard Version increments) mean a previously certified workflow may no longer meet current requirements. Perform the Degradation Check whenever assessing an existing Sovereign workflow — the version extraction and comparison are already in the same engine call from above; read `degradation.certified_version`, `degradation.current_version`, and `degradation.degraded` directly rather than re-extracting `Standard Version: N` by eye:
 
-1. Read the workflow's most recent Change Log entry and identify the Standard Version under which it was last certified. (Look for `Standard Version: N` in the Hardening Certificate, or infer from the certification date if not present.)
-2. Compare against the **Current Standard Version** (see Glossary).
-3. If the workflow was certified under an older version:
+1. `degradation.certified_version` is the Standard Version most recently stamped in the file (`None` if never stamped — this is a different finding than degradation, see below).
+2. `degradation.current_version` is the Current Standard Version (see GLOSSARY) — kept in sync with `scripts/harden_workflow/degradation_check.py`'s `CURRENT_STANDARD_VERSION` constant.
+3. If `degradation.degraded` is `true` (certified version strictly behind current):
    - List which new criteria (added in the newer version) it has not yet been evaluated against.
    - Do NOT immediately downgrade the grade — the workflow earned its Sovereign badge legitimately.
    - REPORT: `DEGRADATION DETECTED: /[name] certified under Standard v[N], current is v[M]. Re-certification recommended for: [list of new criteria].`
    - Ask the user: re-certify now, or log as deferred?
-4. If the workflow was certified under the current version: no degradation. Proceed.
+4. If `degradation.degraded` is `false` and `certified_version` is not `None`: workflow is current. Proceed.
+5. If `certified_version` is `None` (no Standard Version ever stamped): this is not a degradation — it is a workflow that predates the stamping convention or was never certified. Note `NO STANDARD VERSION STAMPED` in the certificate rather than reporting a false degradation.
+
+If the engine is unavailable: fall back to reading the workflow's most recent Change Log entry / Hardening Certificate by eye for `Standard Version: N` and comparing manually against the Current Standard Version; note the fallback in the certificate.
 
 *The Degradation Check is the mechanism by which quality compounds over time rather than drifting silently.*
 
@@ -523,11 +539,9 @@ Typical invocation triggers (from /triage perspective):
   - [Trigger 2: ...]
 ```
 
-**5b. /triage Compatibility Audit**
+**5b. /triage Compatibility Audit** **[ENGINE-BACKED — ADDED 2026-07-07, implementation-plan.md Phase 4.5]**
 
-Cross-reference the description against the trigger matrix in `~/blueprint-workflows/claude-commands/triage.md`. Confirm:
-- Is this workflow represented in /triage's trigger matrix?
-- If not: note it as a gap for the next /triage update cycle
+The membership check itself is mechanical — `triage_gap.represented` from the same Phase 1 engine call already reports whether this workflow's bare name appears anywhere in `triage.md`'s Trigger Matrix (reusing `scripts/triage/matrix_completeness.py`'s `extract_matrix_workflows()` directly, built for `/triage`'s own Phase 4.4b — not re-parsed here). If `represented: false`: note it as a gap for the next `/triage` update cycle. If the engine is unavailable: fall back to reading `triage.md` directly and checking by eye; note the fallback in the certificate.
 
 Do not modify /triage during this workflow. Record the gap in the Hardening Certificate (Phase 8).
 
@@ -594,16 +608,18 @@ Confirm the YAML frontmatter is syntactically valid:
 - `description:` is a single non-empty string
 - The frontmatter block is properly delimited by `---` fences
 
-**7c. Command File Completeness Check**
+**7c. Command File Completeness Check** **[ENGINE-BACKED — ADDED 2026-07-07, implementation-plan.md Phase 4.5]**
 
-Read the command file and confirm the following sections exist:
-- [ ] GLOSSARY section (or equivalent key terms documentation)
-- [ ] At least one Phase or Step with defined success criteria
-- [ ] STRICT RULES or equivalent enforcement block
-- [ ] HOW TO BEGIN activation point
-- [ ] INTEGRATION WITH OTHER WORKFLOWS section
-- [ ] A structured output template (receipt, report, or certificate)
-- [ ] Change Log
+The same `facts` from the Phase 1 engine call already cover five of these seven — re-invoke it if the file changed since Phase 1 (structural sections added during Phase 2-6), rather than re-reading by eye:
+- [ ] `facts.glossary_present` — GLOSSARY section (or equivalent key terms documentation)
+- [ ] At least one Phase or Step with defined success criteria (`facts.phase_count` > 0 is a necessary but not sufficient check — read for actual success-criteria content, which the engine cannot judge)
+- [ ] `facts.strict_rules_present` — STRICT RULES or equivalent enforcement block
+- [ ] `facts.how_to_begin_present` — HOW TO BEGIN activation point
+- [ ] `facts.integration_present` — INTEGRATION WITH OTHER WORKFLOWS section
+- [ ] A structured output template (receipt, report, or certificate) — not engine-detectable (see Phase 1's note); confirm by reading
+- [ ] `facts.changelog_present` — Change Log
+
+If the engine is unavailable: fall back to reading the command file directly and confirming each section exists by eye; note the fallback in the certificate.
 
 **7d. Linter Validation Gate**
 
@@ -827,6 +843,9 @@ This workflow operates in this position within the workflow maintenance pipeline
 
   1. /divergence       → surfaces new workflow ideas and architectural improvements
   2. /harden-workflow  → THIS WORKFLOW — hardens existing or newly created workflow files
+     └─ Phase 1        → scripts/harden_workflow/harden_workflow_audit.py (structural facts + Degradation Check)
+     └─ Phase 5b       → scripts/harden_workflow/harden_workflow_audit.py (/triage gap check)
+     └─ Phase 7c       → scripts/harden_workflow/harden_workflow_audit.py (Completeness Check)
   3. /triage           → uses the hardened frontmatter description to recommend workflows
   4. /receipt-check    → reads Hardening Certificates to track suite coverage (Layer 2)
   5. /document         → records the hardening session in the DevJournal
@@ -852,5 +871,5 @@ This turns the hardening process into a living evolutionary system that accelera
 
 ### Change Log
 
-See `.changelogs/harden-workflow.md` for the full history (13 entries, latest: 2026-07-04).
+See `.changelogs/harden-workflow.md` for the full history (14 entries, latest: 2026-07-07).
 

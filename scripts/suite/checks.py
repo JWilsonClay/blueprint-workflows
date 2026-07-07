@@ -109,12 +109,32 @@ def check_frontmatter(fm, workflow_name, report):
         report.add("WARNING", workflow_name, "frontmatter", f"context_retention '{fm['context_retention']}' not valid")
 
 
+def has_glossary_section(body):
+    return bool(re.search(r'GLOSSARY', body))
+
+
+def has_how_to_begin_section(body):
+    return bool(re.search(r'HOW TO BEGIN', body))
+
+
+def has_strict_rules_section(body):
+    return bool(re.search(r'STRICT RULES', body))
+
+
+def has_integration_section(body):
+    return bool(re.search(r'INTEGRATION', body))
+
+
+def has_changelog_section(body):
+    return bool(re.search(r'Change Log', body))
+
+
 def check_structure(body, workflow_name, fm, report):
-    has_glossary = bool(re.search(r'GLOSSARY', body))
-    has_how_to_begin = bool(re.search(r'HOW TO BEGIN', body))
-    has_strict_rules = bool(re.search(r'STRICT RULES', body))
-    has_integration = bool(re.search(r'INTEGRATION', body))
-    has_changelog = bool(re.search(r'Change Log', body))
+    has_glossary = has_glossary_section(body)
+    has_how_to_begin = has_how_to_begin_section(body)
+    has_strict_rules = has_strict_rules_section(body)
+    has_integration = has_integration_section(body)
+    has_changelog = has_changelog_section(body)
 
     wf_type = fm.get("type", "execution") if fm else "execution"
 
