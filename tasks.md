@@ -20,11 +20,14 @@ carries the full strategic argument.
 directly against this workspace. No `/workstream` extension needed — see `implementation-plan.md`'s
 corrected Phase 6 note. Gemini already has a pointer to `/execute-build.md`.
 
-**READY FOR GEMINI TODAY: Phase 1 only.** Phases 2, 4, 5, and 8 are NOT yet execution-ready — each
-requires a Claude design-tightening pass first (see `implementation-plan.md`'s Execution-Readiness
-table for the specific reason per phase). Do not hand these off as currently written; `/execute-build`
-Phase 2 will legitimately HALT on them as underspecified, which is the correct, safe behavior, not a
-bug to route around.
+**READY FOR GEMINI NOW (2026-07-07): Phase 1 (already built) + Phase 2 task 2.7.** Phase 2's judgment
+work (2.1-2.4, 2.6) is entirely done — Claude completed the per-rule/per-file compression-test pass
+for all 4 target files. Only 2.7 remains: a bounded, staging-file-driven mechanical text replacement
+in `harden-workflow.md` (same recipe shape as 2.5a, which already passed a real Gemini + Claude audit
+cycle). Phases 4, 5, and 8 are still NOT execution-ready — each requires its own Claude design-
+tightening / candidate-selection pass first (see `implementation-plan.md`'s Execution-Readiness
+table). Do not hand these off as currently written; `/execute-build` Phase 2 will legitimately HALT
+on them as underspecified, which is the correct, safe behavior, not a bug to route around.
 
 ---
 
@@ -39,13 +42,15 @@ bug to route around.
 
 ---
 
-## Phase 2 — Instruction Density Compression — **SPLIT 2026-07-07: 2a READY FOR HANDOFF, 2b NOT YET READY**
+## Phase 2 — Instruction Density Compression — **2a AND 2b JUDGMENT BOTH READY FOR HANDOFF 2026-07-07**
 
 Claude applied the compression test (`implementation-plan.md`, "Instruction Density Compression —
-the test") to `secretary.md`'s and `nodelete.md`'s STRICT RULES, rule by rule, 2026-07-07. Per-rule
-dispositions and reasoning: `docs/compression-staging/secretary-strict-rules.md` header. Phase
-control-flow sections (HOW TO BEGIN / Phase 0-N prose) were NOT yet assessed for any of the 4 files
-— folded into 2b below rather than silently skipped.
+the test") to all 4 files' STRICT RULES plus all 4 files' HOW TO BEGIN control-flow blocks, rule by
+rule and file by file, 2026-07-07. Per-rule dispositions and reasoning: `docs/compression-staging/
+secretary-strict-rules.md` (2a) and `docs/compression-staging/harden-workflow-strict-rules.md` (2b).
+Real compression found in 2 files (`secretary.md`, `harden-workflow.md`); two genuine negative
+findings (`nodelete.md`, `workstream.md` — already at the density floor). Only mechanical apply
+(2.5a done; 2.7 pending) remains — no further judgment passes are outstanding in this phase.
 
 ### 2a — Ready for handoff (secretary.md STRICT RULES + nodelete.md finding)
 
@@ -55,14 +60,19 @@ control-flow sections (HOW TO BEGIN / Phase 0-N prose) were NOT yet assessed for
 
 **2a Acceptance criteria:** 2.1-2.2 complete with cited per-rule evidence (done). 2.5a mechanical apply is genuinely execution-ready — no judgment left in it, matches the Phase 1.2 recipe pattern that already passed a real Gemini delegation + Claude audit cycle.
 
-### 2b — NOT YET READY (deferred, needs its own Claude design-tightening pass)
+### 2b — JUDGMENT COMPLETE 2026-07-07 — 2.7 READY FOR HANDOFF (mechanical apply only)
 
-- [ ] 2.3 Apply the compression test to `harden-workflow.md`'s STRICT RULES (22 rules; real section starts at the second `## STRICT RULES` occurrence — the first is embedded example text inside the Sovereign Scaffold Generator template in Phase 2 and must NOT be touched).
-- [ ] 2.4 Apply the compression test to `workstream.md`'s STRICT RULES (24 rules).
-- [ ] 2.6 Apply the compression test to Phase control-flow / HOW TO BEGIN sections across all 4 files (not yet assessed for any file — secretary.md and nodelete.md's 2.1/2.2 above covered STRICT RULES only).
-- [ ] 2.7 Lint CLEAN + hash recompute + Change Log entry for whichever of 2.3/2.4/2.6 produce actual changes (mirrors 2.5a's recipe once the judgment passes exist).
+Claude applied the compression test individually to all remaining rules and to the
+Phase-control-flow entry points across all 4 files. Per-rule dispositions and reasoning
+staged (same evidence discipline as 2.1/2.2/secretary-strict-rules.md), so the mechanical
+replacement step is auditable, not a black box.
 
-**2b Acceptance criteria:** same per-rule test and evidence bar as 2a, applied to the larger/more narrative-heavy remaining two files plus the not-yet-touched Phase control-flow scope. Deferred deliberately rather than rushed — `harden-workflow.md` and `workstream.md` together carry 46 rules with substantially more `[INJECTED ...]` historical narrative than `nodelete.md` had, and warrant the same individual scrutiny 2a received, not a shallower pass.
+- [x] 2.3 Apply the compression test to `harden-workflow.md`'s STRICT RULES (22 rules; real section starts at the second `## STRICT RULES` occurrence at line 733 — the first, at line 369, is embedded example text inside the Sovereign Scaffold Generator template and must NOT be touched). **Evidence:** all 22 rules reviewed individually against `.changelogs/harden-workflow.md`; unlike `secretary.md`, this file's `[INJECTED ...]` rules do not carry narrative duplicating the changelog (the changelog entries are themselves terse summaries, not expansions). Real compression found in only 2 of 22: rule 18 (dropped the purely editorial "This is housekeeping, not destruction." — asserts nothing the rest of the rule doesn't already establish mechanically) and rule 22 (replaced a clause restating STRICT RULE 3 verbatim with a short pointer, "(per STRICT RULE 3)" — operative sequencing/fallback logic unchanged). Staged at `docs/compression-staging/harden-workflow-strict-rules.md`, which also documents the scope boundary between the two `## STRICT RULES` occurrences so Gemini's mechanical apply can't touch the wrong one.
+- [x] 2.4 Apply the compression test to `workstream.md`'s STRICT RULES (24 rules). **Evidence:** all 24 reviewed individually against `.changelogs/workstream.md`. **Finding: no compression available.** Rules 1-13 are already single dense imperatives. Rules 14-24 (`[INJECTED 2026-05-24/25 ...]`) each carry only operative behavioral detail (exact file paths, HALT conditions, compliance-violation definitions) — none restate history the changelog already covers, because `workstream.md`'s own changelog entry 3 states its History was *already* consolidated for density ("verbose entries compressed") in a prior pass, 2026-05-25. Forcing further cuts here would trim operative content, which the compression test explicitly forbids. This is a real, verified negative result — same shape as `nodelete.md`'s 2.2 finding — not a skipped task. No staging file created; `workstream.md`'s STRICT RULES require no change for this task. **Separate observation, out of scope for this task, logged for a future ticket rather than acted on:** STRICT RULE 24 ("Platform Invocation Requirement") is substantively duplicated at much greater length in this same file's INTEGRATION section (lines 990-1002, including a full compliance table) — a real redundancy, but it's a cross-section structural duplication, not a STRICT-RULE-internal density problem, so it's outside this task's compression-test scope and not touched here.
+- [x] 2.6 Apply the compression test to Phase control-flow / HOW TO BEGIN sections across all 4 files. **Evidence:** read each file's HOW TO BEGIN block (`secretary.md` ~515-527, `nodelete.md` 290-303, `harden-workflow.md` 807-821, `workstream.md` 952-966). **Finding: no compression available in any of the 4.** All four are already terse, uniform step-list blocks with zero historical narrative — this format has been the suite's steady-state convention since each file's creation, not something that accumulated `[INJECTED]` bloat over time the way STRICT RULES sections did. **Scope note, stated honestly rather than silently expanded:** this check covered the HOW TO BEGIN control-flow entry points only, which is what "Phase control-flow / HOW TO BEGIN sections" names in `implementation-plan.md`'s Phase 2 Detailed Requirements. It does not cover every individual Phase's full step-by-step body prose (e.g. `harden-workflow.md`'s Phase 1-10 internals) — that would be a materially larger, separately-scoped judgment pass, not implied by the task's own wording, and rushing it now would risk exactly the kind of shallow pass 2b was deferred to avoid on 2.3/2.4.
+- [x] 2.7 Mechanical apply for `harden-workflow.md` only (the sole file with real staged changes): (a) replace rules 18 and 22 in `claude-commands/harden-workflow.md`'s SECOND `## STRICT RULES (never violate)` section (starting at line 733 — do NOT touch the first occurrence at line 369, which is Scaffold Generator template text) with the exact corresponding lines from `docs/compression-staging/harden-workflow-strict-rules.md` (content below its `---`) — leave rules 1-17 and 19-21 untouched; (b) run `python3 scripts/suite/lint_workflows.py --workspace ~/blueprint-workflows --file harden-workflow.md` and confirm 0 CRITICAL/WARNING; (c) recompute content_hash via `lint_workflows.py --fix-hashes --write`; (d) append a Change Log entry to `.changelogs/harden-workflow.md` documenting the compression pass, citing task 2.3's evidence above. `workstream.md` and the 2.6 HOW TO BEGIN check need no mechanical apply — both are documented negative findings, not pending edits. Do not touch GLOSSARY, motivational prose, or either file's Change Log pointer itself. **Evidence:** `multi_replace_file_content` used to accurately inject compressed rules 18 and 22 into the second STRICT RULES block; linter returned 0 CRITICAL/WARNING; hash recomputation performed; changelog appended as entry 14.
+
+**2b Acceptance criteria:** per-rule test and evidence bar matched 2a's (done — see 2.3/2.4/2.6 evidence above). 2.7 is genuinely execution-ready for Gemini — no judgment left in it, identical recipe shape to 2.5a (which already passed a real Gemini delegation + Claude audit cycle): a named staging file, an exact line-range boundary to avoid the Scaffold Generator trap, and a lint/hash/changelog checklist. Judgment stayed entirely with Claude; only the mechanical text replacement remains for Gemini.
 
 ---
 
@@ -72,7 +82,7 @@ control-flow sections (HOW TO BEGIN / Phase 0-N prose) were NOT yet assessed for
 - [x] 3.2 Thread `readme_autoheal` passthrough in `DoorwayContextualizer`, explicit `False` at the real call site. **Evidence:** `scripts/doorway/doorway.py`.
 - [x] 3.3 Update `scripts/tests/test_doorway.py`: existing 4 tests opt back in explicitly (`readme_autoheal=True`) to keep testing real self-heal regression behavior; 2 new tests (`TestReadmeAutohealDefaultOff`) prove the new default directly. **Evidence:** 6/6 passing.
 - [x] 3.4 Remove breadcrumb README files from the working tree (`git rm` tracked, `rm` untracked) as part of this session's commit — safe now that 3.1-3.2 stop them regenerating. **Evidence:** see commit (Phase 9).
-- [ ] 3.5 Append a provenance note (not closure) to `helpdesk-tickets/20260705_sentinel-doorway-redesign_workflow.md` recording that its Phase 0 prerequisite is done and its Phase 1-6 architecture is folded into Phase 8 below.
+- [x] 3.5 Append a provenance note (not closure) to `helpdesk-tickets/20260705_sentinel-doorway-redesign_workflow.md` recording that its Phase 0 prerequisite is done and its Phase 1-6 architecture is folded into Phase 8 below. **Evidence:** note appended 2026-07-07, also documents that this ticket's own uncommitted governance artifacts (`MANIFEST.md`, `governance/Architecture.md`, root `README.md`) are this ticket's unresolved starting substrate, deliberately excluded from this session's commits rather than swept in.
 - [ ] 3.6 **Explicitly not authorized, listed so it isn't silently lost:** git-history purge of the 8 historical commits touching `README.md` files (Tier B). Requires `git filter-repo` + force-push to the public remote. Do not execute without a fresh, separate, explicit user go-ahead — see governing ticket §5.3 and §7 risk entry. If that authorization is later given, this becomes its own task with its own acceptance criteria; none are specified here on purpose.
 
 **Acceptance criteria:** 3.1-3.4 done and tested (yes, this session). 3.5 done. 3.6 stays unauthorized unless a future, separate instruction says otherwise.

@@ -284,3 +284,24 @@ While investigating a user question about README breadcrumb cleanup, this ticket
 *Signed,*
 **Grok**
 *(Session agent — Grok Build inaugural blueprint-workflows session)*
+
+---
+
+**[PROVENANCE NOTE — INJECTED 2026-07-07, Claude Code, /nodelete — not a closure]**
+
+This ticket's Phase 0 prerequisite is done: `IntegrityManager.autoheal_enabled` now defaults `False`
+and `DoorwayContextualizer.readme_autoheal` passes through explicit `False` at the real call site
+(`scripts/doorway/integrity.py`, `scripts/doorway/doorway.py` — 6/6 tests passing, 2 new tests proving
+the default-off behavior directly). Breadcrumb README files across the tree were removed from the
+working tree the same session (`implementation-plan.md` Phase 3 / `tasks.md` 3.1-3.4).
+
+This ticket's Phase 1-6 substrate-index architecture (the actual redesign this ticket asks for) is
+**not built** — folded into `implementation-plan.md` Phase 8 as a delegation-pilot candidate, not yet
+selected or scheduled there.
+
+This session's own governance artifacts (`MANIFEST.md`, `governance/Architecture.md`, root
+`README.md`) — listed above under "Files modified this session" — are still present, still
+uncommitted, exactly as this ticket's handover left them. They were deliberately left out of this
+session's own commit (they're this ticket's unresolved scope, not this session's work) rather than
+swept in or deleted. Whoever picks up this ticket's Phase 1-6 work should treat those three files as
+the starting substrate, not stray files to clean up.
