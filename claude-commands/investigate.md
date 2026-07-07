@@ -1,15 +1,16 @@
 ---
-description: "Sovereign Crime Scene Investigator — read-only forensic investigation producing evidence-cited findings with structured deviation reports and named failure pattern detection"
+description: "Sovereign Crime Scene Investigator — read-only forensic investigation producing evidence-cited findings with structured deviation reports and named failure pattern detection. v3: script-backed by the Citation & Search Log Fidelity Engine (scripts/investigate/investigate_audit.py) for citation resolution and search-log match-count verification."
 type: audit
 grade: Sovereign
-version: 2
-content_hash: "sha256:f46e29a536f7fc39"
-last_hardened: "2026-05-12"
+version: 3
+content_hash: "sha256:395cee41c6b2e72b"
+last_hardened: "2026-07-07"
 strict_rule_count: 12
 phase_count: 5
 context_retention: medium
 flags: []
-dependencies: []
+dependencies:
+  - "scripts/investigate/investigate_audit.py"
 triggers:
   - "/triage"
   - "/helpdesk-tickets"
@@ -54,6 +55,7 @@ This workflow does NOT implement fixes. It does NOT propose code changes as its 
 | **Minimal Reproducible Case (MRC)** | The smallest possible reproduction of the issue — a short script, minimal config, or single function — that demonstrates the failure without any surrounding complexity. Produced in Phase 4a before remediation options are presented. Derived from Divergence #3. |
 | **Mute Witness Protocol** | The principle that the mutation prohibition should be enforced architecturally (by tool access restriction or subagent scoping), not only by instruction. A well-designed crime scene investigator cannot accidentally contaminate the scene — the access model prevents it, not the agent's willpower alone. Derived from Divergence #5. |
 | **Doorway Drift Report** | **[INJECTED 2026-05-12]** Structured JSON output from `doorway.py` (via /sentinel) containing new/modified/deleted/unowned directories, missing READMEs, recommendations, metrics, and zero_finding state. Primary data source for amplified Divergances. |
+| **Citation & Search Log Fidelity Engine** | **[ADDED 2026-07-07, implementation-plan.md Phase 5.4]** `scripts/investigate/investigate_audit.py` — the read-only mechanical layer behind Phase 1c (search-log match-count verification) and the Phase 3 Citation Fidelity Gate (confirms every `file:///path#LN-LM` citation resolves to a real file and valid line range). Schema-agnostic: verifies this workflow's OWN reporting conventions, never the target system's internal schema. Never judges whether cited/searched content actually supports a finding. |
 
 ---
 
@@ -134,6 +136,14 @@ SEARCH LOG:
   grep "[pattern]" [path] → [N matches / 0 matches]
   grep "[pattern]" [path] → [N matches / 0 matches]
 ```
+
+**[ENGINE-BACKED — ADDED 2026-07-07, implementation-plan.md Phase 5.4]** Before including the Search Log in the Investigation Report (Phase 3), verify every logged entry is accurate — a claimed match count is a mechanical fact, not something to trust from memory:
+
+```bash
+python3 ~/blueprint-workflows/scripts/investigate/investigate_audit.py --report-text "{SEARCH_LOG_TEXT}" --output-json
+```
+
+Read `search_log[].status` — `VERIFIED` or `MISMATCH` (with `actual_count` vs. the claimed count). A `MISMATCH` means the logged count is wrong — correct it before the report is delivered; do not present an unverified claim as evidence. If the engine is unavailable: fall back to manually re-running each search; note the fallback.
 
 A zero-result search is evidence too. It means the thing is not where you looked.
 
@@ -263,6 +273,16 @@ Evidence Chain: [INJECTED 2026-05-09 — Divergence #2 Chain of Custody, /nodele
 
 *Evidence Chain purpose:* This ledger makes the investigation itself reproducible. A future agent — or a skeptical user — can retrace every step and verify that the conclusion followed from the evidence. It also enables future sessions to skip re-reading files that were already confirmed clean in prior investigations of the same issue. Files confirmed CLEAN here do not need to be re-read until the substrate changes.
 
+**Citation Fidelity Gate — [ENGINE-BACKED — ADDED 2026-07-07, implementation-plan.md Phase 5.4]** Before delivering the report, verify every citation actually resolves — a hallucinated or stale line range is a mechanical fact to catch here, not something to discover if the user clicks the link later:
+
+```bash
+python3 ~/blueprint-workflows/scripts/investigate/investigate_audit.py --report-text "{DRAFT_REPORT_TEXT}" --output-json
+```
+
+Read `citations[].status` — `VALID`/`VALID_NO_LINE_RANGE` (fine), `FILE_MISSING` (the cited file doesn't exist — fix or remove the citation), `LINE_OUT_OF_RANGE` (the cited lines don't exist in the file — the citation is wrong, re-verify the actual location before delivering). **Do not deliver a report with an unresolved `FILE_MISSING`/`LINE_OUT_OF_RANGE` citation** — STRICT RULE 2 requires citations to support findings; a citation that doesn't resolve supports nothing. If the engine is unavailable: fall back to manually opening each citation link; note the fallback.
+
+**The engine confirms a citation resolves to real, addressable content — it never judges whether that content actually supports the finding it's attached to.** That judgment stays entirely with you.
+
 After delivering the report: **stop.** Ask the user:
 
 > *"Does this match what you were seeing? Do you want me to explain any part differently before we talk about options?"*
@@ -384,6 +404,8 @@ INTEGRATION WITH OTHER WORKFLOWS
 
   /focus-plan      → confirms intent/plan/substrate alignment before investigating
   /investigate     → THIS WORKFLOW — read-only forensic investigation
+     └─ Phase 1c    → scripts/investigate/investigate_audit.py (search-log verification)
+     └─ Phase 3     → scripts/investigate/investigate_audit.py (Citation Fidelity Gate)
   /iterate-test    → after Investigation Report is accepted: iterative fix validation
   /redteam         → adversarial audit (investigate first; redteam attacks what was found)
   /harden          → security hardening after a vulnerability is found and understood
@@ -411,6 +433,7 @@ Standard position in the fix pipeline:
 3. **2026-05-12**: `[HARDENED — /harden-workflow + /quality + /nodelete + /focus-plan]` Pointer/Payload conversion completed. All three amplified Divergances (#1 Autonomous Crime Scene Patrol, #2 Forensic DNA Registry, #3 Silent MRC Oracle) injected with full Doorway protocol integration (JSON drift reports, snapshot, repairs, metrics). STRICT RULE 12 added. All prior content preserved verbatim per /nodelete. Grade remains Sovereign. Standard Version: 2.
 4. **2026-05-12**: `[TICKET HARDENING — /harden-workflow --ticket 20260512_investigate_workflow.md + /focus-plan + /quality + /nodelete]` Resolved two CRITICAL internal contradictions introduced by the 2026-05-12 Doorway injection. (a) Phase 4e mutation relocation: removed write directive for MRC-ORACLE.md — /investigate is zero-mutation; Oracle write responsibility relocated to /sentinel per architectural separation of concerns. (b) Phase 1d and 2d Doorway HALT conditions added: explicit named fallback (`DOORWAY: ABSENT — patrol/registry skipped`) when .doorway/ directory or Doorway data files are absent. (c) STRICT RULE 12 "always/when available" contradiction resolved: replaced with explicit fallback protocol — Doorway is an enhancement layer, not a dependency. (d) Phase 3 confirmation gate hardened: Confirmation Token Protocol injected — UNDERSTOOD / CLARIFY: / REDIRECT: tokens recognized as explicit gate-passage signals for autonomous pipeline contexts. Zero content removed per /nodelete. Standard Version: 2.
 5. **2026-05-21**: `[PORTED — Claude Code migration]` Pointer/Payload architecture retired. Merged into single command file at `~/blueprint-workflows/claude-commands/investigate.md`. Phase 1a: "Use `view_file`" updated to "Use the Read tool". EVIDENCE LOG `view_file` references updated to Read tool. STRICT RULE 1 read-only tool list updated. Phase 4 brain log grep path: `/home/jwils/.gemini/antigravity/brain/` → `/home/jwils/.claude/projects/` with `--include="*.jsonl"`.
+6. **2026-07-07**: `[BUILT — Citation & Search Log Fidelity Engine, Verification-Spine Upgrade, implementation-plan.md Phase 5.4, /nodelete]` Ran Honest-Design Discipline fresh against this file — result staged at `docs/compression-staging/investigate-honest-design.md`. **Finding: seed design CONFIRMED and specified** — the queue's "citation fidelity report" hint named exactly the right mechanical target. Like `/redteam`, this workflow audits an arbitrary target system, but two of its OWN reporting conventions (not the target's schema) are genuinely schema-agnostic to verify: (1) the mandatory `[label](file:///path#LN-LM)` citation format (STRICT RULE 2) — nothing previously confirmed a citation actually resolved to a real file and valid line range; (2) Phase 1c's SEARCH LOG convention (`grep "pattern" path → N matches`) — nothing confirmed a claimed match count was real. **Built `scripts/investigate/`**: `citation_fidelity.py` (`extract_citations()`/`verify_citation()` — `VALID`/`VALID_NO_LINE_RANGE`/`FILE_MISSING`/`LINE_OUT_OF_RANGE`), `search_log_verifier.py` (`extract_search_log_entries()`/`verify_search_entry()` — re-runs the claimed search via Python's `re` module over file contents, deliberately NOT a shell subprocess, since the pattern/path strings originate from report text that could be untrusted in an autonomous pipeline), `reporter.py`, `investigate_audit.py` CLI. 19 new tests (`scripts/tests/test_investigate_evidence.py`) including a read-only invariant test, two regression tests proving the checkers catch a genuinely hallucinated citation line-range and a genuinely fabricated search match count (not just clean-input passes), and an explicit shell-injection-safety test confirming a malicious pattern containing shell metacharacters cannot execute anything. Full suite 440/440 passing (up from 421 pre-task). Live-run against this actual workspace confirmed both checks work end-to-end on real files. **Wired**: Phase 1c (Search Log verification before the log enters the report) and a new Citation Fidelity Gate in Phase 3 (before the report is delivered) — both keep explicit manual-fallback instructions and are explicit the engine confirms resolution only, never whether cited/searched content actually supports a finding. GLOSSARY term added (Citation & Search Log Fidelity Engine). `scripts/investigate/investigate_audit.py` added to frontmatter `dependencies` (this file's `dependencies` was previously empty). No STRICT RULE added — STRICT RULE 2 already required exactly this; the engine changes how citation accuracy is confirmed, not what the rule requires. Frontmatter: version 2→3, `last_hardened` 2026-07-07, `content_hash` recomputed via `--fix-hashes`. `strict_rule_count`/`phase_count` unchanged. Resolves `helpdesk-tickets/CLOSED_20260707_investigate-engine-gap_workflow.md`.
 
 ---
 
