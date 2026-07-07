@@ -232,9 +232,41 @@ def check_content_hash(content, fm, workflow_name, report):
                     f"Content hash mismatch: declared={declared}, actual={actual}")
 
 
+def _find_glossary_section_end(body):
+    """
+    Locate the end of the GLOSSARY section: the position right after its
+    markdown table's last row. Walks line-by-line past every `|`-prefixed
+    row starting from the "GLOSSARY" heading, returning the position of
+    the first line after the table ends.
+
+    [FIXED 2026-07-07, resolves helpdesk-tickets/CLOSED_20260706_check-glossary-usage-divider-bug_workflow.md]
+    The prior implementation used `body.find("---", ...)` -- the first
+    bare "---" substring after "GLOSSARY". A standard table's own header
+    divider row (`|---|---|` or `|------|------------|`) itself contains
+    "---", so that search landed INSIDE the table, before any term's own
+    definition row -- meaning every term was trivially "used" via its own
+    row, and an unused term could never be detected. This walks past the
+    table structurally instead of substring-matching a divider character.
+    """
+    idx = body.find("GLOSSARY")
+    if idx == -1:
+        return 0
+    pos = idx
+    in_table = False
+    for line in body[idx:].splitlines(keepends=True):
+        if line.strip().startswith("|"):
+            in_table = True
+            pos += len(line)
+            continue
+        if in_table:
+            return pos
+        pos += len(line)
+    return pos
+
+
 def check_glossary_usage(body, workflow_name, report):
     terms = extract_glossary_terms(body)
-    glossary_end = body.find("---", body.find("GLOSSARY") + 1) if "GLOSSARY" in body else 0
+    glossary_end = _find_glossary_section_end(body)
     post_glossary = body[glossary_end:] if glossary_end > 0 else body
 
     for term in terms:

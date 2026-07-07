@@ -6,9 +6,9 @@
 **Subject**: `scripts/suite/checks.py`'s `check_glossary_usage` function cannot detect a genuinely-unused GLOSSARY term when the table uses a standard markdown dashed-divider row — which is every GLOSSARY table in this suite. Found via direct unit testing, not observed as a live symptom.
 **Urgency**: LOW (INFO-severity check only; does not affect CRITICAL/WARNING findings, hash verification, structural checks, or any gating behavior)
 **Root Cause Type**: SUBSTANTIVE-LOGIC (a code logic defect in `scripts/suite/checks.py`, not a workflow `.md` structural gap — `/harden-workflow` cannot remediate this per its own opening line and STRICT RULE 3)
-**Phylogeny Disposition**: PENDING
-**Status**: OPEN
-**Verification**: PENDING — a direct code fix + regression test, whenever prioritized.
+**Phylogeny Disposition**: `NO TRANSFER` — a self-contained parsing-logic fix in one function; no structural pattern moved between workflow files.
+**Status**: **REMEDIATED**
+**Verification**: See Section 7, Remediation Record, below.
 
 ---
 
@@ -51,3 +51,48 @@ Fix `glossary_end`'s calculation to find the end of the table itself (e.g., sear
 - `scripts/tests/test_suite_checks.py` (the two tests documenting current behavior).
 - `docs/DESIGN_PR_05_04_Suite_Checks_Test_Coverage.md` (the DESIGN whose Independent Critique and Acceptance Criterion 3 explicitly anticipated "a test reveals a real bug, name it, don't silently patch it").
 - `implementation-plan/sovereign-redesign-cluster/tasks.md` Stage 4 Task 4.4 (the end-to-end verification this finding emerged from).
+
+## 7. Remediation Record ([ADDED] 2026-07-07, by Claude Code)
+
+```
+REMEDIATION RECORD
+  Ticket:            20260706_check-glossary-usage-divider-bug_workflow.md
+  Faulting workflow: N/A (SUBSTANTIVE-LOGIC — scripts/suite/checks.py code, not a workflow .md file)
+  Root cause fixed:  glossary_end computed via body.find("---", ...), which matched inside a
+                     standard table's own |---|---| divider row before any term's definition
+                     row. Replaced with _find_glossary_section_end(): walks line-by-line past
+                     every `|`-prefixed row starting from the GLOSSARY heading, returning the
+                     position of the first line after the table structurally ends -- no longer
+                     dependent on matching a specific divider character sequence.
+  Changes made:      scripts/suite/checks.py: new _find_glossary_section_end() helper;
+                     check_glossary_usage() calls it instead of the inline body.find("---", ...).
+                     scripts/tests/test_suite_checks.py: test_unused_term_not_detected_when_
+                     table_has_dashed_divider renamed to test_unused_term_produces_info_finding,
+                     assertion flipped from "documents the bug" (0 findings) to "verifies the
+                     fix" (1 INFO finding, correct term named); test_used_term_no_finding's
+                     comment corrected (no longer explains away a coincidental pass); new test
+                     test_discriminates_used_from_unused_within_same_multi_term_table added --
+                     a realistic multi-term GLOSSARY proving per-term discrimination, not just
+                     aggregate pass/fail.
+  Tests:             3/3 in TestCheckGlossaryUsage passing (was 2, one asserting buggy
+                     behavior). Full suite: 295/295, 0 regressions.
+  Verified against real data, not just synthetic tests: ran _find_glossary_section_end()
+                     directly against design-orchestrator.md's real GLOSSARY table (8 real
+                     terms) -- confirmed glossary_end lands exactly at the table's true end,
+                     not inside it. Full suite-wide lint run: 0 INFO findings across all 33
+                     real workflow files -- checked this isn't a silent false-clean (the fix
+                     could theoretically still be broken in a way that produces 0 findings
+                     universally); the direct real-file trace above rules that out, and 0
+                     unused terms suite-wide is a credible, not suspicious, result for a suite
+                     whose GLOSSARY tables have been actively maintained throughout this session.
+  Linter:            0 CRITICAL, unchanged WARNING baseline (19, all pre-existing structural
+                     gaps in unrelated files).
+  Deferred:          NONE. This ticket's full scope (fix + both existing tests updated + one
+                     new true-positive test, per the ticket's own Section 5 Recommendation) is
+                     complete.
+```
+
+**Phylogeny Disposition**: `NO TRANSFER` (confirmed at closure — see header).
+
+---
+*Closed by Claude Code, 2026-07-07.*

@@ -272,14 +272,8 @@ class TestCheckContentHash(unittest.TestCase):
 
 class TestCheckGlossaryUsage(unittest.TestCase):
     def test_used_term_no_finding(self):
-        # NOTE: given the same glossary_end quirk documented in
-        # test_unused_term_not_detected_when_table_has_dashed_divider below,
-        # this "no finding" result holds regardless of whether the body text
-        # actually repeats the term -- the table's own divider already
-        # guarantees post_glossary includes the term's own definition row.
-        # Kept as a real assertion of current behavior (a genuinely-used term
-        # correctly produces no finding), not proof the check distinguishes
-        # used-from-unused in the way its name implies.
+        # A term genuinely mentioned again in the body text after the
+        # GLOSSARY table produces no finding.
         report = LintReport()
         body = (
             "## GLOSSARY\n\n| Term | Definition |\n|---|---|\n| **Widget** | A thing. |\n\n---\n\n"
@@ -288,30 +282,52 @@ class TestCheckGlossaryUsage(unittest.TestCase):
         checks.check_glossary_usage(body, "wf.md", report)
         self.assertEqual(report.findings, [])
 
-    def test_unused_term_not_detected_when_table_has_dashed_divider(self):
-        # [FINDING -- discovered live 2026-07-06, Sovereign Redesign Cluster
-        # Stage 4, PR 05-04] check_glossary_usage's glossary_end calculation
-        # is `body.find("---", body.find("GLOSSARY") + 1)` -- the first "---"
+    def test_unused_term_produces_info_finding(self):
+        # [FIXED 2026-07-07, resolves
+        # helpdesk-tickets/CLOSED_20260706_check-glossary-usage-divider-bug_workflow.md]
+        # Originally, check_glossary_usage's glossary_end calculation was
+        # `body.find("---", body.find("GLOSSARY") + 1)` -- the first "---"
         # substring after the word GLOSSARY. In a standard markdown table
         # (every GLOSSARY in this suite), that divider row (`|---|---|` or
         # `|------|------------|`) itself contains "---", so glossary_end
-        # lands INSIDE the table, before any term's own definition row.
-        # post_glossary therefore always includes the table's own rows, so
-        # a term is always found "used" via its own definition -- this check
-        # cannot detect a genuinely unused term when the table uses the
-        # standard dashed-divider format. Confirmed empirically before
-        # writing this test (not assumed). Out of scope to fix here per this
-        # DESIGN's own boundary (docs/DESIGN_PR_05_04_Suite_Checks_Test_Coverage.md
-        # Acceptance Criterion 3: a bug found while adding tests is named, not
-        # silently patched) -- this test documents the real, current behavior,
-        # not the intended one.
+        # landed INSIDE the table, before any term's own definition row --
+        # meaning a term was always found "used" via its own definition row,
+        # and a genuinely unused term could never be detected. Fixed via
+        # _find_glossary_section_end(), which walks past the table
+        # structurally (line-by-line past `|`-prefixed rows) instead of
+        # substring-matching a divider character. This test previously
+        # documented the bug (asserted zero findings); now asserts the
+        # corrected, intended behavior.
         report = LintReport()
         body = (
             "## GLOSSARY\n\n| Term | Definition |\n|---|---|\n| **Widget** | A thing. |\n\n---\n\n"
             "This workflow never mentions that term again."
         )
         checks.check_glossary_usage(body, "wf.md", report)
-        self.assertEqual(report.findings, [])  # bug: should be 1 INFO finding, is 0
+        self.assertEqual(len(report.findings), 1)
+        self.assertEqual(report.findings[0].severity, "INFO")
+        self.assertIn("Widget", report.findings[0].message)
+
+    def test_discriminates_used_from_unused_within_same_multi_term_table(self):
+        # New true-positive case beyond the single-term tests above: a
+        # realistic multi-term GLOSSARY (every real one in this suite has
+        # several terms) where some terms are used post-table and others
+        # are not -- proves the check discriminates per-term, not just
+        # pass/fail on the body as a whole.
+        report = LintReport()
+        body = (
+            "## GLOSSARY\n\n"
+            "| Term | Definition |\n|---|---|\n"
+            "| **Widget** | A thing. |\n"
+            "| **Gadget** | Another thing. |\n"
+            "| **Gizmo** | A third thing. |\n\n"
+            "---\n\n"
+            "This workflow operates on a Widget and references Gizmo logic, "
+            "but never brings up the third term again."
+        )
+        checks.check_glossary_usage(body, "wf.md", report)
+        flagged_terms = {f.message.split("'")[1] for f in report.findings}
+        self.assertEqual(flagged_terms, {"Gadget"})
 
 
 if __name__ == "__main__":
