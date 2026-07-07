@@ -6,7 +6,7 @@
 **Subject**: Structural gap: native execute-build has no defined adapter/pointer-payload contract to delegate to superior Grok execute-plan engine while preserving Sovereign verification spine; creates redundancy, potential drift, and handoff Ghost Logic in large transitions
 **Urgency**: CRITICAL (Architectural)
 **Root Cause Type**: STRUCTURAL
-**Phylogeny Disposition**: PENDING
+**Phylogeny Disposition**: `CONFIRMED — lineage entry` — see Hardening Certificate below. **[RESOLVED 2026-07-07]**
 
 ---
 
@@ -139,9 +139,74 @@ This eliminates redundancy (no need to re-implement isolation/review/git-stack i
 
 Apply /quality, copious documentation, and /harden-workflow --ticket to the revised execute-build.md. Update the manifest/SUITE_PHYLOGENY.md if this pattern propagates (as it likely will). Treat this as a high-priority architectural evolution given the anticipated size of the transition.
 
+## 6. Hardening Certificate ([ADDED] 2026-07-07, by Claude Code, Sovereign Redesign Cluster follow-up)
+
+**Read this section before trusting §4's remediation plan as still current — it is not, for a specific, important, well-evidenced reason.**
+
+This ticket's own root cause — "native execute-build has no defined mechanism for handling a DESIGN-driven phase while preserving the Sovereign verification spine" — **is closed.** The specific *mechanism* §4 prescribed to close it — a pointer/payload adapter whose primary purpose is delegating core execution to Grok `/execute-plan` — **was not built, and should not be**, for a reason this ticket could not have known at filing time: continued heavy reliance on Grok tool-calling as the *primary* execution path is what caused this cluster's own execution agent to terminate mid-build days later, on real, unbudgeted API cost (~$200 across two workspaces — see `helpdesk-tickets/CLOSED_20260706_sovereign-redesign-cluster_meta_workflow.md`'s "Build Attempt, Termination, Recovery" section). The user's own explicit, direct response to that incident — *"we keep the design as is with one caveat, we use a pass for every agent that is not Grok... allows non grok agents to continue through the workflow"* — reversed this ticket's own architectural default.
+
+What was actually built (the **Native Execution Trigger**, `execute-build.md` Phase 0a + GLOSSARY, and the **Agent Capability Gate**, `PILLAR_03_EXECUTION_DELEGATION_FORMULA.md` §15) solves the same underlying problem from the opposite direction: native (non-Grok) execution of a DESIGN-driven phase is the **default**, exercised twice end-to-end this cluster with zero Grok involvement (PR 05-04, PR 06-02 — real backlog items, not synthetic demos). A Grok-delegated path — closer in shape to what this ticket originally asked for — remains *available*, but gated behind confirmed tool-calling capability and explicit session authorization, never assumed, per §15's own text. This ticket's specific pointer/payload artifact, its consumption-of-execute-plan-outputs step, and its "the outer layer must be able to reconstruct that the inner engine actually ran the intelligence" requirement are all real, good engineering asks — they were simply built for the gated, optional path rather than the default one, and have not been implemented in that reduced form as of this closure. **This is a deliberate scope reduction, not an oversight — recorded here so a future agent does not read "CLOSED" as "built exactly as specified."**
+
+```
++══════════════════════════════════════════════════════════+
+║  WORKFLOW HARDENING CERTIFICATE                          ║
+║  Workflow:      /execute-build                            ║
+║  Date:          2026-07-07                                ║
+╠══════════════════════════════════════════════════════════╣
+║  GRADE:         SOVEREIGN (pre-existing, unchanged)       ║
+╠══════════════════════════════════════════════════════════╣
+║  Command file:  ~/blueprint-workflows/claude-commands/execute-build.md
+║  Symlink:       ~/.claude/commands/execute-build.md — PRESENT
+║  Frontmatter:   PRESENT — version 5, strict_rule_count 18
+║  GLOSSARY:      PRESENT (Native Execution Trigger added, Stage 4)
+║  HOW TO BEGIN:  PRESENT
+║  STRICT RULES:  PRESENT (18 rules; #17-18 are this ticket's own gates —
+║                 never assume Grok availability; traceable provenance for
+║                 the native handoff, the Ghost-Logic guard this ticket
+║                 explicitly asked for, built for the native path instead
+║                 of the Grok-delegation path)
+║  Struct Output: PRESENT (Phase Build Receipt, exact canonical format,
+║                 unchanged by this ticket's work — it was already correct)
+║  Change Log:    PRESENT (entry 10, dated 2026-07-06)
+╠══════════════════════════════════════════════════════════╣
+║  /triage Gap:   NONE                                      ║
+╠══════════════════════════════════════════════════════════╣
+║  Changes Made (Sovereign Redesign Cluster Stage 4, prior to this closure pass):
+║    - Native Execution Trigger (Phase 0a): detects a DESIGN with ## PR Plan
+║      when <TASKS_FILE> is absent, runs /implementation-plan against it,
+║      continues Phase 0-7 unmodified. Exercised twice, real items, zero
+║      Grok involvement.
+║    - Agent Capability Gate (PILLAR_03 §15): native is default; Grok path
+║      requires confirmed capability + session authorization, never assumed.
+║      This IS the ticket's own requested "adapter" concept, inverted:
+║      instead of an adapter that routes TO Grok by default, it is a gate
+║      that routes AWAY from Grok by default.
+║    - STRICT RULES 17-18: traceable provenance for the native handoff
+║      (which DESIGN + which /implementation-plan run produced a given
+║      tasks.md), addressing this ticket's own Ghost-Logic concern for the
+║      path that was actually built.
+║  NOT Built (deliberate, see explanation above, not an oversight):
+║    - Pointer/payload artifact format for Grok /execute-plan consumption.
+║    - Consumption logic for /tmp/grok-exec-plan-*.json state, per-PR
+║      receipt parsing from a Grok-executed DAG.
+║    - The "formula-in-a-formula" composition where native wraps Grok as
+║      the default inner engine.
+╠══════════════════════════════════════════════════════════╣
+║  Standard Version: 3                                       ║
+║  Status:        WORKFLOW HARDENING COMPLETE (scope reduced, documented)
++══════════════════════════════════════════════════════════+
+```
+
+**Phylogeny Disposition**: `CONFIRMED — lineage entry` — `manifest/SUITE_PHYLOGENY.md`'s Sovereign Redesign Cluster entry already documents the Agent Capability Gate's propagation across PILLAR_02/PILLAR_03; this ticket is one of that transfer's two origin points (the companion design-formula ticket is the other).
+
+**If a future session decides to build the Grok-delegation path this ticket originally specified** (now correctly understood as the *optional*, gated path, not the default): §4 items 2-3 of this ticket (the payload artifact format, the consumption logic) remain a good starting specification and are not superseded by anything built this cluster — only the "delegate by default" framing in §4 item 1 and the Recommendation (§5) is.
+
 ---
-**Status**: **OPEN**
-**Verification**: PENDING — ticket filed with copious evidence and /quality. Remediation and closure will follow direct quality-verified work + /harden-workflow --ticket (STRUCTURAL path). Phylogeny Disposition to be resolved at closure.
+**Status**: **REMEDIATED (underlying structural gap closed via the opposite architectural default than originally specified — see Hardening Certificate above for the full, honest account of what changed and why)**
+**Verification**: Hardening Certificate above. Full evidence trail: `.workflow_state/receipts/BUILD_RECEIPTS.md` Stage 4/6 entries, `helpdesk-tickets/CLOSED_20260706_sovereign-redesign-cluster_meta_workflow.md`'s own Closure Record and "Build Attempt, Termination, Recovery" section.
+
+---
+*Originally filed by Grok (Videos workspace session, pre-termination). Closed by Claude Code, 2026-07-07 — native path, no Grok involved in this closure, which is itself the point.*
 
 ---
 *Signed,*

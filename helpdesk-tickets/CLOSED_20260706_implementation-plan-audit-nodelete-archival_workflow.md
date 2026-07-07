@@ -6,7 +6,7 @@
 **Subject**: Structural gap in /implementation-plan --audit: no standardized mechanism to parse and mark completed/superseded units with machine-readable markers (e.g. **COMPLETED [ARCHIVE:YYYY-MM-DD]** or **SUPERSEDED [QUARANTINE]**), causing /nodelete --archive (Pillar 6) to conservatively retain completed phase material on live surfaces in implementation-plan.md and tasks.md
 **Urgency**: CRITICAL (Architectural)
 **Root Cause Type**: STRUCTURAL
-**Phylogeny Disposition**: PENDING
+**Phylogeny Disposition**: `NO TRANSFER` — see Hardening Certificate below. **[RESOLVED 2026-07-07]**
 
 ---
 
@@ -94,8 +94,74 @@ Add a "Completion & Archival Marking" sub-phase to the /implementation-plan --au
 
 Apply this to the current Videos workspace as the canonical example, then propagate via the manifest/SUITE_HEALTH.md.
 
-**Status**: **OPEN**
-**Verification**: PENDING — ticket filed to schedule the revision. Full design proposal for formats + populator + sentinel integration follows in session (per user request). Apply after user review; close via /harden-workflow --ticket once templates and audit update are implemented and tested.
+## 6. Hardening Certificate ([ADDED] 2026-07-07, by Claude Code, Sovereign Redesign Cluster follow-up)
+
+This ticket's remediation section (§4, items 1-5) is faithfully implemented as originally envisioned — the only structural gap named here was closed directly, with no architectural supersession (unlike the two companion tickets filed the same day):
+
+```
++══════════════════════════════════════════════════════════+
+║  WORKFLOW HARDENING CERTIFICATE                          ║
+║  Workflow:      /implementation-plan (--audit, Phase 5)  ║
+║  Date:          2026-07-07                                ║
+╠══════════════════════════════════════════════════════════╣
+║  GRADE:         SOVEREIGN (pre-existing, unchanged)       ║
+╠══════════════════════════════════════════════════════════╣
+║  Command file:  ~/blueprint-workflows/claude-commands/implementation-plan.md
+║  Symlink:       ~/.claude/commands/implementation-plan.md — PRESENT
+║  Frontmatter:   PRESENT — version 6, strict_rule_count 27
+║  GLOSSARY:      PRESENT (Completion Marking, Archival Marker added)
+║  HOW TO BEGIN:  PRESENT
+║  STRICT RULES:  PRESENT (27 rules; #27 is this remediation's own gate)
+║  Struct Output: PRESENT (Archival Markers Added section in audit Output Format)
+║  Change Log:    PRESENT (entry 13, dated 2026-07-07)
+╠══════════════════════════════════════════════════════════╣
+║  /triage Gap:   NONE                                      ║
+╠══════════════════════════════════════════════════════════╣
+║  Changes Made (Sovereign Redesign Cluster Stage 5, prior to this closure pass):
+║    - §4 item 1 (Completion Marking sub-pass): implementation-plan.md Phase 5,
+║      dual cross-reference against phase_status.py's status AND receipt_status,
+║      refuses to mark on any mismatch (Ghost Logic guard, exactly as requested).
+║    - §4 item 2 (canonical templates): templates/plan/tasks.md.template +
+║      implementation-plan.md.template.
+║    - §4 item 3 (populator): scripts/plan/ensure_plan_templates.py — one
+║      deliberate deviation from the literal request, see below.
+║    - §4 item 4 (sentinel integration): sentinel.md Phase 1.6.
+║    - §4 item 5 (update related docs): nodelete.md cross-referenced
+║      (this same closure pass, Change Log entry 8) and implementation-plan.md
+║      itself (Stage 5). DESIGN_Complete_Videos_Pipeline.md is in a different
+║      workspace (Videos), outside this repo's edit boundary — not touched.
+║      CLAUDE.md not updated as part of this remediation — a separate,
+║      pre-existing currency question not addressed by this ticket's own scope.
+║    - Verified against real ground truth (not fabricated): the master
+║      cluster tasks.md's own Stages 0-4 (Stage 5), and the first-ever real
+║      /nodelete --archive invocation (Stage 6) — both cited in this ticket's
+║      companion Closure Record at the meta-ticket level.
+║  Deferred Items:
+║    - CLAUDE.md currency (noted, not addressed here).
+║    - DESIGN_Complete_Videos_Pipeline.md (different workspace, out of bounds).
+║  One deliberate correction to the ticket's own literal request:
+║    §4 item 3 asked the populator to "copy from template and customize" when
+║    a plan file is "absent or missing marker structure" — read literally,
+║    this would overwrite any pre-existing tasks.md/implementation-plan.md
+║    that simply predates the marker convention, a data-loss bug. Built
+║    create-only instead: populate genuinely-absent files only; never touch
+║    a file with real content, force or no force. Documented inline in the
+║    populator's own module docstring at build time (Stage 5), not discovered
+║    here — cited for this certificate's own completeness.
+╠══════════════════════════════════════════════════════════╣
+║  Standard Version: 3                                       ║
+║  Status:        WORKFLOW HARDENING COMPLETE               ║
++══════════════════════════════════════════════════════════+
+```
+
+**Phylogeny Disposition**: `NO TRANSFER` — this ticket's remediation is the origin point of a pattern (the Verified-Completion Gate's third expression) already recorded in `manifest/SUITE_PHYLOGENY.md`'s Sovereign Redesign Cluster lineage entry; recording it again here would duplicate, not add, a lineage entry.
+
+---
+**Status**: **REMEDIATED (Completion Marking sub-pass, templates, populator, and sentinel integration all built and verified against real data — see Hardening Certificate above)**
+**Verification**: Hardening Certificate above. Full evidence trail: `.workflow_state/receipts/BUILD_RECEIPTS.md` Stage 5/6 entries, `helpdesk-tickets/CLOSED_20260706_sovereign-redesign-cluster_meta_workflow.md`'s own Closure Record.
+
+---
+*Originally filed by Grok (Videos workspace session). Closed by Claude Code, 2026-07-07 — native path, no Grok involved in this closure.*
 
 ---
 *Signed,*

@@ -6,7 +6,7 @@
 **Subject**: Structural gap in design process: no formal Sovereign Design Formula orchestrator using pointer/payload to batch native steering workflows (focus-plan, implementation-plan, quality, divergence, sentinel) respectfully and produce build-ingestible paperwork with Build Ingestion Manifest; ad-hoc on-the-fly process used for DESIGN_Complete_Videos_Pipeline.md was high-fidelity but not purposefully designed
 **Urgency**: CRITICAL (Architectural)
 **Root Cause Type**: STRUCTURAL
-**Phylogeny Disposition**: PENDING
+**Phylogeny Disposition**: `CONFIRMED — lineage entry` — see Hardening Certificate below. **[RESOLVED 2026-07-07]**
 
 ---
 
@@ -97,8 +97,84 @@ This ticket itself serves as the vehicle, with the formula embedded for full con
 
 Implement the Sovereign Design Formula per the embedded full design document. Create design-orchestrator.md as the outer native layer. Use this ticket + the companion build ticket for /harden-workflow --ticket. Update manifests, add design receipts. Apply /quality throughout. Treat the prior on-the-fly process as the baseline to improve upon purposefully (add staging, payload discipline, manifest, design-phase gates). This ensures the design feeds the build formula cleanly, with copious context preserved in tickets and receipts for all future ingestion agents.
 
-**Status**: **OPEN**
-**Verification**: PENDING — full design formula embedded with /quality and copious details. Follow /harden-workflow --ticket (STRUCTURAL) for remediation. Phylogeny Disposition to be resolved at closure.
+## 6. Hardening Certificate ([ADDED] 2026-07-07, by Claude Code, Sovereign Redesign Cluster follow-up)
+
+**Same architectural correction as this ticket's companion build-side ticket (`CLOSED_20260706_execute-build_pointer_payload_formula_in_formula_workflow.md`) — read that certificate's opening explanation first; it is not repeated in full here.**
+
+This ticket's core structural ask — a formal Sovereign Design Formula orchestrator that batches native steering workflows into a staged, focused payload and produces a DESIGN with a mandatory Build Ingestion Manifest — **was built, faithfully, as `design-orchestrator.md`.** The one significant divergence from this ticket's embedded design document (§Key Decision 1, 5, 6) is the same one as the companion ticket: **delegation to Grok `/design` as the primary write engine was not built as the default.** `design-orchestrator.md`'s own Phase 3 performs the write/review loop **natively** by default — using a genuinely independent subagent (Claude Code's own Agent tool) for critique when available, adversarial self-critique as the floor when it isn't — with Grok delegation available only behind the Agent Capability Gate (confirmed capability + session authorization). This is the identical, well-evidenced supersession explained in the companion certificate: the architecture that led to this cluster's own $200 termination made Grok-delegation-as-default the wrong default going forward.
+
+Everything else this ticket asked for **was built essentially as specified**:
+
+```
++══════════════════════════════════════════════════════════+
+║  WORKFLOW HARDENING CERTIFICATE                          ║
+║  Workflow:      /design-orchestrator (new workflow,       ║
+║                 created to satisfy this ticket)            ║
+║  Date:          2026-07-07                                ║
+╠══════════════════════════════════════════════════════════╣
+║  GRADE:         SOVEREIGN (pre-existing, unchanged --     ║
+║                 genuinely hardened Stage 3, not self-      ║
+║                 declared: created at Structured, elevated  ║
+║                 only after a real /harden-workflow pass)   ║
+╠══════════════════════════════════════════════════════════╣
+║  Command file:  ~/blueprint-workflows/claude-commands/design-orchestrator.md
+║  Symlink:       ~/.claude/commands/design-orchestrator.md — PRESENT
+║  Frontmatter:   PRESENT — version 2, strict_rule_count 10
+║  GLOSSARY:      PRESENT (7 terms, incl. Build Ingestion Manifest --
+║                 this ticket's own Key Decision 3, built verbatim:
+║                 Intent Anchor, Gaps & Divergences, Verification,
+║                 Native Gates Mapping, PR Plan Fidelity, Substrate Hygiene)
+║  HOW TO BEGIN:  PRESENT
+║  STRICT RULES:  PRESENT (10 rules)
+║  Struct Output: PRESENT (DESIGN_*.md with Build Ingestion Manifest,
+║                 DESIGN_RECEIPTS.md entries)
+║  Change Log:    PRESENT (2 entries: creation at Structured, certification
+║                 to Sovereign as a separate, later, honest step)
+╠══════════════════════════════════════════════════════════╣
+║  /triage Gap:   NONE (Trigger Matrix row present)          ║
+╠══════════════════════════════════════════════════════════╣
+║  Changes Made (Sovereign Redesign Cluster Stage 3, prior to this closure pass):
+║    - Phases 0-2 (Intake; Sentinel Briefing + Focus-Plan Primary Payload;
+║      Divergence/Quality + Intent Slice + Payload Assembly) -- this
+║      ticket's own "staged, LLM-respectful context assembly" (Key
+║      Decision 7), built exactly as specified: sentinel first, focus-plan
+║      Evidence Report as primary payload (Key Decision 2, this ticket's
+║      own explicit call-out that focus-plan was "proven useful, not
+║      unnecessary"), divergence/quality deltas, [INTENT] slice.
+║    - Phase 3 (Agent Capability Gate Write + Independent Critique) --
+║      native by default, Grok gated (the one architectural divergence,
+║      explained above).
+║    - Phases 4-5 (Native Post-Gates; Handoff Readiness) -- re-focus
+║      verification, DESIGN_RECEIPTS emission, exactly this ticket's Key
+║      Decision 6 ("must pass native post gates... before considered
+║      ready for build").
+║    - Exercised for real, twice: DESIGN_PR_01_03 (Stage 1 prototype,
+║      before design-orchestrator.md existed as its own file -- proved the
+║      shape) and DESIGN_PR_05_04 (Stage 4, design-orchestrator.md's own
+║      first real native-path exercise) and DESIGN_PR_06_02 (Stage 6,
+║      including this cluster's first genuinely independent subagent
+║      review -- Phase 3's own "independent critique" requirement, proven
+║      load-bearing by catching a real defect self-critique missed).
+║  NOT Built (deliberate, see explanation above, not an oversight):
+║    - Grok /design delegation as the default write engine.
+║    - The specific /tmp/design-payload-*.md pointer file format this
+║      ticket's embedded design specified (Phase 3's native path doesn't
+║      need a cross-process pointer artifact when the same agent performs
+║      both context-assembly and writing).
+╠══════════════════════════════════════════════════════════╣
+║  Standard Version: 3                                       ║
+║  Status:        WORKFLOW HARDENING COMPLETE (scope reduced, documented)
++══════════════════════════════════════════════════════════+
+```
+
+**Phylogeny Disposition**: `CONFIRMED — lineage entry` — `manifest/SUITE_PHYLOGENY.md`'s Sovereign Redesign Cluster entry documents the Agent Capability Gate's propagation; this ticket is the design-phase origin point (the companion execute-build ticket is the build-phase origin point). Same lineage entry, not duplicated here.
+
+---
+**Status**: **REMEDIATED (design-orchestrator.md built and hardened to Sovereign, satisfying this ticket's core structural ask, via the same native-default architecture explained in the companion build-side ticket's certificate)**
+**Verification**: Hardening Certificate above. Full evidence trail: `design-orchestrator.md`'s own Change Log entries 1-2, `.workflow_state/receipts/BUILD_RECEIPTS.md` Stage 3/4/6 entries, `helpdesk-tickets/CLOSED_20260706_sovereign-redesign-cluster_meta_workflow.md`'s own Closure Record.
+
+---
+*Originally filed by Grok (Videos workspace session, pre-termination). Closed by Claude Code, 2026-07-07 — native path, no Grok involved in this closure.*
 
 ---
 *Signed,*
