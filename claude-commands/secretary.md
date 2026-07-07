@@ -1,10 +1,10 @@
 ---
-description: "Sovereign Session Secretary — meta-layer orchestrator that closes every session with SUITE_HEALTH.md + manifest narrative update, HANDOFF.md briefing, ANOMALY_LOG, Suite Learning Registry pass, ledger growth check, and triggers for /document, /receipt-check, and /retrospective"
+description: "Sovereign Session Secretary — meta-layer orchestrator that closes every session with SUITE_HEALTH.md + manifest narrative update, HANDOFF.md briefing, ANOMALY_LOG, Suite Learning Registry pass, ledger growth check, and triggers for /document, /receipt-check, and /retrospective. v6: script-backed by the Session Close Evidence Engine (scripts/secretary/secretary_audit.py) for Retrospective Lag, retrospective freshness, artifact freshness, and receipt-family presence."
 type: meta
 grade: Sovereign
-version: 5
-content_hash: "sha256:3eb2ecad4c09a489"
-last_hardened: "2026-07-05"
+version: 6
+content_hash: "sha256:4bf2183887920aa0"
+last_hardened: "2026-07-07"
 strict_rule_count: 20
 phase_count: 8
 context_retention: high
@@ -13,6 +13,7 @@ dependencies:
   - "/document"
   - "/receipt-check"
   - "/retrospective"
+  - "scripts/secretary/secretary_audit.py"
 triggers:
   - "/triage"
 produces:
@@ -74,6 +75,7 @@ This workflow does NOT:
 | **manifest/history/** | **[ADDED 2026-07-04]** `~/blueprint-workflows/manifest/history/` — dated shard files (`WORKFLOW_MANIFEST_{YYYY-Q}.md`) holding the Append-Only session narrative that used to live in `WORKFLOW_MANIFEST.md`. Rolled over by `scripts/ledger/monitor.py` on a real calendar-quarter change or a within-quarter size safety valve. Read on demand, never mandatory at session start. |
 | **scripts/ledger/** | **[ADDED 2026-07-04]** The deterministic engine (Step 1.2) that performs narrative-shard rollover and the `SUITE_PHYLOGENY.md` growth warning, config-driven via `ledger_config.toml`. Always uses the real OS clock for quarter determination — never agent inference. |
 | **Retrospective Lag** | **[ADDED 2026-07-05]** Named failure shape: a session closes (Phase 1 writes its `manifest/history/` narrative entry) but its Phase 6 `/retrospective` entry never lands in `PROCESS_LEARNINGS.md` — and the gap persists silently across further sessions because nothing checks the *prior* session's Phase 6, only the current one's (ADDENDUM E). Closed by Step 0b.5's one-step-back consistency check. |
+| **Session Close Evidence Engine** | **[ADDED 2026-07-07, implementation-plan.md Phase 4.4]** `scripts/secretary/secretary_audit.py` — the read-only mechanical layer behind Step 0b.5 (Retrospective Lag comparison), ADDENDUM E (retrospective date-match), ADDENDUM F (artifact freshness), and the TRIAGE_RECEIPTS/DESIGN_RECEIPTS consumption blocks (generalized receipt-family presence). Reports facts only — mtimes, date comparisons, file presence — never whether the session's own narrative content is honest or complete. Architectural sibling of `scripts/build/` (backs `/execute-build`) and `scripts/focus/` (backs `/focus-plan`). |
 
 ---
 
@@ -114,19 +116,31 @@ If `~/blueprint-workflows/manifest/` does not exist: create it now before procee
 
 ADDENDUM E (Phase 6) verifies that *this* session's own retrospective entry lands — it has no visibility into whether the *prior* session's did. Confirmed gap: two consecutive session-closes (2026-07-04 `/nodelete` Pillar 6; 2026-07-05 Hallucinated Success investigation) each produced a `manifest/history/` narrative entry via Phase 1 but no corresponding `PROCESS_LEARNINGS.md` entry via Phase 6 — the gap went unnoticed until an unrelated retrospective happened to cross-check the two files directly.
 
-Before proceeding to Phase 1, run this one-step-back check:
+**[ENGINE-BACKED — ADDED 2026-07-07, implementation-plan.md Phase 4.4]** Before proceeding to Phase 1, run this one-step-back check — the date extraction AND the comparison itself are mechanical facts, not just the extraction:
 
 ```bash
-# Most recent narrative entry's date, across all shards (not just the active one)
+python3 ~/blueprint-workflows/scripts/secretary/secretary_audit.py \
+  --workspace ~/blueprint-workflows \
+  --process-learnings ~/blueprint-workflows/process_learnings/PROCESS_LEARNINGS.md \
+  --history-glob "~/blueprint-workflows/manifest/history/*.md" \
+  --output-json
+```
+
+Read `retrospective_lag.gap_detected` from the JSON directly — no eyeballing two separate grep outputs and comparing dates by hand. If the engine is unavailable: fall back to the two greps below and compare the dates manually; note the fallback in the Secretary Receipt.
+
+```bash
+# Fallback only — most recent narrative entry's date, across all shards (not just the active one)
 grep -h "SESSION APPEND" ~/blueprint-workflows/manifest/history/*.md | tail -1
-# PROCESS_LEARNINGS.md's last entry date
+# Fallback only — PROCESS_LEARNINGS.md's last entry date
 grep "^## 20" ~/blueprint-workflows/process_learnings/PROCESS_LEARNINGS.md | tail -1
 ```
 
-Compare the two dates. If the narrative's latest entry is dated later than `PROCESS_LEARNINGS.md`'s latest entry — meaning at least one prior session closed via Phase 1 without a matching Phase 6 retrospective — note this in the Secretary Receipt (Phase 7):
+If `gap_detected: true` — meaning at least one prior session closed via Phase 1 without a matching Phase 6 retrospective — note this in the Secretary Receipt (Phase 7):
 `RETROSPECTIVE: GAP DETECTED — narrative current through [date], PROCESS_LEARNINGS.md last entry [date]`
 
-If the dates are consistent (no session closed without its retrospective landing): note `RETROSPECTIVE: NO GAP — narrative and PROCESS_LEARNINGS.md consistent as of [date]`.
+If `gap_detected: false` (no session closed without its retrospective landing): note `RETROSPECTIVE: NO GAP — narrative and PROCESS_LEARNINGS.md consistent as of [date]`.
+
+**The engine reports the date comparison only — it never judges whether a gap, once detected, matters enough to act on.** That stays advisory and with the model, exactly as STRICT RULE 20 already states.
 
 This is advisory, not a hard gate — it mirrors the `SUITE_PHYLOGENY.md` WARN and Registry REVIEW precedent (Steps 1.0.5, 1.2) and does not block this session's own Phase 6 from running normally. Its purpose is to make a growing gap visible in every session's receipt going forward, rather than requiring another unrelated retrospective to notice it by manual cross-file comparison.
 
@@ -412,28 +426,44 @@ Execute /retrospective with the session boundary established in Phase 0. Supply 
 The /retrospective entry will be appended to:
 `~/blueprint-workflows/process_learnings/PROCESS_LEARNINGS.md`
 
-**[ADDENDUM E — Machine-Readable /retrospective Confirmation — INJECTED 2026-05-15, /harden-workflow --ticket 20260512_secretary_workflow.md + /nodelete]**
+**[ADDENDUM E — Machine-Readable /retrospective Confirmation — INJECTED 2026-05-15, /harden-workflow --ticket 20260512_secretary_workflow.md + /nodelete. ENGINE-BACKED — ADDED 2026-07-07, implementation-plan.md Phase 4.4]**
 
-Do not rely on prose output from /retrospective to confirm the append succeeded. After /retrospective completes, independently verify the entry by running:
+Do not rely on prose output from /retrospective to confirm the append succeeded. After /retrospective completes, independently verify the entry — the date-match check is mechanical, not just the tail:
 
 ```bash
-tail -n 10 ~/blueprint-workflows/process_learnings/PROCESS_LEARNINGS.md
+python3 ~/blueprint-workflows/scripts/secretary/secretary_audit.py \
+  --workspace ~/blueprint-workflows \
+  --process-learnings ~/blueprint-workflows/process_learnings/PROCESS_LEARNINGS.md \
+  --output-json
 ```
 
-Confirm that the last entry's date matches today's session date (`$(date +%Y-%m-%d)`). If the date does not match: log `RETROSPECTIVE: FAILED — entry date mismatch or file unmodified` in the Secretary Receipt and continue. Do not halt for a retrospective failure, but do not declare COMPLETE either.
+Read `retrospective_freshness.matches_today` from the JSON — `true`/`false`, not an eyeballed date comparison. If the engine is unavailable: fall back to `tail -n 10 ~/blueprint-workflows/process_learnings/PROCESS_LEARNINGS.md` and compare the last entry's date to today's date (`$(date +%Y-%m-%d)`) by hand; note the fallback in the Secretary Receipt.
+
+If `matches_today: false`: log `RETROSPECTIVE: FAILED — entry date mismatch or file unmodified` in the Secretary Receipt and continue. Do not halt for a retrospective failure, but do not declare COMPLETE either.
 
 Do not proceed to Phase 7 until this verification is confirmed or the failure is explicitly logged.
 
-**[INJECTED pr-05-02, PILLAR_05 — secretary TRIAGE_RECEIPTS consumption, /nodelete]**
-Before Phase 7 receipt, explicitly consume TRIAGE_RECEIPTS (read for presence + recent entries; include in summary + SUITE_HEALTH notes). This ensures secretary and downstream SUITE_HEALTH surface the new receipt family member (P5).
+**[INJECTED pr-05-02, PILLAR_05 — secretary TRIAGE_RECEIPTS consumption, /nodelete. ENGINE-BACKED — ADDED 2026-07-07, implementation-plan.md Phase 4.4]**
+Before Phase 7 receipt, explicitly consume TRIAGE_RECEIPTS and DESIGN_RECEIPTS together via the generalized receipt-family check (read for presence + recent entries; include in summary + SUITE_HEALTH notes). This ensures secretary and downstream SUITE_HEALTH surface both receipt family members (P5, PILLAR_02) — and any future member needs only another filename here, not a new hardcoded block:
 
 ```bash
+python3 ~/blueprint-workflows/scripts/secretary/secretary_audit.py \
+  --workspace ~/blueprint-workflows \
+  --receipts-dir .workflow_state/receipts \
+  --receipt-files TRIAGE_RECEIPTS.md DESIGN_RECEIPTS.md \
+  --output-json
+```
+
+Read `receipt_family` from the JSON — each entry's `present` flag and `last_lines`. If the engine is unavailable, fall back to the two manual blocks below; note the fallback in the Secretary Receipt.
+
+```bash
+# Fallback only
 ls .workflow_state/receipts/TRIAGE_RECEIPTS.md 2>/dev/null && echo "TRIAGE_RECEIPTS present" || echo "TRIAGE_RECEIPTS absent"
 tail -n 5 .workflow_state/receipts/TRIAGE_RECEIPTS.md 2>/dev/null || true
 ```
 
-**[INJECTED 2026-07-06, Sovereign Redesign Cluster Stage 3, PILLAR_02 PR 02-06 — secretary DESIGN_RECEIPTS consumption, /nodelete]**
-Same treatment for `/design-orchestrator`'s receipt family member:
+**[INJECTED 2026-07-06, Sovereign Redesign Cluster Stage 3, PILLAR_02 PR 02-06 — secretary DESIGN_RECEIPTS consumption, /nodelete — folded into the generalized engine call above, 2026-07-07]**
+Fallback-only manual check for `/design-orchestrator`'s receipt family member (already covered by the single engine call above under normal operation):
 
 ```bash
 ls .workflow_state/receipts/DESIGN_RECEIPTS.md 2>/dev/null && echo "DESIGN_RECEIPTS present" || echo "DESIGN_RECEIPTS absent"
@@ -443,6 +473,21 @@ tail -n 5 .workflow_state/receipts/DESIGN_RECEIPTS.md 2>/dev/null || true
 ---
 
 ## PHASE 7 — SECRETARY RECEIPT
+
+**[ADDENDUM F — Artifact Freshness Gate — ADDED 2026-07-07, implementation-plan.md Phase 4.4, engine-backed]**
+
+HOW TO BEGIN already warns: *"Do not present SUITE_HEALTH.md, the manifest narrative shard, HANDOFF.md, or ANOMALY_LOG.md as the completion of /secretary."* That warning is a Hallucinated-Success defense — before emitting the receipt, confirm structurally, not by memory, that this session's own claimed writes actually landed:
+
+```bash
+python3 ~/blueprint-workflows/scripts/secretary/secretary_audit.py \
+  --workspace ~/blueprint-workflows \
+  --check-paths ~/blueprint-workflows/manifest/SUITE_HEALTH.md {PROJECT}/.workflow_state/HANDOFF.md {PROJECT}/.workflow_state/ANOMALY_LOG.md {ACTIVE_NARRATIVE_SHARD} \
+  --output-json
+```
+
+Read `freshness` from the JSON — each path's `exists` and `touched_since` (default reference: start of today). A path reporting `touched_since: false` when this phase's own text claims it was UPDATED/CREATED/WRITTEN/APPENDED this session is a real discrepancy: log it as a finding in the Secretary Receipt rather than silently emitting the claim anyway. If the engine is unavailable: fall back to `ls -la` on each path and eyeball the mtime; note the fallback in the Secretary Receipt.
+
+**The engine reports mtime facts only — it never judges whether the file's content is adequate, honest, or complete.** A `touched_since: true` result means the file changed, not that what was written to it is good; that judgment stays entirely with the model, exactly as it always has.
 
 Emit the session-close receipt:
 
@@ -546,6 +591,10 @@ INTEGRATION WITH OTHER WORKFLOWS
   /receipt-check     → TRIGGERED BY /secretary Phase 3
   /retrospective     → TRIGGERED BY /secretary Phase 6
   /secretary         → THIS WORKFLOW — closes every session
+     └─ Step 0b.5    → scripts/secretary/secretary_audit.py (Retrospective Lag)
+     └─ ADDENDUM E   → scripts/secretary/secretary_audit.py (retrospective date-match)
+     └─ ADDENDUM F   → scripts/secretary/secretary_audit.py (artifact freshness, Phase 7)
+     └─ Phase 6      → scripts/secretary/secretary_audit.py (TRIAGE_RECEIPTS/DESIGN_RECEIPTS presence)
 
 Standard pipeline position:
   ... → /harden → /secretary [SESSION CLOSE — orchestrates /document, /receipt-check, /retrospective]
@@ -567,5 +616,5 @@ Output files:
 
 ### Change Log
 
-See `.changelogs/secretary.md` for the full history (12 entries, latest: 2026-07-06).
+See `.changelogs/secretary.md` for the full history (14 entries, latest: 2026-07-07).
 
