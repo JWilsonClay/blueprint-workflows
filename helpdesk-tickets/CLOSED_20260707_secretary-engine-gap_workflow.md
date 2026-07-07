@@ -6,7 +6,8 @@
 **Subject**: `/secretary` claims 4-5 artifacts change on every run (`SUITE_HEALTH.md`, a `manifest/history/` shard, `HANDOFF.md`, `ANOMALY_LOG.md`, a `PROCESS_LEARNINGS.md` entry via `/retrospective`) and its own HOW TO BEGIN already contains a hand-written warning against presenting those artifacts as completion — but nothing structurally confirms any of them were actually touched this session before the Phase 7 Secretary Receipt is emitted.
 **Urgency**: MEDIUM (this workflow closes every session in this suite; the gap is latent — a prose defense already exists — but prose defenses against Hallucinated Success are exactly what the Verification-Spine campaign converts into structural ones)
 **Root Cause Type**: STRUCTURAL
-**Phylogeny Disposition**: PENDING
+**Phylogeny Disposition**: NO TRANSFER
+**Phylogeny Disposition Note** [RESOLVED 2026-07-07, retroactive fix per helpdesk-tickets/CLOSED_20260707_helpdesk-tickets-engine-gap_workflow.md]: `scripts/secretary/` is a new, self-contained package with no shared structural pattern (STRICT RULE template, decision scaffold) moved between workflow files. No lineage entry warranted.
 
 ---
 
@@ -20,6 +21,10 @@ Three of `/secretary`'s deterministic steps (suite linter, Suite Learning Regist
 
 ## 3. Forensic Evidence
 
+- **The engine now wired in**: [secretary.md](file:///home/jwils/blueprint-workflows/claude-commands/secretary.md#L119-L125)
+  *Evidence: Step 0b.5's ENGINE-BACKED block, added this session, invoking `scripts/secretary/secretary_audit.py` for the Retrospective Lag comparison instead of the prior two-grep eyeball.*
+- **The mechanical layer itself**: [scripts/secretary/__init__.py](file:///home/jwils/blueprint-workflows/scripts/secretary/__init__.py#L1-L39)
+  *Evidence: the package's own contract docstring listing the three modules (freshness, retrospective_check, receipt_presence) and their read-only, fact-only scope.*
 - `claude-commands/secretary.md` (pre-fix, v5) HOW TO BEGIN: "CRITICAL: Do not present `SUITE_HEALTH.md`... as the completion of /secretary" — a prose-only defense with no structural backing.
 - Step 0b.5 (pre-fix): two separate `grep` commands with "Compare the two dates" left as an agent-eyeballed instruction, not a computed boolean.
 - ADDENDUM E (pre-fix): `tail -n 10` + "Confirm that the last entry's date matches" — same shape.

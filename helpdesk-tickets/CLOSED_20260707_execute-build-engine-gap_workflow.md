@@ -6,7 +6,8 @@
 **Subject**: `/execute-build` still relies on "read the file and extract by eye" for Phase Map construction, receipt-presence checking, the Step 5d Completeness Scan, and the Step 5f Scope Compliance Check — all four are mechanical facts an agent could get wrong or skip under Context Erosion, matching the same failure shape the Verification-Spine campaign already fixed for `/focus-plan`, `/quality`, `/harden`, `/iterate-test`, and `/receipt-check`.
 **Urgency**: MEDIUM (this workflow drives every phase of every build in this suite; the gap is latent, not actively causing failures, but the enforcement model — instruction, not structure — is the weakest available)
 **Root Cause Type**: STRUCTURAL
-**Phylogeny Disposition**: PENDING
+**Phylogeny Disposition**: NO TRANSFER
+**Phylogeny Disposition Note** [RESOLVED 2026-07-07, retroactive fix per helpdesk-tickets/CLOSED_20260707_helpdesk-tickets-engine-gap_workflow.md]: `scripts/build/` reuses `scripts/focus/phase_status.py` via direct Python import — the established reuse pattern this whole campaign follows (e.g. `/harden-workflow` importing `scripts/triage/matrix_completeness.py`), not a structural pattern (STRICT RULE template, decision scaffold) transferred between workflow **files**. No lineage entry warranted.
 
 ---
 
@@ -20,6 +21,10 @@ The 2026-06-02 Verification-Spine queue scan classified `/execute-build` as "Med
 
 ## 3. Forensic Evidence
 
+- **The engine now wired in**: [execute-build.md](file:///home/jwils/blueprint-workflows/claude-commands/execute-build.md#L89-L94)
+  *Evidence: Step 0b's ENGINE-BACKED block, added this session, invoking `scripts/build/build_audit.py` instead of the prior "read and extract by eye" instruction.*
+- **The mechanical layer itself**: [scripts/build/__init__.py](file:///home/jwils/blueprint-workflows/scripts/build/__init__.py#L1-L29)
+  *Evidence: the package's own contract docstring — reuses `scripts/focus/phase_status.py` directly (not duplicated) for Phase Map/receipt status, and adds the two genuinely new pieces (completeness scan, scope diff) named in Section 5's recommendation below.*
 - `claude-commands/execute-build.md` (pre-fix, v5) Step 0b: "Read <TASKS_FILE> in full. Extract: Every phase... Every task... current completion state" — no script invocation.
 - `scripts/focus/phase_status.py`: already parses `tasks.md` into exactly this shape (`Phase` dataclass: title, checkboxes, status, receipt_status) — built 2026-06-30, extended 2026-07-04, used by `focus.py` and `nodelete`'s Archival Mode, never imported by anything under `execute-build.md`.
 - `claude-commands/execute-build.md` (pre-fix) Step 5d/5f: pure prose instructions to search for markers / compare file lists — no engine, no test coverage, no structural guarantee the search actually ran.

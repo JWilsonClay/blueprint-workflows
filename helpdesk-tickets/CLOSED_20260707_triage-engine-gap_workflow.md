@@ -6,7 +6,8 @@
 **Subject**: `/triage` Phase 0b (task/phase state) and Phase 0c (receipt state) hand-count/hand-check facts that `scripts/focus/phase_status.py` and `scripts/receipt/coverage.py` already compute for other workflows, and nothing mechanically confirms the report actually mentions every Trigger Matrix workflow — despite STRICT RULES 3 and 9 and Phase 1's own injected text each independently naming that exact guarantee.
 **Urgency**: LOW-MEDIUM (a real gap, but `/triage`'s own STRICT RULE 1 — cite specific evidence — and the human-in-the-loop review of every report provide some existing mitigation; still, a mechanical backstop is the correct fix per this campaign's own standard)
 **Root Cause Type**: STRUCTURAL
-**Phylogeny Disposition**: PENDING
+**Phylogeny Disposition**: NO TRANSFER
+**Phylogeny Disposition Note** [RESOLVED 2026-07-07, retroactive fix per helpdesk-tickets/CLOSED_20260707_helpdesk-tickets-engine-gap_workflow.md]: `scripts/triage/matrix_completeness.py` is new, self-contained code; Phase 0b/0c wire directly into pre-existing `phase_status.py`/`coverage.py` via import, the established reuse pattern, not a transferred structural pattern. No lineage entry warranted.
 
 ---
 
@@ -20,6 +21,10 @@
 
 ## 3. Forensic Evidence
 
+- **The engine now wired in**: [triage.md](file:///home/jwils/blueprint-workflows/claude-commands/triage.md#L103-L108)
+  *Evidence: Phase 0b's ENGINE-BACKED block, added this session, invoking `scripts/triage/triage_audit.py` instead of the prior hand-counting instruction.*
+- **The mechanical layer itself**: [scripts/triage/__init__.py](file:///home/jwils/blueprint-workflows/scripts/triage/__init__.py#L1-L39)
+  *Evidence: the package's own contract docstring naming the completeness check as a pure set-difference, explicitly not a proxy for evaluation rigor.*
 - `claude-commands/triage.md` (pre-fix) Phase 0b: "Read it fully... Count tasks by state" — no script call, despite `phase_status.py` existing and doing exactly this since 2026-06-30.
 - `claude-commands/triage.md` (pre-fix) Phase 0c: "Are Build Receipts present?... Harden Grades?..." — no script call, despite `coverage.py` existing and doing exactly this for `/receipt-check`.
 - STRICT RULE 3, STRICT RULE 9, and the Phase 1 "Completeness requirement" injection all independently state "every workflow must appear in the report" with no shared mechanical enforcement.

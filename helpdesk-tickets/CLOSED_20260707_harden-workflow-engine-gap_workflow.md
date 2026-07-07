@@ -6,7 +6,8 @@
 **Subject**: `/harden-workflow` Phases 1, 4d, 5b, and 7a/7c each independently ask "does this section exist" for the same structural elements, hand-checked each time — despite `scripts/suite/lint_workflows.py` and its underlying `scripts/suite/checks.py` library already answering exactly these questions, mechanically, and already being invoked by this same file at Phase 7d.
 **Urgency**: LOW-MEDIUM (this workflow is itself the suite's own hardening authority; a structural gap in it undermines the credibility of every grade it certifies — but the existing Phase 7d linter gate does provide a real backstop before certification)
 **Root Cause Type**: STRUCTURAL
-**Phylogeny Disposition**: PENDING
+**Phylogeny Disposition**: NO TRANSFER
+**Phylogeny Disposition Note** [RESOLVED 2026-07-07, retroactive fix per helpdesk-tickets/CLOSED_20260707_helpdesk-tickets-engine-gap_workflow.md]: `scripts/harden_workflow/` is new, self-contained code; the `checks.py` refactor promoted three inline booleans to standalone functions within one existing file (behavior-preserving, not a pattern moved between workflow files) and `scripts/triage/matrix_completeness.py` is reused via import, the established pattern. No lineage entry warranted.
 
 ---
 
@@ -20,6 +21,10 @@
 
 ## 3. Forensic Evidence
 
+- **The engine now wired in**: [harden-workflow.md](file:///home/jwils/blueprint-workflows/claude-commands/harden-workflow.md#L238-L243)
+  *Evidence: Phase 1's ENGINE-BACKED block, added this session, invoking `scripts/harden_workflow/harden_workflow_audit.py` instead of the prior four-phase hand-checklist.*
+- **The mechanical layer itself**: [scripts/harden_workflow/__init__.py](file:///home/jwils/blueprint-workflows/scripts/harden_workflow/__init__.py#L1-L43)
+  *Evidence: the package's own contract docstring explaining the `grade_hint` is one-directional/advisory only, never a certified grade.*
 - `claude-commands/harden-workflow.md` (pre-fix) Phase 1 Assessment Card: a hand-checklist ("[ ] GLOSSARY section present", etc.) — no script call, despite `checks.py`'s `check_structure()` computing exactly these booleans.
 - Phase 5b (pre-fix): "Cross-reference the description against the trigger matrix... Confirm: Is this workflow represented?" — manual read, despite `scripts/triage/matrix_completeness.py` (built same session, Phase 4.4b) already extracting every Trigger Matrix workflow name mechanically.
 - Phase 7c (pre-fix): a second hand-checklist for the SAME sections Phase 1 already asked about, immediately before Phase 7d runs the linter and gets the same answer a third time.

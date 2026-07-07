@@ -6,7 +6,8 @@
 **Subject**: `/redteam` Phase 3a's secret leakage scan instructed a plain `grep -n "SECRET\|...` — which prints the entire matched line, including any live secret value, directly to the agent's own visible output — directly contradicting the same file's STRICT RULE 6 ("Never expose actual secret values in the REDTEAM RECEIPT or in any log entry"). Separately, Phase 1a/1b re-derive coverage/mock facts by eye that a schema-agnostic scanner can enumerate mechanically.
 **Urgency**: MEDIUM (a real, live self-contradiction in a security-audit workflow — the exact tool meant to catch secret leakage was itself instructed to leak the secret it found, into the agent's own context/output)
 **Root Cause Type**: STRUCTURAL
-**Phylogeny Disposition**: PENDING
+**Phylogeny Disposition**: NO TRANSFER
+**Phylogeny Disposition Note** [RESOLVED 2026-07-07, retroactive fix per helpdesk-tickets/CLOSED_20260707_helpdesk-tickets-engine-gap_workflow.md]: `scripts/redteam/` is new, self-contained code with no shared structural pattern moved between workflow files. No lineage entry warranted.
 
 ---
 
@@ -20,6 +21,10 @@ Phase 3a was written as a quick illustrative `grep` example without considering 
 
 ## 3. Forensic Evidence
 
+- **The engine now wired in**: [redteam.md](file:///home/jwils/blueprint-workflows/claude-commands/redteam.md#L124-L129)
+  *Evidence: Phase 1a's ENGINE-BACKED block, added this session, invoking `scripts/redteam/redteam_audit.py`.*
+- **The mechanical layer itself**: [scripts/redteam/__init__.py](file:///home/jwils/blueprint-workflows/scripts/redteam/__init__.py#L1-L46)
+  *Evidence: the package's own contract docstring describing the schema-agnostic design and the structural redaction guarantee for secret values.*
 - `claude-commands/redteam.md` (pre-fix) Phase 3a: `grep -rn "SECRET\|SALT\|API_KEY\|TOKEN\|PASSWORD\|ADMIN_PATH\|BACKDOOR" [project_root]/logs/` — prints full matching lines.
 - Same file, STRICT RULE 6: "Never expose actual secret values in the REDTEAM RECEIPT or in any log entry." No mechanism connected the two — the rule was aspirational text, not enforced by the tooling the same phase instructed.
 - Separately: Phase 1a ("Flag every module with coverage < 80%") and Phase 1b ("Read every `@patch`... call") both re-derive facts by eye that `coverage.py`'s own JSON output and a simple Python regex scan can supply mechanically — neither needs project-schema knowledge, unlike Phase 5's Ghost Logic reconstruction (which genuinely cannot be generalized, see the governing design doc).

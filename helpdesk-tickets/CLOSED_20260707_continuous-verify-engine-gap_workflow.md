@@ -6,7 +6,8 @@
 **Subject**: `continuous-verify.md` Phase 1/2 instruct manual anchor-checking ("use the Read tool or grep") that duplicates `scripts/focus/anchor_scanner.py`'s already-built, already-proven `verify_file()`/`verify_symbol()` — and has no way to surface `verify_symbol()`'s `FOUND_TEST_ONLY` (Mock Trap) signal at all, despite `/focus-plan` already relying on that exact signal.
 **Urgency**: MEDIUM (a real capability gap in a gate that runs at every `/execute-build` phase boundary — a criterion whose anchor exists only in test code could be marked SATISFIED with nothing flagging the risk)
 **Root Cause Type**: STRUCTURAL
-**Phylogeny Disposition**: PENDING
+**Phylogeny Disposition**: NO TRANSFER
+**Phylogeny Disposition Note** [RESOLVED 2026-07-07, retroactive fix per helpdesk-tickets/CLOSED_20260707_helpdesk-tickets-engine-gap_workflow.md]: `scripts/continuous_verify/anchor_cli.py` is a thin wrapper importing `scripts/focus/anchor_scanner.py` directly — reuse, not a structural pattern transferred between workflow files. No lineage entry warranted.
 
 ---
 
@@ -20,6 +21,10 @@
 
 ## 3. Forensic Evidence
 
+- **The engine now wired in**: [continuous-verify.md](file:///home/jwils/blueprint-workflows/claude-commands/continuous-verify.md#L119-L124)
+  *Evidence: Phase 1's ENGINE-BACKED block, added this session, invoking `scripts/continuous_verify/anchor_cli.py` instead of the prior manual Read-tool/grep instruction.*
+- **The mechanical layer itself**: [scripts/continuous_verify/__init__.py](file:///home/jwils/blueprint-workflows/scripts/continuous_verify/__init__.py#L1-L35)
+  *Evidence: the package's own contract docstring explaining the `mock_trap_candidate` flag closes the previously-invisible capability gap.*
 - `claude-commands/continuous-verify.md` (pre-fix) Phase 1: "Read the anchor: use the Read tool on `{path}`, or `grep` as appropriate" — no script call.
 - `scripts/focus/anchor_scanner.py`'s `verify_symbol()`: already returns `FOUND_PRODUCTION`/`FOUND_TEST_ONLY`/`ABSENT`, with `FOUND_TEST_ONLY` an explicit Mock Trap signal.
 - `continuous-verify.md`'s Phase 1 assessment vocabulary: `SATISFIED`/`NOT SATISFIED`/`UNVERIFIABLE` — no field or instruction anywhere referencing Mock Trap risk, despite this suite naming that exact failure pattern globally (`~/.claude/CLAUDE.md`'s Failure Pattern Vocabulary).

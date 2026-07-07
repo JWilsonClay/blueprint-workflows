@@ -6,7 +6,8 @@
 **Subject**: `sentinel.md` Step 2b's Routing Map table hand-duplicates `scripts/doorway/recommender.py`'s logic instead of reading its already-emitted `workflow` field, and the duplicate has already drifted: a missing table row for a duplicate-emitting ID, and an undocumented severity value (`INFO`) silently excluded from every tally.
 **Urgency**: MEDIUM (a live documentation-vs-engine drift discovered by direct comparison, not theoretical — the exact failure shape this campaign exists to close)
 **Root Cause Type**: STRUCTURAL
-**Phylogeny Disposition**: PENDING
+**Phylogeny Disposition**: NO TRANSFER
+**Phylogeny Disposition Note** [RESOLVED 2026-07-07, retroactive fix per helpdesk-tickets/CLOSED_20260707_helpdesk-tickets-engine-gap_workflow.md]: `scripts/sentinel/recommender_parity.py` is new, self-contained code with no shared structural pattern moved between workflow files. No lineage entry warranted.
 
 ---
 
@@ -20,6 +21,10 @@
 
 ## 3. Forensic Evidence
 
+- **The engine now wired in**: [sentinel.md](file:///home/jwils/blueprint-workflows/claude-commands/sentinel.md#L340-L346)
+  *Evidence: Step 2b's ENGINE-BACKED block, added this session, invoking `scripts/sentinel/sentinel_audit.py` to verify the routing table against `recommender.py`'s real source.*
+- **The mechanical layer itself**: [scripts/sentinel/recommender_parity.py](file:///home/jwils/blueprint-workflows/scripts/sentinel/recommender_parity.py#L1-L16)
+  *Evidence: module docstring — extracts recommender.py's actual id/workflow/severity triples and diffs them against the documented table, the occurrence-count comparison that catches the duplicate-ID defect a presence check alone would miss.*
 - `scripts/doorway/recommender.py`: two separate `recs.append({"id": "SEQ-SUBSTRATE-HEALTH", ...})` blocks — one for `drift.get("new")`, one for `tier1_issues = drift.get("stale_index") + drift.get("ownership_incomplete")`.
 - `claude-commands/sentinel.md` (pre-fix) Step 2b: exactly one `SEQ-SUBSTRATE-HEALTH` row, describing only the new-directory condition.
 - `recommender.py`: `"severity": "INFO"` for `SEQ-SUBSTRATE-MAINTAIN`.

@@ -6,7 +6,8 @@
 **Subject**: `investigate.md` mandates a `[label](file:///path#LN-LM)` citation format (STRICT RULE 2) and a `grep "pattern" path → N matches` Search Log convention (Phase 1c), but nothing confirms either is actually accurate — a hallucinated line range or a fabricated match count would be invisible unless a human manually re-verifies every citation and search.
 **Urgency**: MEDIUM (this workflow's entire output is evidence-cited findings; unverified citations undermine the core guarantee the workflow exists to provide)
 **Root Cause Type**: STRUCTURAL
-**Phylogeny Disposition**: PENDING
+**Phylogeny Disposition**: NO TRANSFER
+**Phylogeny Disposition Note** [RESOLVED 2026-07-07, retroactive fix per helpdesk-tickets/CLOSED_20260707_helpdesk-tickets-engine-gap_workflow.md]: `scripts/investigate/` is new, self-contained code with no shared structural pattern moved between workflow files (it is itself later reused BY `/helpdesk-tickets`, an import relationship recorded in that ticket, not a transfer originating here). No lineage entry warranted.
 
 ---
 
@@ -20,6 +21,10 @@ Both conventions were designed as instructional discipline (STRICT RULE 2: "Pros
 
 ## 3. Forensic Evidence
 
+- **The engine now wired in**: [investigate.md](file:///home/jwils/blueprint-workflows/claude-commands/investigate.md#L140-L146)
+  *Evidence: Phase 1c's ENGINE-BACKED block, added this session, invoking `scripts/investigate/investigate_audit.py` for search-log verification.*
+- **The mechanical layer itself**: [scripts/investigate/__init__.py](file:///home/jwils/blueprint-workflows/scripts/investigate/__init__.py#L1-L38)
+  *Evidence: the package's own contract docstring explaining both checks operate on this workflow's own reporting conventions, never the target's unknown schema.*
 - `claude-commands/investigate.md` GLOSSARY "Citation" term: mandates the `file:///path#LN-LM` format with no verification mechanism referenced anywhere in the file.
 - Phase 1c: "Log every search and its result... A zero-result search is evidence too" — no mechanism confirms the logged count is accurate.
 
