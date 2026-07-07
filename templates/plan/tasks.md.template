@@ -1,0 +1,36 @@
+# tasks.md — [Workspace/Project Name] (Active — only uncompleted items)
+
+**Note:** Units marked `**COMPLETED [ARCHIVE:YYYY-MM-DD]**` below have been independently
+verified by `/implementation-plan --audit`'s Completion Marking sub-pass (dual cross-reference
+against `scripts/focus/phase_status.py` + `.workflow_state/receipts/BUILD_RECEIPTS.md` — never
+checkbox state alone). A marked unit MAY be moved to `.history/archive/tasks.md.ledger.md` via
+`/nodelete --archive` — never automatic, always user-invoked. See `claude-commands/nodelete.md`
+Pillar 6. Everything not marked and not named for archival stays here, in full, on the live
+surface.
+
+**Checkbox states:** `[ ]` not started · `[/]` in progress · `[x]` complete. A `[x]` phase is not
+itself sufficient for archival — `/execute-build` must also have written a matching
+`.workflow_state/receipts/BUILD_RECEIPTS.md` entry whose `Phase/Stage:` value exact-matches this
+file's own phase title (see `execute-build.md` Phase 6 / `scripts/focus/phase_status.py`).
+
+---
+
+## Phase 1 — [Title]
+<!-- Marker slot: leave blank until independently verified, or place here once /implementation-plan --audit confirms it:
+     **COMPLETED [ARCHIVE:YYYY-MM-DD]** (receipts: [BUILD_RECEIPTS.md entry]; phase_status: found_complete)
+     **SUPERSEDED [QUARANTINE:YYYY-MM-DD]** (reason: [cite the specific superseding decision]) -->
+
+- [ ] 1.1 [Task description]
+- [ ] 1.2 [Task description]
+
+**Acceptance criteria:** [measurable conditions that define this phase as done]
+
+---
+
+## Phase 2 — [Title]
+
+- [ ] 2.1 [Task description]
+
+**Acceptance criteria:** [measurable conditions]
+
+---

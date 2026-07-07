@@ -14,3 +14,4 @@
 - helpdesk-tickets/: Open workflow failure incident tickets consumed by /harden-workflow --ticket mode
 - implementation-plan/: Generated implementation plans and adversarial audit records (audits/)
 - TODO/: Active task tracking, divergence notes, and archived completed items
+- templates/: Canonical templates consumed by suite scripts (plan/ — tasks.md.template + implementation-plan.md.template for the sentinel populator and audit Completion Marking, Pillar 4)

@@ -2,11 +2,11 @@
 description: "Sovereign Session-Initialization Monitor — ambient workspace drift detection via doorway.py, producing structured context briefing and workflow recommendations at session start"
 type: meta
 grade: Sovereign
-version: 2
-content_hash: "sha256:0b79bd54a4eb27a1"
+version: 3
+content_hash: "sha256:bce33c79d4ce9b62"
 last_hardened: "2026-05-15"
 strict_rule_count: 8
-phase_count: 6
+phase_count: 7
 context_retention: medium
 flags: []
 dependencies:
@@ -15,7 +15,7 @@ triggers: []
 produces: []
 consumes: []
 platform_requirements:
-  file_write: false
+  file_write: true
   shell_exec: true
   git_access: true
 ---
@@ -45,8 +45,9 @@ recommend. Execution belongs to the workflows you hand off to.
 | **Severity Tier** | HIGH / MEDIUM / LOW — the urgency classification assigned by the recommender engine. HIGH findings may trigger helpdesk ticket filing. |
 | **Ticket Threshold** | The severity level at or above which a helpdesk ticket is automatically filed. Default: HIGH. Configurable per-session. |
 | **Session Context** | The workspace path is derived in priority order: (1) explicit `--workspace` argument from user, (2) inferred from the open document paths visible in the session metadata, (3) user is asked once for a path. |
-| **Mute Witness** | Sentinel is read-only during Phases 0–2. The scan tool writes only to the workspace's hidden `.doorway/` directory — never to the project substrate itself. Engine owns context delivery via index (see Doorway Design Invariant). |
+| **Mute Witness** | Sentinel is read-only during Phases 0–2. The scan tool writes only to the workspace's hidden `.doorway/` directory — never to the project substrate itself. Engine owns context delivery via index (see Doorway Design Invariant). **[NOTE — 2026-07-07, Stage 5]** Two narrow, safety-gated exceptions to the substrate write predate/accompany this note: Phase 1.5's optional `--auto-apply` breadcrumb population, and Phase 1.6 (Plan & Tasks Format Check) below — both write only when the target is genuinely absent or explicitly opted into, never overwriting real content. See Plan & Tasks Format Check. |
 | **Routing** | Surfacing a recommendation to the user that names the next workflow to run. Sentinel does not autonomously invoke the downstream workflow — it presents the routing map and waits for user confirmation. |
+| **Plan & Tasks Format Check** | **[ADDED 2026-07-07 — Sovereign Redesign Cluster Stage 5, PILLAR_04_POST_BUILD_HYGIENE_ARCHIVAL_NODELETE.md]** Phase 1.6: calls `scripts/plan/ensure_plan_templates.py --workspace {PATH}`, the canonical populator, to ensure a genuinely-absent `tasks.md`/`implementation-plan.md` is seeded from `templates/plan/`. Never overwrites a file with real content (the populator's own Safety Invariant, not a sentinel-side check) — safe to run live, unconditionally, every session. |
 
 ---
 
@@ -262,6 +263,53 @@ BREADCRUMB tag region is exclusively for LLM rapid context ingestion.
 
 ---
 
+## PHASE 1.6 — PLAN & TASKS FORMAT CHECK (SILENT)
+
+**[ADDED 2026-07-07 — Sovereign Redesign Cluster Stage 5, PILLAR_04_POST_BUILD_HYGIENE_ARCHIVAL_NODELETE.md §4.5]**
+
+**Objective**: Ensure the target workspace has canonical `tasks.md` and `implementation-plan.md`
+files, seeded from this suite's own `templates/plan/` when genuinely absent — the earliest point
+in a session a fresh workspace can receive the marker-ready format the Completion Marking
+sub-pass (`/implementation-plan --audit` Phase 5) and `/nodelete` Pillar 6 both consume.
+
+**Safety note**: this step is unconditionally safe to run live, every session, because the
+populator itself (`scripts/plan/ensure_plan_templates.py`) never overwrites a file that has real
+content — that invariant lives in the tool, not in a flag sentinel must remember to pass. See
+GLOSSARY: Plan & Tasks Format Check.
+
+**Known, discovered limitation — [ADDED 2026-07-07, found live during this stage's own build]**:
+"absent at root" is a mechanical, root-only presence check. A mature workspace that intentionally
+tracks its plan elsewhere (e.g. this very suite: `blueprint-workflows` has no root `tasks.md` by
+convention — it uses per-campaign `implementation-plan/<name>/tasks.md`) will still receive a
+literal, unfilled root-level placeholder the first time this step runs there, since the populator
+cannot distinguish "genuinely new project" from "mature project, different convention" — it was
+deliberately not built with that heuristic (out of Task 5.3's scope; a real check would need
+false positives evaluated before adding complexity). The placeholder is harmless on disk but
+would confuse `/execute-build`'s default root-relative `tasks.md` lookup if left in place and
+later invoked without an explicit path. Review the Phase 3 report's PLAN & TASKS FORMAT line
+after the first run in any workspace; delete the populated file if the workspace intentionally
+uses a different convention. This is a one-time consideration per workspace — the populator is
+idempotent and will not re-offer once the file exists (whether real or placeholder).
+
+### Step 1.6a — Run the Populator
+
+```bash
+python3 ~/blueprint-workflows/scripts/plan/ensure_plan_templates.py \
+  --workspace {WORKSPACE_PATH} \
+  --output-json
+```
+
+### Step 1.6b — Store the Result
+
+Parse the JSON report's `summary` block (`populated`, `skipped`, `errors`) and each entry in
+`actions` (`file`, `action`, `reason`). Store as `<PLAN_FORMAT_RESULT>` for the Phase 3 report.
+
+If `errors > 0`: do not halt the session — a missing `templates/plan/` directory or unreadable
+template is a suite-installation issue, not a workspace drift finding. Note it in the Phase 3
+report's Plan & Tasks Format line and continue.
+
+---
+
 ## PHASE 2 — TRIAGE CLASSIFICATION (SILENT)
 
 **Objective**: Classify findings by severity and determine routing.
@@ -335,6 +383,10 @@ Produce the following report format. Fill every field. No field may be omitted.
 ║   Self-healing repairs:    {metrics.repairs} (READMEs auto-created)
 ║   Substrate Index:         freshness checked; zero_finding = Tier 1 (index+ownership) only; see .doorway/substrate_index.json for full payload + summaries
 ╠════════════════════════════════════════════════════════════════════╣
+║ PLAN & TASKS FORMAT:
+║   {For each action in <PLAN_FORMAT_RESULT>.actions:} {file}: {action} — {reason}
+║   Summary: {populated} populated, {skipped} skipped, {errors} errors
+╠════════════════════════════════════════════════════════════════════╣
 ║ FINDINGS:
 ║   {For each recommendation:}
 ║   [{severity}] {id} → {workflow}
@@ -402,14 +454,14 @@ workspace, then produce a unified Routing Map that covers all workspaces.
 
 ## STRICT RULES (never violate)
 
-1. **Sentinel is read-only.** The only filesystem writes permitted during Phases 0–3 are within `{workspace}/.doorway/` — the Doorway state directory. No workspace substrate files, no workflow files, no project code files may be modified. If you find yourself about to write to a project file, stop. **[EXCEPTION — INJECTED 2026-06-12, ticket 20260612_gitignore-seeder_module.md]** Step 1d's gitignore seeder is an explicitly authorized write channel for exactly one project file, `{workspace}/.gitignore`, and only the managed block between its markers. The write is non-destructive (the user's existing entries are never touched), additive-only, and idempotent — on par with doorway.py's README self-healing. No other project-file write is permitted.
+1. **Sentinel is read-only.** The only filesystem writes permitted during Phases 0–3 are within `{workspace}/.doorway/` — the Doorway state directory. No workspace substrate files, no workflow files, no project code files may be modified. If you find yourself about to write to a project file, stop. **[EXCEPTION — INJECTED 2026-06-12, ticket 20260612_gitignore-seeder_module.md]** Step 1d's gitignore seeder is an explicitly authorized write channel for exactly one project file, `{workspace}/.gitignore`, and only the managed block between its markers. The write is non-destructive (the user's existing entries are never touched), additive-only, and idempotent — on par with doorway.py's README self-healing. **[EXCEPTION — ADDED 2026-07-07, Sovereign Redesign Cluster Stage 5]** Step 1.6's plan populator (`scripts/plan/ensure_plan_templates.py`) is a third explicitly authorized write channel, for exactly `{workspace}/tasks.md` and `{workspace}/implementation-plan.md`. The write is create-only — the populator's own Safety Invariant refuses to touch either file if it already has any non-whitespace content, force or no force (see `ensure_plan_templates.py` module docstring). No other project-file write is permitted.
 2. **One question rule.** If the workspace path cannot be resolved, ask exactly one question. Do not ask for additional context. The user answers; you proceed.
 3. **No autonomous downstream execution.** Sentinel surfaces the routing map and waits for the user to confirm. It does not invoke `/investigate`, `/document`, or any other workflow without explicit user acknowledgment. The exception is helpdesk ticket filing (Phase 4a) — this is always autonomous when HIGH findings are present.
 4. **Halt on scan failure.** If `doorway.py` exits non-zero or produces unparseable JSON, do not attempt to interpret the error or produce a partial report. File a helpdesk ticket and halt.
 5. **System path protection.** Refuse to scan `/etc`, `/usr`, `/bin`, `/sbin`, `/lib`, `/proc`, `/sys`, or any path that is a direct child of `/home` (i.e., `/home` itself, not a user's home directory subdirectory). Print: `[SENTINEL] Refused: system path scanning is not permitted`.
 6. **No jargon without definition.** Every technical term in the report that the user might not know must be defined inline on first use. Example: "hash-matched (meaning the directory's content fingerprint has not changed since the last scan)".
 7. **Confidence is declared.** The Sentinel Report must declare its scan confidence: HIGH (doorway.py ran successfully and produced valid JSON), MEDIUM (partial JSON, some fields missing), or LOW (doorway.py failed, report is estimated from last snapshot). A report without a confidence declaration is incomplete.
-8. **Mute Witness on all workspace files.** Even if a README is corrupt or missing in the target workspace, do not rewrite it. The `doorway.py` script's self-healing is the only authorized write channel for workspace content during a sentinel scan **(plus the gitignore seeder's managed-block write — see the Rule 1 exception)**. Engine owns context delivery (index + ownership file). If you observe corruption, report it — do not fix it yourself.
+8. **Mute Witness on all workspace files.** Even if a README is corrupt or missing in the target workspace, do not rewrite it. The `doorway.py` script's self-healing is the only authorized write channel for workspace content during a sentinel scan **(plus the gitignore seeder's managed-block write and the plan populator's create-only write — see the Rule 1 exceptions)**. Engine owns context delivery (index + ownership file). If you observe corruption, report it — do not fix it yourself.
 
 **Doorway Design Invariant:** "Agent context is delivered by the engine (JSON index + ownership file), not by filesystem cardinality (N × README.md). Hygiene gates must measure index freshness and ownership completeness — not mere README existence."
 
@@ -461,14 +513,18 @@ Exception: the pre-flight failure halt (Phase 0b) and the scan failure halt (Pha
 ```
 Required: ~/blueprint-workflows/scripts/doorway/doorway.py
 Optional: ~/blueprint-workflows/scripts/gitignore/gitignore_seeder.py  (Step 1d — non-fatal if absent)
+Optional: ~/blueprint-workflows/scripts/plan/ensure_plan_templates.py  (Step 1.6a — non-fatal if absent)
 Runtime:  python3 (stdlib only — hashlib, os, pathlib, json, argparse, datetime, tomllib, subprocess)
 Data dir: {workspace}/.doorway/ (auto-created on first scan; owner-only 0o700)
   - substrate_index.json is primary context/handover artifact (FOLDER_OWNERSHIP + index)
 Writes:   {workspace}/.gitignore managed block (Step 1d only; non-destructive, idempotent)
+Writes:   {workspace}/tasks.md + {workspace}/implementation-plan.md (Step 1.6a only; create-only,
+          never touches a file with existing content — see STRICT RULE 1)
 ```
 
 If the scripts path changes: update the script path in Phase 0b (Pre-flight Validation),
-Phase 1a (Execute the Scan), and Phase 1d (Gitignore Hygiene Seed).
+Phase 1a (Execute the Scan), Phase 1d (Gitignore Hygiene Seed), and Phase 1.6a (Plan & Tasks
+Format Check).
 
 ---
 
@@ -485,3 +541,4 @@ Phase 1a (Execute the Scan), and Phase 1d (Gitignore Hygiene Seed).
 3. **2026-05-21**: `[PORTED — Claude Code migration]` Pointer/Payload architecture retired. Merged into single command file at `~/blueprint-workflows/claude-commands/sentinel.md`. All doorway.py paths updated: `/home/jwils/.gemini/antigravity/global_workflows/scripts/doorway/doorway.py` → `~/blueprint-workflows/scripts/doorway/doorway.py` (Phase 0b, Phase 1a, Phase 1.5c, SCRIPTS DEPENDENCY). Phase 1.5b Step 2: `view_file` → Read tool. Phase 1.5b Step 4: `run_command` → Bash tool. SCRIPTS DEPENDENCY stale-path update note reworded to drop pointer-file reference.
 4. **2026-06-12**: `[INJECTED — ticket 20260612_gitignore-seeder_module.md, /nodelete]` Gave /sentinel a gitignore-hygiene responsibility. (a) New **Step 1d (Gitignore Hygiene Seed)** in Phase 1: invokes `scripts/gitignore/gitignore_seeder.py --workspace {PATH} --output-json`, which writes a non-destructive, idempotent managed block (`.history/`, `quarantine/`, `.workflow_state/`, security + noise patterns) into the workspace `.gitignore` from an editable `seed.toml`, and runs a detect-and-warn pass intersecting security patterns with `git ls-files`. Already-tracked secrets become a HIGH finding routed to `/gitclean --mode a` (gitignore stops only *future* leaks; history rewrite is /gitclean's job). Seeder failure is non-fatal (unlike the doorway scan halt, Rule 4). (b) **STRICT RULE 1** reconciled via a marked EXCEPTION: the seeder's managed-block write to `{workspace}/.gitignore` is an explicitly authorized write channel (the only project-file write permitted), on par with doorway's README self-healing. (c) **STRICT RULE 8** annotated to acknowledge the second authorized write channel. (d) SCRIPTS DEPENDENCY updated (seeder path, `tomllib`/`subprocess` runtime, `.gitignore` write note). Standard Version: 2.
 5. **2026-07-06**: `[UPDATED — PR pr-01-04, per PILLAR_01_CONTEXT_SESSION_INITIALIZATION.md + DESIGN_Sovereign_Redesign_Cluster_Canonical.md (Phase B)]` Sentinel workflow update: GLOSSARY (zero_finding as Tier-1, substrate_index term + refs); Phase 1.5 re-scoped/optionalized (agent enrichment on index entries, default skip, --enrich-breadcrumbs, LLM walk removed from core); Phase 2 routing (missing_readme Tier-2 only, no default /document; added index_freshness + bootstrap handling); Phase 3 report (substrate_index freshness, Tier breakdown, "context from FOLDER_OWNERSHIP + .doorway/substrate_index.json"); STRICT RULES (Mute Witness + "Engine owns context delivery (index)", Doorway Design Invariant stated verbatim); INTEGRATION/SCRIPTS (substrate_index primary handover); ACTIVATION (document --context-only, --materialize-readmes); parse/report updates for new substrate. All /nodelete (inject + append only). Follows existing patterns; smallest targeted changes.
+6. **2026-07-07**: `[INJECTED — Sovereign Redesign Cluster Stage 5, PILLAR_04_POST_BUILD_HYGIENE_ARCHIVAL_NODELETE.md §4.5, /nodelete]` Added **Phase 1.6 — Plan & Tasks Format Check**, immediately after Phase 1.5 and before Phase 2: calls `scripts/plan/ensure_plan_templates.py --workspace {PATH} --output-json`, the canonical populator, to seed a genuinely-absent `tasks.md`/`implementation-plan.md` from `templates/plan/`. Safe to run live unconditionally — the populator's own Safety Invariant (not a sentinel-side check) refuses to touch a file with any real content, matching the gitignore seeder's precedent (Change Log entry 4) of an explicitly authorized, narrow, non-destructive write channel. GLOSSARY: "Plan & Tasks Format Check" term added; "Mute Witness" entry annotated with a dated note rather than rewritten. STRICT RULE 1 gets a third named exception (following the exact pattern of the 2026-06-12 gitignore-seeder exception); STRICT RULE 8's parenthetical updated to match. Phase 3 report template gets a new "PLAN & TASKS FORMAT" block, positioned after DRIFT SUMMARY and before FINDINGS per the governing design's own placement spec. SCRIPTS DEPENDENCY: new optional dependency + a second `Writes:` line, scoped to exactly the two files, create-only. Frontmatter: `phase_count` 6→7, `platform_requirements.file_write` false→true (Phase 1.5's existing conditional `--auto-apply` write already made this field stale before this entry — not fixed retroactively here, out of this stage's scope, but not compounded either: this entry's own new write channel is now accurately declared). `version` 2→3.

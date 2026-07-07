@@ -1,0 +1,50 @@
+# implementation-plan.md — [Workspace/Project Name]
+
+## [INTENT] User Objective
+
+> [Restate the user's high-level goal in their own terminology — the why, not just the what.
+>  This is the anchor every future /focus-plan run compares the substrate against.
+>  Marked /nodelete: this section may never be removed, only updated by explicit user instruction.]
+
+### Scope & Boundaries
+
+[What is in scope; what is explicitly out of scope.]
+
+### Success Criteria (measurable)
+
+[Specific, verifiable conditions that define the project as done.]
+
+### Constraints & Assumptions
+
+[...]
+
+### Risk Assessment & Mitigation
+
+[...]
+
+### Dependencies
+
+[...]
+
+### Rollback Strategy
+
+[...]
+
+### Verification Method
+
+[...]
+
+---
+
+## Phase 1 — [Title]
+<!-- Marker slot: same convention as tasks.md — see templates/plan/tasks.md.template.
+     Leave blank until /implementation-plan --audit's Completion Marking sub-pass independently
+     verifies this unit (dual cross-reference: scripts/focus/phase_status.py's status AND
+     receipt_status must both confirm). Never hand-write a COMPLETED marker — it must come from
+     the audit's own verification, or it is Hallucinated Success in marker form. -->
+
+### Detailed Requirements
+
+[...]
+
+---
