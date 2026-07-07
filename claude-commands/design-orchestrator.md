@@ -1,8 +1,8 @@
 ---
 description: "Sovereign Design Formula — outer native layer that stages sentinel briefing, focus-plan Evidence Report, divergence/quality deltas, and an implementation-plan [INTENT] slice into a focused context, then produces a canonical DESIGN_*.md with a Build Ingestion Manifest and PR Plan. Native write/review by default (Agent Capability Gate, §15); delegates only the write/review loop to Grok /design when that tool-calling is available and authorized for the session."
 type: execution
-grade: Structured
-version: 1
+grade: Sovereign
+version: 2
 content_hash: "sha256:52f39a977fc4e340"
 last_hardened: "2026-07-06"
 strict_rule_count: 10
@@ -191,4 +191,51 @@ Activation in Claude Code: `/design-orchestrator <raw intent>` in any Claude Cod
 ---
 
 ### Change Log
-1. **2026-07-06**: `[CREATED — Sovereign Redesign Cluster Stage 3, Task 3.1-3.2, PILLAR_02_DESIGN_ORCHESTRATION_FORMULA.md §4.1 + §15]` Native implementation of the Sovereign Design Formula. Phases 0-2 follow PILLAR_02 §4.1's staged discipline verbatim (sentinel briefing, focus-plan primary payload + Negative Space, divergence/quality deltas, `[INTENT]` slice, payload assembly). Phase 3 implements the Agent Capability Gate (§15) as the core mechanism rather than an afterthought: native write + Independent Critique by default, Grok `/design` delegation only when tool-calling is confirmed available and session-authorized. Phase 4 (post-gates: focus re-verify, quality chain, Build Ingestion Manifest, DESIGN_RECEIPTS.md emission via the corrected unquoted-heredoc pattern) and Phase 5 (handoff readiness) are unconditional regardless of Phase 3's path — post-gates were never Grok-dependent, per §15's own finding. Modeled structurally on `execute-build.md`, `focus-plan.md`, `implementation-plan.md` (GLOSSARY, phased execution, STRICT RULES, Risk table, INTEGRATION, Change Log). Prototype shape (staged read → write → self-review → verify) already proven working end-to-end this session on PR 01-03 (Stage 1 of the same cluster) before this file formalized it. Standard Version: 3.
+1. **2026-07-06**: `[CREATED — Sovereign Redesign Cluster Stage 3, Task 3.1-3.2, PILLAR_02_DESIGN_ORCHESTRATION_FORMULA.md §4.1 + §15]` Native implementation of the Sovereign Design Formula. Phases 0-2 follow PILLAR_02 §4.1's staged discipline verbatim (sentinel briefing, focus-plan primary payload + Negative Space, divergence/quality deltas, `[INTENT]` slice, payload assembly). Phase 3 implements the Agent Capability Gate (§15) as the core mechanism rather than an afterthought: native write + Independent Critique by default, Grok `/design` delegation only when tool-calling is confirmed available and session-authorized. Phase 4 (post-gates: focus re-verify, quality chain, Build Ingestion Manifest, DESIGN_RECEIPTS.md emission via the corrected unquoted-heredoc pattern) and Phase 5 (handoff readiness) are unconditional regardless of Phase 3's path — post-gates were never Grok-dependent, per §15's own finding. Modeled structurally on `execute-build.md`, `focus-plan.md`, `implementation-plan.md` (GLOSSARY, phased execution, STRICT RULES, Risk table, INTEGRATION, Change Log). Prototype shape (staged read → write → self-review → verify) already proven working end-to-end this session on PR 01-03 (Stage 1 of the same cluster) before this file formalized it. Standard Version: 3. Deliberately graded **Structured** at creation, not Sovereign — all 6 structural elements were present but an actual `/harden-workflow` pass had not yet run; claiming Sovereign before that would have been Grade Fraud.
+2. **2026-07-06**: `[HARDENED — /harden-workflow, Sovereign Redesign Cluster Stage 3 Task 3.4]` Full 8-phase hardening protocol run against entry 1's content — not a rewrite, a verification pass. Phase 1 Assessment Card: all 6 Sovereign criteria (GLOSSARY, frontmatter, HOW TO BEGIN, STRICT RULES, structured output, Change Log) confirmed genuinely present, not scaffolded. Phase 4d (Inter-Workflow Reference Integrity): all 8 referenced workflows (`/sentinel`, `/focus-plan`, `/divergence`, `/quality`, `/implementation-plan`, `/execute-build`, `/triage`, `/secretary`) confirmed to exist via direct file check. Phase 7d (Linter Validation Gate): 0 CRITICAL, 1 WARNING (Antigravity pointer missing at `~/.gemini/antigravity/global_workflows/design-orchestrator.md`) — deferred deliberately, not silently: creating a pointer for a third runtime of uncertain active-use status would itself be the kind of speculative cross-tool tooling this cluster's own Agent Capability Gate exists to avoid building prematurely. Grade elevated Structured → Sovereign. `version` 1→2. Standard Version: 3.
+
+**Hardening Certificate:**
+```
++══════════════════════════════════════════════════════════+
+║  WORKFLOW HARDENING CERTIFICATE                          ║
+║  Workflow:      /design-orchestrator                     ║
+║  Date:          2026-07-06                                ║
+╠══════════════════════════════════════════════════════════╣
+║  GRADE:         SOVEREIGN                                 ║
+╠══════════════════════════════════════════════════════════╣
+║  Command file:  ~/blueprint-workflows/claude-commands/design-orchestrator.md
+║  File size:     20,781 bytes                              ║
+║  Symlink:       ~/.claude/commands/design-orchestrator.md — PRESENT ║
+║  Frontmatter:   PRESENT — description ✓                   ║
+║  GLOSSARY:      PRESENT (7 terms)                          ║
+║  HOW TO BEGIN:  PRESENT                                    ║
+║  STRICT RULES:  PRESENT (10 rules)                         ║
+║  Struct Output: PRESENT (DESIGN_RECEIPTS.md heredoc + Phase 5c report) ║
+║  Change Log:    PRESENT                                    ║
+╠══════════════════════════════════════════════════════════╣
+║  /triage Gap:   NONE — Trigger Matrix row added Stage 3 Task 3.3 ║
+╠══════════════════════════════════════════════════════════╣
+║  Changes Made:                                             ║
+║    - Verified all 6 structural criteria against actual file content (not assumed) ║
+║    - Verified all 8 inter-workflow references resolve to real files ║
+║    - Ran Phase 7d linter gate: 0 CRITICAL                  ║
+║    - Elevated grade Structured → Sovereign                 ║
+║  Deferred Items:                                           ║
+║    - Antigravity pointer (WARNING-level, not CRITICAL) — third-runtime status uncertain, not fabricated speculatively ║
+╠══════════════════════════════════════════════════════════╣
+║  Standard Version: 3                                       ║
+║  Status:        WORKFLOW HARDENING COMPLETE                ║
++══════════════════════════════════════════════════════════+
+```
+
+**Hardening Intelligence Payload:**
+```
+HARDENING INTELLIGENCE PAYLOAD
+Workflow Hardened: /design-orchestrator
+Date: 2026-07-06
+Observed Patterns: Agent Capability Gate as a first-class Phase (not a bolted-on amendment) works cleanly when the gate is designed into the workflow's structure from the start, per PILLAR_02 §15 and PILLAR_03 §15's identical treatment.
+Suggested STRICT RULE additions or improvements: none for this workflow; STRICT RULE 9 (unquoted receipt heredoc + backtick check) is itself a suite-wide pattern worth propagating to any FUTURE new workflow with receipt emission, not just this one.
+Potential new failure patterns: none new this session beyond what's already named (Ghost Logic, Mock Trap, Context Erosion, Grade Fraud -- all already in the global vocabulary).
+Cross-workflow recommendations: none beyond the Stage 3 Task 3.3 cross-refs already completed (triage, secretary, role, SUITE_HEALTH).
+Phylogenetic note: direct structural descendant of execute-build.md (Pillar 3's symmetric counterpart) and focus-plan.md/implementation-plan.md (phased GLOSSARY+STRICT RULES+Change Log convention) -- not a novel structure, a faithful application of proven suite DNA to a new domain (design orchestration).
+```
