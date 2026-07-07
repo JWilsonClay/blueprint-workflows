@@ -142,6 +142,33 @@ class TestBuildPhaseStatusReport(unittest.TestCase):
         self.assertFalse(report.found)
         self.assertEqual(report.phases, [])
 
+    def test_tasks_md_path_override(self):
+        # [ADDED 2026-07-06 — Sovereign Redesign Cluster Stage 1 prototype]
+        # tasks.md deliberately placed outside workspace root (a real case:
+        # implementation-plan/sovereign-redesign-cluster/tasks.md avoids
+        # colliding with a separate campaign's root implementation-plan.md).
+        # Receipts stay workspace-root-relative regardless -- they are a
+        # workspace-wide ledger, not per-plan.
+        nested_dir = self.tmp / "nested" / "plan"
+        nested_dir.mkdir(parents=True)
+        nested_tasks = nested_dir / "tasks.md"
+        _write(nested_tasks, "## Phase 1: Setup\n- [x] a\n")
+        _write(
+            self.tmp / BUILD_RECEIPTS_RELPATH,
+            "## 2026-07-06 — /execute-build — Phase 1: Setup\n"
+            "- Phase/Stage: Phase 1: Setup\n- Grade/Status: PHASE COMPLETE\n---\n",
+        )
+        # Default lookup (workspace/tasks.md) must not find the nested file.
+        default_report = build_phase_status_report(self.tmp)
+        self.assertFalse(default_report.found)
+        # Explicit override finds it, and still cross-references the
+        # workspace-root receipts ledger correctly.
+        report = build_phase_status_report(self.tmp, tasks_md_path=nested_tasks)
+        self.assertTrue(report.found)
+        self.assertEqual(report.path, str(nested_tasks))
+        self.assertTrue(report.receipts_file_found)
+        self.assertEqual(report.phases[0].receipt_status, "found_complete")
+
     def test_tasks_md_present_no_receipts_file(self):
         _write(self.tmp / "tasks.md", "## Phase 1: Setup\n- [x] a\n")
         report = build_phase_status_report(self.tmp)

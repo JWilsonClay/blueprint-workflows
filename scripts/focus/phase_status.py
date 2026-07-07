@@ -222,7 +222,9 @@ def _receipt_status_for(title: str, receipts: List[ReceiptEntry]) -> str:
     return "found_incomplete"
 
 
-def build_phase_status_report(workspace: Path) -> TasksMdReport:
+def build_phase_status_report(
+    workspace: Path, tasks_md_path: Optional[Path] = None
+) -> TasksMdReport:
     """
     Locate tasks.md and (if present) BUILD_RECEIPTS.md, and produce the
     per-phase status report /focus-plan PHASE 2 uses to adjudicate absent
@@ -231,9 +233,20 @@ def build_phase_status_report(workspace: Path) -> TasksMdReport:
     found=False means tasks.md does not exist at all — itself meaningful:
     the plan has not been broken into execution phases yet, so every absent
     anchor is presumptively PENDING, not a MISMATCH candidate.
+
+    Args:
+        workspace: Absolute path to the workspace root. BUILD_RECEIPTS.md is
+            always located at workspace/.workflow_state/receipts/ — receipts
+            are a workspace-wide ledger, not per-plan.
+        tasks_md_path: Optional explicit path to tasks.md, overriding the
+            default workspace/tasks.md lookup. [ADDED 2026-07-06 — Sovereign
+            Redesign Cluster Stage 1 prototype found this hardcoded lookup
+            could not verify a tasks.md deliberately placed outside workspace
+            root; additive, backward-compatible — default behavior unchanged
+            when omitted.]
     """
     workspace = Path(workspace)
-    tasks_path = workspace / TASKS_MD_NAME
+    tasks_path = Path(tasks_md_path) if tasks_md_path is not None else workspace / TASKS_MD_NAME
     if not tasks_path.is_file():
         return TasksMdReport(found=False, path=None, receipts_file_found=False, phases=[])
 
