@@ -121,11 +121,26 @@ class WorkspaceScanner:
             # Skip recursion if nothing in this branch has changed.
             if not should_recurse(rel_path_str, content_hash):
                 # Carry over all known children of this path from the previous map.
+                # [FIXED 2026-07-08, resolves helpdesk-tickets/CLOSED_20260705_sentinel-doorway-redesign_workflow.md]
+                # content_hash only covers .py files, so it never invalidates this
+                # branch when a README.md is added or removed by hand (outside
+                # doorway's own self-heal, which already forces a full-scan
+                # escalation via Option C and so never hits this path). Rather
+                # than re-hashing the whole branch's .py content just to catch a
+                # README change, cheaply re-stat has_readme directly for each
+                # carried-over path — a single is_file() call, correct at any
+                # depth, and far cheaper than the alternative of making the hash
+                # itself README-sensitive (which would only propagate staleness
+                # fixes one level per scan, not resolve them outright).
                 for p_old, info_old in previous_map.items():
                     if (
                         p_old.startswith(rel_path_str + "/")
                         and p_old not in workspace_map
                     ):
+                        fresh_has_readme = (self.workspace / p_old / "README.md").is_file()
+                        if fresh_has_readme != info_old.get("has_readme"):
+                            info_old = dict(info_old)
+                            info_old["has_readme"] = fresh_has_readme
                         workspace_map[p_old] = info_old
                         if info_old.get("has_readme") and not self._is_readme_excluded(p_old):
                             ingested_count += 1

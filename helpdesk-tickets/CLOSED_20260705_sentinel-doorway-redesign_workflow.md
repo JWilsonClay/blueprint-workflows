@@ -6,7 +6,7 @@
 **Subject**: The Doorway "breadcrumb web" (per-directory README.md + MANIFEST auto-sync) does not function as intended for real agents — lazy agents rationally read only `FOLDER_OWNERSHIP.md`; READMEs duplicate ownership, populate unevenly, trigger false hygiene signals, and collide with workflow infrastructure. Request full re-engineer of `/sentinel` + `scripts/doorway/` around a machine-readable substrate index and tiered requirements.
 **Urgency**: HIGH (affects every workspace first `/sentinel` run; compounds with lazy-scan bug; blocks trustworthy zero-finding; creates linter CRITICAL in blueprint-workflows)
 **Root Cause Type**: SUBSTANTIVE-LOGIC
-**Phylogeny Disposition**: PENDING
+**Phylogeny Disposition**: NO TRANSFER — the substrate-index architecture was built under the separate PILLAR_01 initiative (a genuine parallel-discovery case, not a transfer from this ticket); this ticket's own remaining closure work (§10) was three local fixes, not a reusable pattern.
 
 ---
 
@@ -339,3 +339,25 @@ uncommitted, exactly as this ticket's handover left them. They were deliberately
 session's own commit (they're this ticket's unresolved scope, not this session's work) rather than
 swept in or deleted. Whoever picks up this ticket's Phase 1-6 work should treat those three files as
 the starting substrate, not stray files to clean up.
+
+---
+
+## 10. Remediation Record — 2026-07-08 (closes this ticket)
+
+**Reconciliation finding, before any new work**: checking this ticket's own §4 Phase 1-6 against the actual current code in `scripts/doorway/` found most of it already built — under a separate, parallel initiative (`PILLAR_01_CONTEXT_SESSION_INITIALIZATION.md`, PRs pr-01-00 through pr-01-06) that ran concurrently with this ticket and was never cross-referenced back to it. Confirmed built and live: Phase 1 (substrate_index.json architecture — `doorway.py` emits it, `manifest.py` syncs from it), Phase 2 (tiered zero-finding — `auditor.py`'s `ownership_incomplete`, `doorway.py`'s `tier1_keys` gate), Phase 3 item 1 (Option C auto-escalation — `doorway.py:247`), Phase 3 item 3 (inaugural bootstrap tagging — `is_bootstrap`), Phase 4 (`manifest.py` sync, `integrity.py`'s `autoheal_enabled` default-off + `readme_exclude_dirs`, `breadcrumb.py`'s delimiter bug already fixed), Phase 5 item 3 (no `ACTIVE ADVISORY` entries existed in `SUITE_HEALTH.md` at all — nothing to supersede). This is a genuinely good outcome, not a process failure to flag — real, verified, tested work, just filed under a different initiative name.
+
+**What was actually still open — three items, not a six-phase program:**
+
+1. **`scanner.py`'s `compute_dir_hash()` staleness gap** (the literal Phase 4 `scanner.py` row): confirmed by reading the code live — the hash only covers `.py` files, so a README manually added or removed (outside self-heal, which is opt-in and off by default, and whose own missing-README detections already trigger Option C's full-scan escalation) goes undetected on an incremental scan. Worse than originally scoped: since removing a file is never counted as a "repair," Option C's `repairs > 0` escalation condition can never fire for this case — a manually-deleted README's stale `has_readme: true` would persist **forever**, with no self-correcting path at all, not just until the next full scan. Fixed in [scanner.py#L120-L142](file:///home/jwils/blueprint-workflows/scripts/doorway/scanner.py#L120-L142): each carried-over path now gets a cheap, direct `is_file()` re-check for `has_readme`, correct at any depth, independent of the .py-only content hash. New regression test `test_manual_readme_removal_refreshes_without_escalation` in `scripts/tests/test_doorway.py` proves the exact failure mode (zero repairs, real detection anyway) — confirmed failing against the pre-fix code, passing after.
+2. **SUITE_HEALTH ACTIVE ADVISORY Convention** (Phase 3 item 5, per this ticket's own §9 design-tightening spec): added to [manifest/SUITE_HEALTH.md#L15-L24](file:///home/jwils/blueprint-workflows/manifest/SUITE_HEALTH.md#L15-L24) verbatim as specified — two clauses, cite the ticket, remove on closure. **Found and fixed a live violation of the convention in the same edit**: the file already had a `[RESOLVED 2026-07-07 — CLOSED_...]` advisory citing an already-closed ticket, exactly the dangling-stale-advisory case the new convention exists to prevent — removed per Remediation on Contact.
+3. **`role.md` session-boundary pointer** (Phase 5 item 1): added one sentence naming `/sentinel` (FOLDER_OWNERSHIP.md + `.doorway/substrate_index.json`) as the source of workspace-structure context — [role.md#L192](file:///home/jwils/blueprint-workflows/claude-commands/role.md#L192) — rather than restating the Doorway Design Invariant a second time.
+
+**Verified**: full suite 467/467 (up from 466), including the new regression test. `lint_workflows.py`: 0 CRITICAL, 19 pre-existing WARNINGs (none introduced). Live inaugural-scan dry run against a fresh scratch workspace confirmed: `is_bootstrap: true`, zero P0 `/investigate` routing, recommendations correctly limited to MEDIUM (unowned) and INFO (Tier 2 missing_readme) — satisfying this ticket's own §4 verification criterion directly. `20260705_doorway_lazy-scan-stale-readme_workflow.md` (the sibling ticket this ticket's §1 said to fold in) was already closed independently — confirmed, not re-opened.
+
+**One pre-existing citation** (`claude-commands/README.md#L1-L12`, §3c) now resolves `FILE_MISSING` — expected, not a new defect: that file was deliberately deleted as part of the autoheal-default-off fix in an earlier session (see this ticket's own §7 provenance note). Left as historical evidence.
+
+Frontmatter changes: `scripts/doorway/scanner.py` (no frontmatter, code file), `manifest/SUITE_HEALTH.md` (no frontmatter, Live-State doc), `role.md` version 3→4, content_hash recomputed, last_hardened 2026-07-08, Change Log entry 9 appended.
+
+---
+**Status**: **REMEDIATED**
+**Verification**: CONFIRMED — 467/467 tests pass (1 new regression test, verified failing pre-fix), 0 CRITICAL lint, live inaugural-scan dry run matches this ticket's own verification criteria.

@@ -148,6 +148,37 @@ class TestDoorwayStaleReadmeCarryOver(unittest.TestCase):
         result = self._run(full_scan=False)
         self.assertEqual(result["metrics"]["repairs"], 0)
 
+    def test_manual_readme_removal_refreshes_without_escalation(self):
+        """[ADDED 2026-07-08, resolves helpdesk-tickets/CLOSED_20260705_sentinel-doorway-redesign_workflow.md]
+        A gap Option C's repair-triggered escalation never covered: a human
+        manually DELETES a real README from a directory whose parent's .py-only
+        hash never changes. Removing a file is not a 'repair' (repairs only
+        count creations), so metrics['repairs'] stays 0 and Option C's
+        `repairs > 0` escalation condition never fires -- the stale
+        has_readme=True would otherwise persist forever, silently, with no
+        self-correcting path at all. scanner.py must catch this directly by
+        re-stating has_readme for every carried-over path, independent of
+        whether anything else in the run counts as a repair.
+
+        Uses readme_autoheal=False so the raw detection is observable directly,
+        rather than being immediately masked by self-heal recreating the file
+        within the same run (which is what a readme_autoheal=True run would do,
+        correctly, but that would prove self-heal works, not that detection did)."""
+        ctx1 = DoorwayContextualizer(self.workspace, quiet=True, output_json=True, readme_autoheal=False)
+        ctx1.run(full_scan=True)  # establish ground truth: child has_readme True
+        (self.child / "README.md").unlink()  # real, human deletion -- not itself a repair
+        ctx2 = DoorwayContextualizer(self.workspace, quiet=True, output_json=True, readme_autoheal=False)
+        result = ctx2.run(full_scan=False)
+        self.assertEqual(
+            dict(ctx2.metrics).get("repairs", 0), 0,
+            "test setup assumption broken: a deletion must not itself count as a repair",
+        )
+        self.assertIn(
+            "stable_parent/child", result.get("drift", {}).get("missing_readme", []),
+            "manual README deletion was not detected on the very next incremental "
+            "scan, despite zero repairs to trigger Option C's escalation",
+        )
+
 
 class TestReadmeAutohealDefaultOff(unittest.TestCase):
     """
