@@ -645,5 +645,17 @@
 
 ### Cross-Project Insight
 - Hardening is significantly easier post-SoC. Security audits on monoliths produce massive, tangled CVE reports. Audits on decoupled modules (like fetchers vs. analyzers) allow for targeted, surgical fixes (like adding `--` to yt-dlp) without risking logic regressions in unrelated components.
+## 2026-07-07 — MIXED (Workflow Maintenance & Git Scrub)
+- **Workflows used**: /helpdesk-tickets, /gitclean, /secretary
+- **Summary**: Addressed structural gaps in /gitclean (tracked-but-ignored files bypass) and /nodelete (lack of dual-surface archival synchronization). Successfully performed Local Runtime File Purge (LRFP) to scrub database and test artifacts from historical commits without touching the working tree.
+- **Workflow Health Metrics**:
+  - `git log ... | head -1 && echo FAIL` is a known bash scripting trap where `head -1` exiting `0` on an empty pipe triggers the success branch of `&&`. Discovered during /gitclean Phase 7 verification. This false positive caused the workflow to mistakenly report that history scrubbing failed, when it had actually succeeded perfectly.
+
+### Protocol Refinement Suggestions
+- **Problem observed**: `/gitclean` Phase 7 Verification script incorrectly reports failure when history is successfully scrubbed, due to `head -1` pipe behavior on empty input.
+- **Proposed change**: `/gitclean` — Fix Phase 7 verification script by using `wc -l` to count commits instead of `head -1`, mirroring the logic used correctly in Phase 4 verification. (This should be filed via a helpdesk ticket for the Senior Architect).
+- **Change type**: Minor bugfix
+- **Priority**: MEDIUM
+- **Rationale**: False negatives in verification phases degrade trust in the workflow system.
 
 ---
