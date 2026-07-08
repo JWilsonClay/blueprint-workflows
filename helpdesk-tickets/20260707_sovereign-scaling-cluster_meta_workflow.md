@@ -58,6 +58,12 @@ The QUEUE table was last touched 2026-06-02. Since then, the Sovereign Redesign 
 2. Convert the QUEUE-table format to the standard `implementation-plan.md` + `tasks.md` pair (per `templates/plan/`). Each QUEUE row maps to one `tasks.md` Phase; the ten-step recipe maps to that phase's task checklist.
 3. Prioritize `/execute-build`'s own engine-extraction ahead of its current #4 position — Part 4's delegation design builds directly on top of it.
 
+### 2.4 Status Snapshot — [ADDED 2026-07-07, this session, closing this Part] **PART 1 COMPLETE**
+
+All 9 PENDING workflows named in §2.1's table now have real, tested, read-only engines. Executed exactly as §2.3 recommended: `/execute-build` went first (`tasks.md` Phase 4.1-4.2), then `/secretary`/`/triage`/`/harden-workflow` (the remaining §2.2 re-verification targets, Phase 4.3-4.5), then the five originally-PENDING-but-not-materially-changed targets `/redteam`/`/sentinel`/`/continuous-verify`/`/investigate`/`/helpdesk-tickets` (Phase 5.1-5.5). Each got its own fresh Honest-Design Discipline pass per §2.3 item 1 — three found the seed assumption needed correcting (`/execute-build`'s reuse target had already been built elsewhere; `/redteam`'s "Ghost Logic collector" framing didn't survive re-application against an arbitrary-target-codebase constraint; `/sentinel`'s assumed "drift-delta layer" gap didn't exist at all), the rest confirmed and specified the original hint. 168 new tests (295 → 463), zero regressions, every touched file lint-CLEAN. Per-workflow evidence: `tasks.md` Phases 4-5, `docs/compression-staging/*-honest-design.md` (9 design docs), and 9 closed helpdesk tickets (`CLOSED_20260707_*-engine-gap_workflow.md`). This closes Part 1 (§2) of this ticket — Parts 2-4 (§3-§5) remain open, gated behind the separate execution approval §0 describes.
+
+A retroactive data-integrity finding surfaced by the very last engine built (`/helpdesk-tickets`'s own Ticket Lifecycle Evidence Engine): all 9 of this session's own engine-gap tickets had left `Phylogeny Disposition: PENDING` despite `Status: REMEDIATED` (a live instance of the exact contradiction that engine was built to catch), and used prose evidence instead of the mandated citation format. Corrected same-day — see those 9 tickets' own `Phylogeny Disposition Note` fields and added citations.
+
 ---
 
 ## 3. Part 2 — The Bloat Ticket: Real Signal, Two Narrow Levers (Not a Rewrite)

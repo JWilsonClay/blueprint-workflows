@@ -256,6 +256,23 @@ While investigating a user question about README breadcrumb cleanup, this ticket
 
 ---
 
+## 8. Execution-Readiness Assessment (2026-07-07, later same day, post-Verification-Spine campaign)
+
+**Direct answer to the question this ticket's §4 note (line 251) left open**: with the Verification-Spine campaign now complete (9 real Honest-Design Discipline + engine-build cycles, `tasks.md` Phases 4-5) and the Gemini delegation pattern proven twice (Phase 1 full pilot, tasks 2.5a/2.7 mechanical-apply), this ticket's remaining work was re-checked directly against `/execute-build` Phase 2's own observability bar ("a phase where some tasks lack acceptance criteria is underspecified... HALT and ask the user to clarify") — not assumed ready because it "looks well-specified."
+
+**Verdict: NOT YET READY for direct Gemini handoff.** Unlike Phase 1 (Quick Wins) or the STRICT RULES compression tasks, this ticket's remaining phases contain real, unresolved design judgment, not just mechanical execution of an already-fully-decided change:
+
+- **Phase 2 (Zero-finding redefinition)** is the closest to ready — concrete tiers, named files (`auditor.py`, `recommender.py`, `sentinel.md`).
+- **Phase 3 item 5** ("document pattern for ACTIVE ADVISORY bullets") names no concrete file or content — underspecified by `/execute-build`'s own gate.
+- **Phase 4**'s `auditor.py` row is conditional ("if Option B hybrid") on an option the ticket's own §Phase 6 lists as a documented-but-undecided alternative to the stated preference (A/D) — a live conditional branch is exactly the ambiguity `/execute-build` Phase 2 would legitimately HALT on.
+- **Phase 3 item 1** ("Phase 1e — interim — may merge with Option C") is explicitly tentative in its own wording.
+
+**This is not a rejection of the work — it is the same finding this campaign made repeatedly this session**: real, valuable, but requiring a Claude design-tightening pass (resolving the Option B conditional, writing a concrete Phase 3 item 5, converting "may merge" into a decided sequencing) before it is honestly ready to hand to Gemini. That pass has not been done as part of this note — doing so is real, separate work, not a quick addendum, and is being flagged rather than rushed.
+
+**Recommendation**: if this is prioritized as the next delegation target, the next step is a Claude pass converting this ticket's §4 into a proper `implementation-plan.md`/`tasks.md` phase pair (per `templates/plan/`), resolving every conditional/tentative item into a single decided path, before any Gemini invocation — mirroring exactly how `tasks.md` Phases 4-5 were built this session before their own mechanical-apply tasks were staged.
+
+---
+
 ## 6. Handover Context (for incoming agent — read if no conversation history)
 
 **Workspace:** `~/blueprint-workflows` — Sovereign Workflow Suite (32 slash commands in `claude-commands/`, symlinked to `~/.claude/commands/`).
