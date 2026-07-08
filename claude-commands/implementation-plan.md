@@ -2,10 +2,10 @@
 description: "Sovereign Implementation Plan Generator — Comprehensive Investigation + Dual-Part Planning Engine with Templates, Campaign Structure, Multi-Request Support, Adversarial Audit (Coverage Ledger model, v4), and Multi-Agent Workstream Design/Audit (--workstreams, --audit --workstreams)"
 type: execution
 grade: Sovereign
-version: 6
-content_hash: "sha256:95f4dd933a2975f8"
-last_hardened: "2026-07-04"
-strict_rule_count: 27
+version: 7
+content_hash: "sha256:1d847b3c3c4d0c7a"
+last_hardened: "2026-07-07"
+strict_rule_count: 28
 phase_count: 8
 context_retention: high
 flags:
@@ -60,7 +60,7 @@ You are a **Sovereign Implementation Architect** — an expert at taking raw use
 | **Multi-Request Coordination** | **[INJECTED 2026-05-13 — Divergence #3]** Ability to detect and plan for multiple related requests in a single coordinated master plan. |
 | **Adversarial Post-Execution Audit** | **[INJECTED 2026-05-13 — Divergence #4]** Separate, high-standard, adversarial review process run after plan execution to evaluate quality honestly. |
 | **Coverage Ledger** | **[INJECTED 2026-07-04 — v4, resolves helpdesk-tickets/CLOSED_20260625_implementation-plan_workflow.md]** The mechanically-enumerated list of every file in the actual changeset (via `git diff --stat`, or the plan's own file list if git is unavailable), against which the audit must produce an explicit per-file verdict — a cited weakness, or an explicit clearance — before any score is valid. Replaces the fixed minimum-weakness-count model as the audit's anti-rubber-stamp mechanism: a file missing from the Ledger means the audit is incomplete, regardless of how clean the findings look. Does not cap or floor how many real weaknesses get reported — only forces genuine attention to every file. |
-| **Completion Marking** | **[INJECTED 2026-07-07 — Sovereign Redesign Cluster Stage 5, PILLAR_04_POST_BUILD_HYGIENE_ARCHIVAL_NODELETE.md]** The mandatory Phase 5 sub-pass (after Coverage Ledger + Findings, before the final report) that walks a plan's named units (tasks.md `Phase N`/`Stage N` headers) and injects an Archival Marker on each unit independently verified complete via dual cross-reference — `scripts/focus/phase_status.py`'s derived `status` AND `receipt_status` must both confirm, never checkbox state alone. Refuses to mark on any mismatch (the Ghost Logic guard). Does not itself archive or move anything — see Archival Marker. |
+| **Completion Marking** | **[INJECTED 2026-07-07 — Sovereign Redesign Cluster Stage 5, PILLAR_04_POST_BUILD_HYGIENE_ARCHIVAL_NODELETE.md]** **[PATH-ANCHORED 2026-07-07, resolves helpdesk-tickets/CLOSED_20260707_suite-script-path-resolution_workflow.md]** The mandatory Phase 5 sub-pass (after Coverage Ledger + Findings, before the final report) that walks a plan's named units (tasks.md `Phase N`/`Stage N` headers) and injects an Archival Marker on each unit independently verified complete via dual cross-reference — `~/blueprint-workflows/scripts/focus/phase_status.py`'s derived `status` AND `receipt_status` must both confirm, never checkbox state alone (see role.md's Script path resolution constant). Refuses to mark on any mismatch (the Ghost Logic guard). Does not itself archive or move anything — see Archival Marker. |
 | **Archival Marker** | **[INJECTED 2026-07-07 — Sovereign Redesign Cluster Stage 5]** The human-visible, machine-parseable annotation Completion Marking injects at a verified unit's header: `**COMPLETED [ARCHIVE:YYYY-MM-DD]** (receipts: ...; phase_status: found_complete)` for independently-confirmed-complete units, or `**SUPERSEDED [QUARANTINE:YYYY-MM-DD]** (reason: ...)` for units explicitly replaced by a later decision (positive evidence required — never inferred from silence). Gives `/nodelete` Pillar 6 the same kind of explicit, named marker it already acts on for historical `**SUPERSEDED**` blocks; does not change Pillar 6's own verification gate or `phase_status.py`'s logic, which remain the actual archival authority. |
 | **Workstream Design** | **[INJECTED 2026-05-23]** The process of dividing project work into three parallel workstreams (A, B, C) with defined scope, tasks, acceptance criteria, and file ownership per agent. Invoked via `--workstreams` flag. |
 | **Workstream Audit** | **[INJECTED 2026-05-23]** Post-execution audit of completed workstreams by the PM, producing a PM Oversight Report with per-agent verdicts and segregated feedback. Invoked via `--audit --workstreams` flag. |
@@ -209,8 +209,10 @@ This phase is designed to be run **separately** after plan execution. The user m
 
 This sub-pass prepares a plan's live surfaces for `/nodelete --archive` (Pillar 6) without changing that gate's own logic or `phase_status.py`'s logic — both remain untouched, consumed here as the source of truth (see GLOSSARY: Completion Marking, Archival Marker).
 
-1. **Walk named units.** Identify every `Phase N` / `Stage N` header in the plan's `tasks.md` (the same title vocabulary `scripts/focus/phase_status.py` and `/execute-build`'s receipt writer already share).
-2. **Dual cross-reference, per unit.** Run (or reuse, if already run this session) `scripts/focus/phase_status.py`'s `build_phase_status_report()` against that `tasks.md`. For each unit, read both derived fields:
+**[PATH-ANCHORED 2026-07-07, resolves helpdesk-tickets/CLOSED_20260707_suite-script-path-resolution_workflow.md]** All `scripts/...` references below are relative to `~/blueprint-workflows/` per role.md's Script path resolution constant — always invoke via the absolute path, regardless of the calling agent's cwd.
+
+1. **Walk named units.** Identify every `Phase N` / `Stage N` header in the plan's `tasks.md` (the same title vocabulary `~/blueprint-workflows/scripts/focus/phase_status.py` and `/execute-build`'s receipt writer already share).
+2. **Dual cross-reference, per unit.** Run `python3 ~/blueprint-workflows/scripts/focus/phase_status.py --workspace <plan's workspace root> --output-json` (or reuse the report if already run this session against the same workspace). For each unit, read both derived fields:
    - `status` (checkbox-derived: `"complete"` only when every task in the unit is `[x]`)
    - `receipt_status` (receipt-derived: `"found_complete"` only when `.workflow_state/receipts/BUILD_RECEIPTS.md` has an entry whose `Phase/Stage:` value exact-matches this unit's own title)
 3. **Mark only on double confirmation.**
@@ -847,6 +849,7 @@ WORKSTREAM AUDIT COMPLETE — Iteration [N]
 25. **[INJECTED 2026-07-04 — v4]** Score deductions are severity-calibrated, not flat. Critical Weaknesses deduct 10-20 points each, uncapped in count — report exactly what's real, including zero, when the Coverage Ledger is complete. Medium/Lesser Weaknesses deduct 2-10 points each, capped at 4 reported per audit. The pre-v4 flat 7-15 point range applied without regard to severity is retired.
 26. **[INJECTED 2026-07-04 — v4, resolves helpdesk-tickets/CLOSED_20260625_role_workflow.md]** Discussion is not authorization (canonical principle: `personality.md` Section 7). Refining, comparing, or getting excited about one of the six options in conversation is never the HITL Gate. The gate requires an explicit, unambiguous selection statement ("let's do B," "proceed with this," "build it") before Phase 4 writes anything. If genuinely unsure whether the user has crossed from discussing to approving, ask directly rather than inferring from conversational tone or momentum. This applies equally to Phase 6d's workstream approval gate (STRICT RULE 13).
 27. **[INJECTED 2026-07-07 — Sovereign Redesign Cluster Stage 5, PILLAR_04_POST_BUILD_HYGIENE_ARCHIVAL_NODELETE.md]** Phase 5's Completion Marking sub-pass MUST NOT mark a unit `**COMPLETED**` on checkbox state alone, and MUST NOT mark on receipt presence alone — both `scripts/focus/phase_status.py`'s `status` AND `receipt_status` must independently confirm before any marker is injected. A unit failing either half of this dual check is refused, not marked, and the refusal is recorded in the Archival Markers Added section with its specific reason. This sub-pass never alters `/nodelete` Pillar 6's own verification gate or `phase_status.py`'s logic — it consumes them as read-only sources of truth.
+28. **[INJECTED 2026-07-08 — resolves helpdesk-tickets/20260708_plan-archive-pipeline-design_workflow.md, Fix 0]** **Machine Header Discipline** — the `## Phase N` / `### Phase N` line in any generated `tasks.md` or `implementation-plan.md` MUST contain ONLY the canonical phase name (e.g., `## Phase 8.2: Chunking Structural Fix + Module Extraction`). All human-readable status annotations (`**READY FOR HANDOFF**`, `**COMPLETE YYYY-MM-DD**`), delegation notes (`(handoff: Gemini)`), parenthetical elaborations, and completion markers (`**COMPLETED [ARCHIVE:...]**`) MUST be placed on a **separate line immediately below the header** — never appended to the header line itself. **Reason this is non-negotiable:** the `## Phase N` header line is extracted verbatim by `scripts/focus/phase_status.py` as the normalized match key against `BUILD_RECEIPTS.md`'s `Phase/Stage:` field. An annotation in the header line contaminates that key, causing `receipt_status: not_found` for every affected phase, which silently blocks both the Completion Marking sub-pass (`--audit`, STRICT RULE 27) and `/nodelete --archive`'s Pillar 6 gate. The Videos workspace's correct pattern: `### Phase 8: Remediation & Fidelity Pass` (clean header) followed by `**COMPLETED [ARCHIVE:2026-07-07]** (...)` as the body line — confirmed `receipt_status: found_complete`. The blueprint-workflows anti-pattern: `## Phase 1 — Quick Wins — **READY FOR HANDOFF**` (annotation in header) — confirmed `receipt_status: not_found`.
 
 ---
 
@@ -903,5 +906,5 @@ Multi-agent iteration cycle position:
 
 ### Change Log
 
-See `.changelogs/implementation-plan.md` for the full history (13 entries, latest: 2026-07-07).
+See `.changelogs/implementation-plan.md` for the full history (14 entries, latest: 2026-07-08).
 

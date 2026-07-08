@@ -3,9 +3,9 @@ description: "Sovereign Build Agent — implements each phase of tasks.md with s
 type: execution
 grade: Sovereign
 version: 6
-content_hash: "sha256:cdb1edcd500a4662"
+content_hash: "sha256:9cfdc61f434e424f"
 last_hardened: "2026-07-07"
-strict_rule_count: 18
+strict_rule_count: 19
 phase_count: 7
 context_retention: high
 flags: []
@@ -391,7 +391,7 @@ Workspace root is the parent directory of `<TASKS_FILE>`.
 mkdir -p "$(dirname <TASKS_FILE>)/.workflow_state/receipts"
 cat >> "$(dirname <TASKS_FILE>)/.workflow_state/receipts/BUILD_RECEIPTS.md" << RECEIPT_EOF
 ## $(date +%Y-%m-%d) — /execute-build — <ACTIVE_PHASE name>
-- Phase/Stage: <ACTIVE_PHASE name>
+- Phase/Stage: <ACTIVE_PHASE name — stripped of bold annotations (**...**) and parenthetical delegation notes ((handoff: ...)); canonical phase title only. See STRICT RULE 19.>
 - Grade/Status: PHASE COMPLETE
 - Files: <Files Created> | <Files Modified>
 - Commit: $(git -C "$(dirname <TASKS_FILE>)" rev-parse --short HEAD 2>/dev/null || echo "N/A")
@@ -467,6 +467,7 @@ Ask the user: proceed to /iterate-test validation, run /harden, or declare ready
 16. **[INJECTED 2026-07-04, resolves helpdesk-tickets/CLOSED_20260625_role_workflow.md]** Turn-Boundary Pause Protocol (canonical principle: `personality.md` Section 8). If the user signals reduced active supervision is coming ("I will review," "I'll check back," or equivalent — not a fixed phrase) at any point during a build: complete the current phase in full — through Step 6's Phase Build Receipt and the `BUILD_RECEIPTS.md` write — before yielding control. Never leave a phase partially built, a task unmarked, or a receipt unwritten because a pause was signaled. If the signal arrives mid-phase: finish that phase, but do not additionally advance into the next phase afterward — the pause caps forward progress at the phase already underway, overriding this file's normal autonomous continuation (the "If more phases remain: advance... and return to STEP 1" instruction in PHASE 6) until the user re-engages.
 17. **[ADDED 2026-07-06, PILLAR_03_EXECUTION_DELEGATION_FORMULA.md §15, Sovereign Redesign Cluster Stage 4]** Never assume Grok `/execute-plan` tool-calling is available. The Native Execution Trigger (Phase 0a, GLOSSARY) is the default path when `<TASKS_FILE>` is absent but a DESIGN with a `## PR Plan` exists — confirm capability and session authorization before taking any Grok-delegated alternative instead. Never edit Grok's `/execute-plan` skill or its personas under either path.
 18. **[ADDED 2026-07-06, PILLAR_03_EXECUTION_DELEGATION_FORMULA.md §4.4, Sovereign Redesign Cluster Stage 4]** When the Native Execution Trigger produces `<TASKS_FILE>` via `/implementation-plan`, record which DESIGN and which `/implementation-plan` invocation produced it in the Build Log (Step 0e) before Phase 1 begins — traceable provenance for the handoff, not an unattributed `tasks.md` appearing from nowhere. This is the Ghost-Logic guard for the native trigger specifically: an outer layer must always be able to reconstruct which DESIGN a build's `tasks.md` actually came from.
+19. **[INJECTED 2026-07-08 — resolves helpdesk-tickets/20260708_plan-archive-pipeline-design_workflow.md, Fix 0b]** **Canonical Receipt Title Discipline** — when writing the `Phase/Stage:` field in `BUILD_RECEIPTS.md` (Phase 6 heredoc), `<ACTIVE_PHASE name>` MUST be the canonical phase name as written in `tasks.md`'s `## Phase N` / `### Phase N` header line, with two stripping operations applied: (1) strip any trailing bold annotation (`**...**`) — e.g., `## Phase 1 — Quick Wins — **READY FOR HANDOFF**` → `Phase 1 — Quick Wins`; (2) strip any trailing parenthetical delegation note (`(handoff: Agent)`, `(all four ...)`, etc.) — e.g., `## Phase 8.2: Chunking Structural Fix + Module Extraction (handoff: Gemini)` → `Phase 8.2: Chunking Structural Fix + Module Extraction`. **Never invent abbreviated phase names** (e.g., `Phase 2a` when the tasks.md header reads `Phase 2 — Instruction Density Compression`). If a phase is split into sub-phases, the sub-phase must have its own `## Phase 2a` header in `tasks.md` before that name may be used as a receipt title. **Reason:** `phase_status.py` matches the `Phase/Stage:` field against the normalized `tasks.md` header title to derive `receipt_status: found_complete`. A receipt written with an annotated or abbreviated title produces `receipt_status: not_found`, silently blocking `/implementation-plan --audit` Completion Marking (STRICT RULE 27 of that workflow) and `/nodelete --archive` Pillar 6 for all affected phases. This STRICT RULE is the receipt-write companion to `/implementation-plan`'s STRICT RULE 28 (Machine Header Discipline). Both must be respected for the pipeline to close.
 
 ────────────────────────────────────────────
 HOW TO BEGIN

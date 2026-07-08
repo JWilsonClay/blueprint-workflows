@@ -2,9 +2,9 @@
 description: "Sovereign Design Formula — outer native layer that stages sentinel briefing, focus-plan Evidence Report, divergence/quality deltas, and an implementation-plan [INTENT] slice into a focused context, then produces a canonical DESIGN_*.md with a Build Ingestion Manifest and PR Plan. Native write/review by default (Agent Capability Gate, §15); delegates only the write/review loop to Grok /design when that tool-calling is available and authorized for the session."
 type: execution
 grade: Sovereign
-version: 2
-content_hash: "sha256:52f39a977fc4e340"
-last_hardened: "2026-07-06"
+version: 3
+content_hash: "sha256:2cc3cfc4c5f813a2"
+last_hardened: "2026-07-07"
 strict_rule_count: 10
 phase_count: 6
 context_retention: high
@@ -85,7 +85,7 @@ This workflow is symmetric to `/execute-build` (Pillar 3): that workflow owns th
 
 **Unconditional — runs identically whether Phase 3 took the native or the Grok-delegated path. Post-gates were never Grok-dependent.**
 
-4a. **Focus re-verify.** Run `scripts/focus/focus.py` again, this time with the produced DESIGN as the target plan (`--plan <design-path>` if the CLI supports it, or a direct read of the DESIGN's `[INTENT]` and cited gaps against current substrate). Outcome: PARITY (claims hold), MISMATCH (a claim doesn't hold — fix the DESIGN or the claim before proceeding, do not paper over it), or PENDING (a cited gap is legitimately future work, not Ghost Logic — `phase_status.py`-style adjudication where a tasks.md already exists for this scope).
+4a. **Focus re-verify.** Run `python3 ~/blueprint-workflows/scripts/focus/focus.py` again (absolute path per role.md's Script path resolution constant — **[PATH-ANCHORED 2026-07-07, resolves helpdesk-tickets/CLOSED_20260707_suite-script-path-resolution_workflow.md]**), this time with the produced DESIGN as the target plan (`--plan <design-path>` if the CLI supports it, or a direct read of the DESIGN's `[INTENT]` and cited gaps against current substrate). Outcome: PARITY (claims hold), MISMATCH (a claim doesn't hold — fix the DESIGN or the claim before proceeding, do not paper over it), or PENDING (a cited gap is legitimately future work, not Ghost Logic — `phase_status.py`-style adjudication where a tasks.md already exists for this scope).
 
 4b. **`/quality` chain.** Confirm the DESIGN was produced under `/quality` discipline (Step 5 critique findings, Quality Witness log entry if `.workflow_state/quality_witness.log`'s parent directory exists).
 
@@ -193,6 +193,7 @@ Activation in Claude Code: `/design-orchestrator <raw intent>` in any Claude Cod
 ### Change Log
 1. **2026-07-06**: `[CREATED — Sovereign Redesign Cluster Stage 3, Task 3.1-3.2, PILLAR_02_DESIGN_ORCHESTRATION_FORMULA.md §4.1 + §15]` Native implementation of the Sovereign Design Formula. Phases 0-2 follow PILLAR_02 §4.1's staged discipline verbatim (sentinel briefing, focus-plan primary payload + Negative Space, divergence/quality deltas, `[INTENT]` slice, payload assembly). Phase 3 implements the Agent Capability Gate (§15) as the core mechanism rather than an afterthought: native write + Independent Critique by default, Grok `/design` delegation only when tool-calling is confirmed available and session-authorized. Phase 4 (post-gates: focus re-verify, quality chain, Build Ingestion Manifest, DESIGN_RECEIPTS.md emission via the corrected unquoted-heredoc pattern) and Phase 5 (handoff readiness) are unconditional regardless of Phase 3's path — post-gates were never Grok-dependent, per §15's own finding. Modeled structurally on `execute-build.md`, `focus-plan.md`, `implementation-plan.md` (GLOSSARY, phased execution, STRICT RULES, Risk table, INTEGRATION, Change Log). Prototype shape (staged read → write → self-review → verify) already proven working end-to-end this session on PR 01-03 (Stage 1 of the same cluster) before this file formalized it. Standard Version: 3. Deliberately graded **Structured** at creation, not Sovereign — all 6 structural elements were present but an actual `/harden-workflow` pass had not yet run; claiming Sovereign before that would have been Grade Fraud.
 2. **2026-07-06**: `[HARDENED — /harden-workflow, Sovereign Redesign Cluster Stage 3 Task 3.4]` Full 8-phase hardening protocol run against entry 1's content — not a rewrite, a verification pass. Phase 1 Assessment Card: all 6 Sovereign criteria (GLOSSARY, frontmatter, HOW TO BEGIN, STRICT RULES, structured output, Change Log) confirmed genuinely present, not scaffolded. Phase 4d (Inter-Workflow Reference Integrity): all 8 referenced workflows (`/sentinel`, `/focus-plan`, `/divergence`, `/quality`, `/implementation-plan`, `/execute-build`, `/triage`, `/secretary`) confirmed to exist via direct file check. Phase 7d (Linter Validation Gate): 0 CRITICAL, 1 WARNING (Antigravity pointer missing at `~/.gemini/antigravity/global_workflows/design-orchestrator.md`) — deferred deliberately, not silently: creating a pointer for a third runtime of uncertain active-use status would itself be the kind of speculative cross-tool tooling this cluster's own Agent Capability Gate exists to avoid building prematurely. Grade elevated Structured → Sovereign. `version` 1→2. Standard Version: 3.
+3. **2026-07-07**: `[PATH-ANCHORED, resolves helpdesk-tickets/CLOSED_20260707_suite-script-path-resolution_workflow.md]` Phase 4a's Focus Re-Verify instruction referenced `scripts/focus/focus.py` with a bare relative path — fixed to the absolute `python3 ~/blueprint-workflows/scripts/focus/focus.py` form, referencing the new "Script path resolution" constant in `role.md`. Lower-severity than the `implementation-plan.md`/`nodelete.md` sibling fixes (this file's own EXECUTION MODEL already demonstrates the correct absolute form elsewhere), but fixed for consistency since it's the exact pattern the ticket named. 463/463 suite tests pass, no regressions. Frontmatter: version 2→3, content_hash recomputed, last_hardened 2026-07-07.
 
 **Hardening Certificate:**
 ```

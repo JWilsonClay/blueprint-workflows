@@ -6,7 +6,7 @@
 **Subject**: `investigate.md`'s own INTEGRATION section names 7 specific `/triage triggers` ("Something is broken and I don't know why" → `/investigate`, etc.), but `triage.md`'s Trigger Matrix — the authoritative table `/triage` actually evaluates — has no `/investigate` block at all. The link is one-directional and broken on the authoritative side.
 **Urgency**: LOW (a real, live gap, but `/investigate` is still directly user-invocable regardless of `/triage` routing it — the failure mode is a missed recommendation, not a blocked capability)
 **Root Cause Type**: STRUCTURAL
-**Phylogeny Disposition**: PENDING
+**Phylogeny Disposition**: NO TRANSFER — a Trigger Matrix row addition local to `triage.md`, not a reusable engine or pattern.
 
 ---
 
@@ -36,10 +36,19 @@ Low. `/investigate` remains directly user-invocable; the gap only means `/triage
 Add a `/investigate` block to `triage.md`'s Trigger Matrix, using `investigate.md`'s own 7 documented conditions as the source triggers (e.g. "Failure signals detected with no clear cause" → P2, intent-driven elevation on phrases like "walk me through what happened"). This requires judgment about priority levels and intent-modifier phrasing (matching every other Trigger Matrix block's own style) — not mechanical, so it is being filed rather than auto-fixed in this pass.
 
 ---
-**Status**: **OPEN**
-**Verification**: PENDING
+
+## 6. Remediation Record — 2026-07-07
+
+Added a `/investigate` block to `triage.md`'s Trigger Matrix (after `/redteam`), translating the 7 declared `/triage triggers` conditions from `investigate.md`'s own INTEGRATION section into 4 trigger rows using this suite's existing style: 2 mechanical (`<FAILURE_SIGNALS>` unexplained-behavior evidence at P2; journal/commit evidence of an unresolved error at P2) and 2 intent-driven (general "something's broken"/"walk me through" phrasing at P1; the explicit "treat this like a crime scene" invocation phrase at P0, matching `/investigate`'s own stated explicit-invocation semantics). This required judgment about priority levels and intent-modifier phrasing, per this ticket's own §5 — not mechanical, so it was filed rather than auto-fixed, and is now resolved by a Claude judgment pass rather than an engine.
+
+**Verified**: [triage.md](file:///home/jwils/blueprint-workflows/claude-commands/triage.md#L315-L321) — new block present. `scripts/triage/matrix_completeness.py`'s `extract_matrix_workflows()` re-run against the live file confirms `/investigate` now appears (26 distinct entries, up from 25 at filing time). 463/463 suite tests pass, no regressions. Frontmatter: version 4→5, content_hash recomputed via `lint_workflows.py --fix-hashes --write`, last_hardened 2026-07-07. Change Log entry 14 appended to `triage.md`.
+
+---
+**Status**: **REMEDIATED**
+**Verification**: CONFIRMED — engine re-run confirms the row is present and correctly parsed; full suite green.
 
 ---
 *Signed,*
 **Claude Code**
 *(Sovereign Scaling Cluster — post-campaign survey)*
+*(Remediated by: Claude Code, Sovereign Scaling Cluster, blueprint-workflows main session, 2026-07-07)*

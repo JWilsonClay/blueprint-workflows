@@ -304,6 +304,23 @@ While investigating a user question about README breadcrumb cleanup, this ticket
 
 ---
 
+## 9. Design-Tightening Pass (2026-07-07, later same day — resolves §8's own findings)
+
+Per §8's own recommendation: each of the three conditional/tentative items identified there is now resolved into a single decided path. This is a design decision, not new code — no scripts changed by this section.
+
+**1. Phase 4's `auditor.py` row — Option B conditional resolved: Option B is NOT adopted.**
+Original text: *"Tiered missing_readme; parse enriched FOLDER_OWNERSHIP if Option B hybrid."* §Phase 6's own option table already lists the user's stated preference as Option A/D ("substrate index + engine-owned context"), with Option B as a documented-but-rejected alternative. There is no live decision left to make — the conditional was leftover phrasing from before the user's preference was recorded in §4/§207. **Decided wording**: `auditor.py` — implement Tier 1/Tier 2 missing_readme classification per the Phase 2 table only. No FOLDER_OWNERSHIP enrichment parsing. If Option B is ever revisited, it is a new ticket, not a branch inside this one.
+
+**2. Phase 3 item 5 — concretized.**
+Original text: *"SUITE_HEALTH advisory lifecycle: document pattern for ACTIVE ADVISORY bullets tied to open tickets."* No file or content named. **Decided**: add a short "ACTIVE ADVISORY Convention" subsection near the top of `manifest/SUITE_HEALTH.md` itself (the file where these bullets actually live), stating: an ACTIVE ADVISORY bullet must (a) cite the open ticket filename it is tied to, (b) be removed in the same edit that closes/renames that ticket to `CLOSED_`, never left dangling. This is the concrete acceptance criterion Gemini's execution should satisfy — a specific subsection, specific file, specific two-clause content.
+
+**3. Phase 3 item 1 — "may merge with Option C" resolved: it does NOT merge.**
+Original text: *"Phase 1e (interim — may merge with Option C): post-repair full-scan reconciliation."* Option C (Phase 0's auto-escalate-to-`--full-scan`-on-repairs>0 fix) is already scoped as an independent Phase 0 stabilization step, and per §7's provenance note the broader autoheal-default-off work is already partially built. **Decided**: Phase 1e remains its own distinct step — a post-repair full-scan reconciliation that runs regardless of whether Option C's auto-escalation already fired, because Option C's trigger condition (`repairs > 0`) and Phase 1e's purpose (confirming the substrate index is fresh after any repair, not just after a lazy-scan phantom) are different guarantees. No merge; sequence Option C's Phase 0 fix first (it already exists), Phase 1e second, as two rows in the same execution plan, not one collapsed step.
+
+**Readiness verdict updated**: with all three conditionals resolved into single decided paths, this ticket's §4 (Phases 2-5) now passes `/execute-build` Phase 2's observability bar — no remaining step has a live "if/may" branch. **Status: READY for the next Gemini delegation candidate slot**, on the condition (per §8's own recommendation, still valid) that a Claude pass first converts §4 into a proper `implementation-plan.md`/`tasks.md` phase pair before invocation — this section resolves the ambiguity that pass would have had to stop and ask about; it does not replace the pass itself.
+
+---
+
 **[PROVENANCE NOTE — INJECTED 2026-07-07, Claude Code, /nodelete — not a closure]**
 
 This ticket's Phase 0 prerequisite is done: `IntegrityManager.autoheal_enabled` now defaults `False`

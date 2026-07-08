@@ -42,12 +42,31 @@ recognized," not as "no phases exist."
 
 Architecturally read-only, same contract as the rest of scripts/focus/: no
 write primitives, bounded reads via safe_read.
+
+Standalone invocation: unlike its sibling engines (focus.py, harden_audit.py,
+receipt_audit.py), this module previously had no CLI entrypoint of its own —
+it was designed to be imported by other engines (build_audit.py,
+receipt_audit.py), which each already do their own sys.path bootstrap before
+importing it. Two workflow files (implementation-plan.md, nodelete.md)
+nonetheless instructed the agent to "run" this module directly, with no path
+anchor and no self-sufficient import path — see
+helpdesk-tickets/CLOSED_20260707_suite-script-path-resolution_workflow.md.
+The __main__ block below closes that gap: this file can now be invoked
+exactly like its siblings, via
+`python3 ~/blueprint-workflows/scripts/focus/phase_status.py --workspace
+<path> --output-json`, regardless of the caller's cwd or whether anything
+upstream has already set sys.path.
 """
 
 import re
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
+
+_HERE = Path(__file__).resolve().parent
+if str(_HERE.parent) not in sys.path:
+    sys.path.insert(0, str(_HERE.parent))
 
 from engine_utils import safe_read
 
@@ -66,9 +85,41 @@ _RECEIPT_FIELD_RE = re.compile(r"^-\s*([A-Za-z/ ]+?):\s*(.+)$")
 _COMPLETE_STATUSES = frozenset({"phase complete", "project build complete"})
 
 
+def _strip_header_annotations(title: str) -> str:
+    """Strip human-readable status annotations from a phase header title.
+
+    This is the pre-processing step applied before normalization to prevent
+    inline header annotations from contaminating the match key.
+
+    Strips in this order:
+    1. Trailing bold annotations: ' -- **READY FOR HANDOFF**',
+       ' -- **COMPLETE 2026-07-07** (notes...)' etc.
+    2. Does NOT strip plain parentheticals universally -- they may be part of
+       a canonical title. A second-pass parenthetical strip is used in
+       _receipt_status_for() only, returning a distinct 'found_complete_approx'
+       status so the caller can distinguish a clean match from a legacy-header
+       approximate match.
+
+    Per /implementation-plan STRICT RULE 28 (Machine Header Discipline) and
+    /execute-build STRICT RULE 19 (Canonical Receipt Title Discipline), this
+    stripping should become unnecessary once all plan authors follow those rules.
+    This function is the resilience layer for pre-existing legacy headers.
+
+    Resolves: helpdesk-tickets/20260708_plan-archive-pipeline-design_workflow.md Fix 1
+    """
+    # Strip " -- **...**" bold annotations (and any trailing parenthetical after them)
+    stripped = re.sub(r"\s*\u2014\s*\*\*[^*]+\*\*.*$", "", title).strip()
+    # Also handle " - **...**" (hyphen-dash variant)
+    stripped = re.sub(r"\s*-\s*\*\*[^*]+\*\*.*$", "", stripped).strip()
+    # Strip standalone trailing "**ANNOTATION**" with no dash (edge case)
+    stripped = re.sub(r"\s*\*\*[A-Z][A-Z ]+[A-Z]\*\*\s*$", "", stripped).strip()
+    return stripped
+
+
 def _normalize(title: str) -> str:
     """Collapse a phase title to a case/punctuation/whitespace-insensitive key."""
     return re.sub(r"[^a-z0-9]+", " ", title.lower()).strip()
+
 
 
 @dataclass
@@ -213,13 +264,50 @@ def parse_build_receipts(text: str) -> List[ReceiptEntry]:
 
 
 def _receipt_status_for(title: str, receipts: List[ReceiptEntry]) -> str:
-    target = _normalize(title)
-    matches = [r for r in receipts if _normalize(r.phase) == target]
-    if not matches:
-        return "not_found"
-    if any(r.grade_status.lower() in _COMPLETE_STATUSES for r in matches):
-        return "found_complete"
-    return "found_incomplete"
+    """Return the receipt match status for a given phase title.
+
+    Match priority:
+    1. Exact normalized match (after bold-annotation stripping) -> 'found_complete' /
+       'found_incomplete' / 'not_found'
+    2. Second-pass: also strip trailing parentheticals (e.g. '(handoff: Gemini)') from
+       the tasks.md title and retry. If this second-pass matches, return
+       'found_complete_approx' or 'found_incomplete_approx' to signal that the match
+       required approximation -- indicating the header has legacy annotations and
+       /implementation-plan STRICT RULE 28 has not yet been applied.
+
+    'found_complete_approx' is treated as equivalent to 'found_complete' by
+    /nodelete Pillar 6 and the --audit Completion Marking sub-pass, but the
+    distinct value allows callers to log which phases still have dirty headers
+    and require cleanup (Fix 3: retroactive header normalization).
+
+    Resolves: helpdesk-tickets/20260708_plan-archive-pipeline-design_workflow.md Fix 1
+    """
+    # Pass 1: strip bold annotations, then normalize
+    cleaned = _strip_header_annotations(title)
+    target = _normalize(cleaned)
+    matches = [r for r in receipts if _normalize(_strip_header_annotations(r.phase)) == target]
+    if matches:
+        if any(r.grade_status.lower() in _COMPLETE_STATUSES for r in matches):
+            return "found_complete"
+        return "found_incomplete"
+
+    # Pass 2: additionally strip trailing parentheticals from the tasks.md title
+    # (e.g. '(handoff: Gemini)', '(all four re-verification targets -- ...)')
+    # Returns *_approx status to signal the match needed a looser strip.
+    cleaned_paren = re.sub(r"\s*\([^)]*\)\s*$", "", cleaned).strip()
+    target_paren = _normalize(cleaned_paren)
+    if target_paren != target:  # Only retry if stripping actually changed anything
+        matches_paren = [
+            r for r in receipts
+            if _normalize(_strip_header_annotations(r.phase)) == target_paren
+        ]
+        if matches_paren:
+            if any(r.grade_status.lower() in _COMPLETE_STATUSES for r in matches_paren):
+                return "found_complete_approx"
+            return "found_incomplete_approx"
+
+    return "not_found"
+
 
 
 def build_phase_status_report(
@@ -271,3 +359,45 @@ def build_phase_status_report(
         receipts_file_found=receipts_file_found,
         phases=phases,
     )
+
+
+def _parse_args() -> "argparse.Namespace":
+    import argparse
+    p = argparse.ArgumentParser(
+        prog="phase_status.py",
+        description="tasks.md + BUILD_RECEIPTS.md Phase Status Engine — dual "
+                    "cross-reference of checkbox state and receipt trail. Read-only.",
+    )
+    p.add_argument("--workspace", required=True, type=str,
+                   help="Absolute path to the workspace root (tasks.md and "
+                        ".workflow_state/receipts/BUILD_RECEIPTS.md are located relative to this).")
+    p.add_argument("--tasks-file", default=None, type=str,
+                   help="Optional explicit path to tasks.md, overriding the default "
+                        "workspace/tasks.md lookup.")
+    p.add_argument("--output-json", action="store_true", help="Emit JSON to stdout.")
+    p.add_argument("--quiet", action="store_true", help="Suppress human-readable output.")
+    return p.parse_args()
+
+
+def main() -> int:
+    import json as _json
+    args = _parse_args()
+    report = build_phase_status_report(
+        Path(args.workspace),
+        tasks_md_path=Path(args.tasks_file) if args.tasks_file else None,
+    )
+    if args.output_json:
+        print(_json.dumps(report.as_dict(), indent=2))
+    elif not args.quiet:
+        if not report.found:
+            print("tasks.md: NOT FOUND")
+        else:
+            print(f"tasks.md: {report.path}")
+            print(f"BUILD_RECEIPTS.md: {'found' if report.receipts_file_found else 'absent'}")
+            for phase in report.phases:
+                print(f"  {phase.title}: status={phase.status} receipt_status={phase.receipt_status}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

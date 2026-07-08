@@ -220,6 +220,35 @@ class TestBuildPhaseStatusReport(unittest.TestCase):
         after = _all_paths(self.tmp)
         self.assertEqual(before, after)
 
+    def test_strip_header_annotations_logic(self):
+        from focus.phase_status import _strip_header_annotations
+        self.assertEqual(_strip_header_annotations("Phase 1: Setup — **READY FOR HANDOFF**"), "Phase 1: Setup")
+        self.assertEqual(_strip_header_annotations("Phase 2 - **COMPLETE 2026-07-07** (notes)"), "Phase 2")
+        self.assertEqual(_strip_header_annotations("Phase 3 **COMPLETE**"), "Phase 3")
+        self.assertEqual(_strip_header_annotations("Phase 4 (handoff: Gemini)"), "Phase 4 (handoff: Gemini)")
+
+    def test_receipt_status_exact_match_with_bold_annotations_stripped(self):
+        # Even if headers contain bold annotations, stripping is done first.
+        _write(self.tmp / "tasks.md", "## Phase 1 — Quick Wins — **READY FOR HANDOFF**\n- [x] a\n")
+        _write(
+            self.tmp / BUILD_RECEIPTS_RELPATH,
+            "## 2026-07-04 — /execute-build — Phase 1 — Quick Wins\n"
+            "- Phase/Stage: Phase 1 — Quick Wins\n- Grade/Status: PHASE COMPLETE\n---\n",
+        )
+        report = build_phase_status_report(self.tmp)
+        self.assertEqual(report.phases[0].receipt_status, "found_complete")
+
+    def test_receipt_status_approx_match_with_parentheticals_stripped(self):
+        # If headers contain trailing parentheticals, Pass 2 strips them to match.
+        _write(self.tmp / "tasks.md", "## Phase 8: Remediation Pass (handoff: Gemini)\n- [x] a\n")
+        _write(
+            self.tmp / BUILD_RECEIPTS_RELPATH,
+            "## 2026-07-07 — /execute-build — Phase 8: Remediation Pass\n"
+            "- Phase/Stage: Phase 8: Remediation Pass\n- Grade/Status: PHASE COMPLETE\n---\n",
+        )
+        report = build_phase_status_report(self.tmp)
+        self.assertEqual(report.phases[0].receipt_status, "found_complete_approx")
+
 
 if __name__ == "__main__":
     unittest.main()
