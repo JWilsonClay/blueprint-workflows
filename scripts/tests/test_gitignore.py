@@ -14,15 +14,20 @@ and graceful behaviour in a non-git directory.
 Run via scripts/run_tests.sh (unittest discover, PYTHONPATH=scripts/).
 """
 
+import contextlib
+import io
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from gitignore.config import BLOCK_END, BLOCK_START
 from gitignore.matcher import find_tracked_secrets, pattern_matches
 from gitignore.gitignore_seeder import GitignoreSeeder, assert_safe_target
+from gitignore import gitignore_seeder
 
 
 def _git(ws: Path, *args) -> None:
@@ -172,6 +177,62 @@ class TestReportOnly(unittest.TestCase):
             self.assertEqual(rep["block_action"], "created")  # what it WOULD do
         finally:
             shutil.rmtree(ws, ignore_errors=True)
+
+
+class TestWorkspaceConfirmationGate(unittest.TestCase):
+    """
+    Defense-in-depth workspace-confirmation gate — resolves the follow-up (b)
+    flagged in helpdesk-tickets/CLOSED_20260716_sentinel_workflow.md. An
+    unconfirmed workspace is never written to; the agent-facing CLI *defaults* to
+    unconfirmed; and the read-only secret scan still runs when unconfirmed (only
+    the WRITE is gated, not the read).
+    """
+
+    def setUp(self):
+        self.ws = Path(tempfile.mkdtemp())
+        self.gi = self.ws / ".gitignore"
+
+    def tearDown(self):
+        shutil.rmtree(self.ws, ignore_errors=True)
+
+    def test_class_unconfirmed_writes_nothing(self):
+        rep = GitignoreSeeder(self.ws, confirmed=False).run()
+        self.assertFalse(self.gi.exists())
+        self.assertFalse(rep["wrote"])
+        self.assertFalse(rep["confirmed"])
+        self.assertEqual(rep["write_skipped_reason"], "workspace not confirmed")
+        self.assertEqual(rep["block_action"], "created")  # what it WOULD do
+
+    def test_class_default_is_confirmed(self):
+        rep = GitignoreSeeder(self.ws).run()
+        self.assertTrue(rep["confirmed"])
+        self.assertTrue(rep["wrote"])
+        self.assertTrue(self.gi.exists())
+
+    def test_unconfirmed_still_runs_readonly_secret_scan(self):
+        _init_repo(self.ws)
+        (self.ws / ".env").write_text("API_KEY=supersecret\n", encoding="utf-8")
+        _git(self.ws, "add", ".env")
+        rep = GitignoreSeeder(self.ws, confirmed=False).run()
+        self.assertFalse(self.gi.exists())               # no write
+        self.assertFalse(rep["wrote"])
+        self.assertTrue(rep["git_repo"])
+        self.assertIn(".env", {h["path"] for h in rep["tracked_secrets"]})  # scan still ran
+
+    def _run_cli(self, extra_args):
+        argv = ["seeder.py", "--workspace", str(self.ws), "--quiet", "--output-json"] + extra_args
+        with mock.patch.object(sys, "argv", argv), contextlib.redirect_stdout(io.StringIO()):
+            return gitignore_seeder.main()
+
+    def test_cli_defaults_to_unconfirmed_no_write(self):
+        rc = self._run_cli([])  # no --workspace-confirmed => fail safe
+        self.assertEqual(rc, 0)
+        self.assertFalse(self.gi.exists())
+
+    def test_cli_writes_only_when_confirmed(self):
+        rc = self._run_cli(["--workspace-confirmed"])
+        self.assertEqual(rc, 0)
+        self.assertTrue(self.gi.exists())
 
 
 class TestMatcher(unittest.TestCase):

@@ -10,12 +10,17 @@ handling for a missing templates directory.
 Run via scripts/run_tests.sh (unittest discover, PYTHONPATH=scripts/).
 """
 
+import contextlib
+import io
 import shutil
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from plan.ensure_plan_templates import PlanPopulator
+from plan import ensure_plan_templates
 
 
 def _write(path: Path, content: str) -> None:
@@ -103,6 +108,64 @@ class TestPlanPopulator(unittest.TestCase):
         action = next(a for a in report["actions"] if a["file"] == "tasks.md")
         self.assertEqual(action["action"], "error")
         self.assertEqual(report["summary"]["errors"], 1)
+
+
+class TestWorkspaceConfirmationGate(unittest.TestCase):
+    """
+    Defense-in-depth workspace-confirmation gate — resolves the follow-up (b)
+    flagged in helpdesk-tickets/CLOSED_20260716_sentinel_workflow.md. An
+    unconfirmed workspace is never written to, and — critically — the agent-facing
+    CLI *defaults* to unconfirmed, so an agent that skips /sentinel's Step 0a.1
+    gate also omits --workspace-confirmed and fails safe.
+    """
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.workspace = self.tmp / "workspace"
+        self.workspace.mkdir()
+        self.templates_dir = self.tmp / "templates" / "plan"
+        self.templates_dir.mkdir(parents=True)
+        _write(self.templates_dir / "tasks.md.template",
+               "# tasks.md — [Workspace/Project Name]\n")
+        _write(self.templates_dir / "implementation-plan.md.template",
+               "# implementation-plan.md — [Workspace/Project Name]\n")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_class_unconfirmed_writes_nothing(self):
+        report = PlanPopulator(workspace=self.workspace, templates_dir=self.templates_dir,
+                               confirmed=False).run()
+        actions = {a["file"]: a["action"] for a in report["actions"]}
+        self.assertEqual(actions, {"tasks.md": "skipped_unconfirmed",
+                                   "implementation-plan.md": "skipped_unconfirmed"})
+        self.assertFalse((self.workspace / "tasks.md").exists())
+        self.assertFalse((self.workspace / "implementation-plan.md").exists())
+        self.assertFalse(report["confirmed"])
+
+    def test_class_default_is_confirmed(self):
+        # A programmatic caller is trusted: omitting `confirmed` writes as before.
+        report = PlanPopulator(workspace=self.workspace, templates_dir=self.templates_dir).run()
+        self.assertTrue(report["confirmed"])
+        self.assertTrue((self.workspace / "tasks.md").exists())
+
+    def _run_cli(self, extra_args):
+        argv = ["ensure_plan_templates.py", "--workspace", str(self.workspace),
+                "--templates-dir", str(self.templates_dir), "--quiet", "--output-json"] + extra_args
+        with mock.patch.object(sys, "argv", argv), contextlib.redirect_stdout(io.StringIO()):
+            return ensure_plan_templates.main()
+
+    def test_cli_defaults_to_unconfirmed_no_write(self):
+        rc = self._run_cli([])  # no --workspace-confirmed => fail safe
+        self.assertEqual(rc, 0)  # unconfirmed is a clean no-op, not an error
+        self.assertFalse((self.workspace / "tasks.md").exists())
+        self.assertFalse((self.workspace / "implementation-plan.md").exists())
+
+    def test_cli_writes_only_when_confirmed(self):
+        rc = self._run_cli(["--workspace-confirmed"])
+        self.assertEqual(rc, 0)
+        self.assertTrue((self.workspace / "tasks.md").exists())
+        self.assertTrue((self.workspace / "implementation-plan.md").exists())
 
 
 if __name__ == "__main__":

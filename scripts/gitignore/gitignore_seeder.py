@@ -19,10 +19,20 @@ Design contracts:
 
 Usage:
     python seeder.py --workspace /abs/path [--config /abs/seed.toml]
-                     [--report-only] [--output-json] [--quiet]
+                     [--report-only] [--workspace-confirmed] [--output-json] [--quiet]
 
-Hook: invoked by the /sentinel flow alongside doorway.py against the flagged
---workspace, so every workspace the suite operates on receives correct,
+WORKSPACE-CONFIRMATION GATE (defense-in-depth, added 2026-07-21): the CLI writes
+nothing unless --workspace-confirmed is passed — the read-only block computation
+and secret scan still run, but the managed-block WRITE is withheld. /sentinel
+passes the flag only after its Step 0a.1 Inference Confirmation Gate confirms the
+workspace (or for an explicit --workspace path), so an agent that skips the gate
+also omits the flag and fails safe rather than seeding an unconfirmed (possibly
+wrong) workspace — the failure class of CLOSED_20260716_sentinel_workflow.md. The
+class API defaults confirmed=True (trusted programmatic caller); only the CLI
+defaults it False.
+
+Hook: invoked by the /sentinel flow (Step 1d) alongside doorway.py against the
+flagged --workspace, so every workspace the suite operates on receives correct,
 security-aware ignore coverage automatically.
 
 Origin: helpdesk ticket 20260612_gitignore-seeder_module.md.
@@ -110,15 +120,25 @@ class GitignoreSeeder:
         workspace:   Resolved absolute Path to the target workspace root.
         config_path: Optional path to an alternative seed.toml (defaults to bundled).
         apply:       When False (--report-only), compute everything but write nothing.
+        confirmed:   When False, compute everything (including the read-only secret
+                     scan) but write nothing — defense-in-depth against writing to an
+                     unconfirmed/inferred workspace. See module docstring.
     """
 
-    def __init__(self, workspace, config_path=None, apply=True):
+    def __init__(self, workspace, config_path=None, apply=True, confirmed=True):
         self.workspace = Path(workspace).resolve()
         assert_safe_target(self.workspace)
         self.gitignore_path = self.workspace / GITIGNORE_NAME
         assert_within(self.gitignore_path, self.workspace)
         self.config = load_seed(config_path)
         self.apply = apply
+        # Defense-in-depth workspace-confirmation gate (module docstring). Class
+        # default True (trusted programmatic caller); the CLI defaults it False and
+        # requires --workspace-confirmed, because the CLI is the agent-facing
+        # boundary where an inferred/unconfirmed workspace is the documented risk
+        # (CLOSED_20260716_sentinel_workflow.md). Only the WRITE is gated — the
+        # read-only secret scan still runs when unconfirmed.
+        self.confirmed = confirmed
 
     def run(self) -> dict:
         existing = safe_read(self.gitignore_path) if self.gitignore_path.exists() else ""
@@ -144,9 +164,12 @@ class GitignoreSeeder:
             if tracked is not None else []
 
         wrote = False
-        if self.apply and changed:
+        if self.apply and self.confirmed and changed:
             self._write(new_content)
             wrote = True
+        write_skipped_reason = None
+        if changed and not wrote:
+            write_skipped_reason = "workspace not confirmed" if not self.confirmed else "report-only"
 
         return {
             "schema_version": SCHEMA_VERSION,
@@ -159,6 +182,8 @@ class GitignoreSeeder:
             "block_action": block_action,
             "changed": changed,
             "wrote": wrote,
+            "confirmed": self.confirmed,
+            "write_skipped_reason": write_skipped_reason,
             "managed_patterns": count_patterns(self.config),
             "git_repo": tracked is not None,
             "tracked_secrets": secrets,
@@ -200,7 +225,8 @@ def _parse_args():
                     "warns on already-tracked secrets.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="Examples:\n"
-               "  python seeder.py --workspace /home/user/project\n"
+               "  python seeder.py --workspace /home/user/project                        # scans, writes nothing (unconfirmed)\n"
+               "  python seeder.py --workspace /home/user/project --workspace-confirmed   # writes the managed block\n"
                "  python seeder.py --workspace /home/user/project --report-only --output-json\n",
     )
     p.add_argument("--workspace", required=True, type=str,
@@ -209,6 +235,10 @@ def _parse_args():
                    help="Alternative seed.toml path (defaults to the bundled config).")
     p.add_argument("--report-only", action="store_true",
                    help="Compute the block + secret scan but write nothing.")
+    p.add_argument("--workspace-confirmed", action="store_true",
+                   help="Enable the .gitignore write. Without it the block computation + "
+                        "secret scan still run, but nothing is written (defense-in-depth "
+                        "against an unconfirmed / inferred workspace — see module docstring).")
     p.add_argument("--output-json", action="store_true", help="Emit JSON to stdout.")
     p.add_argument("--quiet", action="store_true", help="Suppress human-readable output.")
     return p.parse_args()
@@ -218,7 +248,8 @@ def main() -> int:
     args = _parse_args()
     try:
         seeder = GitignoreSeeder(args.workspace, config_path=args.config,
-                                 apply=not args.report_only)
+                                 apply=not args.report_only,
+                                 confirmed=args.workspace_confirmed)
     except ValueError as e:
         print(str(e), file=sys.stderr)
         return 2  # Refused / unsafe target.

@@ -17,11 +17,17 @@ Optional:
     --dry-run          Report what would happen; write nothing.
     --force            Also populate a target file that exists but is
                         empty/whitespace-only (see Safety Invariant below).
+    --workspace-confirmed
+                        Required to actually write. Without it the CLI reports what
+                        it would do but writes nothing (see WORKSPACE-CONFIRMATION
+                        GATE below).
     --output-json      Emit the report as JSON to stdout.
     --quiet            Suppress human-readable output (errors still print).
 
-Workflow calling convention (from /sentinel Phase 1.6):
-    python {SCRIPTS_DIR}/plan/ensure_plan_templates.py --workspace {TARGET} --output-json
+Workflow calling convention (from /sentinel Phase 1.6, workspace already confirmed
+via Step 0a.1):
+    python {SCRIPTS_DIR}/plan/ensure_plan_templates.py --workspace {TARGET} \
+        --workspace-confirmed --output-json
 
 SAFETY INVARIANT (deliberate, documented narrowing of
 PILLAR_04_POST_BUILD_HYGIENE_ARCHIVAL_NODELETE.md §4.4's literal populator
@@ -49,6 +55,20 @@ overwrites existing ones) rather than a naive sync/clobber tool.
 
 This tool is the second script in this suite (after doorway/) to write to a
 target workspace. It is NOT read-only like scripts/focus/.
+
+WORKSPACE-CONFIRMATION GATE (defense-in-depth, added 2026-07-21):
+
+The Safety Invariant above protects a workspace's *existing* files. It does
+NOT protect against writing to the *wrong* workspace — seeding a genuinely-
+absent tasks.md into a project that was never the intended target (exactly the
+failure in helpdesk-tickets/CLOSED_20260716_sentinel_workflow.md, where
+/sentinel inferred the wrong workspace and this populator seeded it). The CLI
+therefore writes nothing unless --workspace-confirmed is passed. /sentinel
+passes it only after Step 0a.1's Inference Confirmation Gate has confirmed the
+workspace (or for an explicit --workspace path), so an agent that skips the
+gate also omits the flag and fails safe (reports 'skipped_unconfirmed', writes
+nothing). The class API defaults confirmed=True (a programmatic caller is
+trusted); only the agent-facing CLI defaults it to False.
 """
 
 import argparse
@@ -78,11 +98,19 @@ _PLACEHOLDER = "[Workspace/Project Name]"
 class PlanPopulator:
     """Idempotently ensures tasks.md + implementation-plan.md exist in a target workspace."""
 
-    def __init__(self, workspace: Path, templates_dir: Path, dry_run: bool = False, force: bool = False):
+    def __init__(self, workspace: Path, templates_dir: Path, dry_run: bool = False,
+                 force: bool = False, confirmed: bool = True):
         self.workspace = Path(workspace).resolve()
         self.templates_dir = Path(templates_dir).resolve()
         self.dry_run = dry_run
         self.force = force
+        # Defense-in-depth workspace-confirmation gate (see module docstring,
+        # "WORKSPACE-CONFIRMATION GATE"). Class default is True — a programmatic
+        # caller is trusted to have chosen its workspace. The CLI defaults it to
+        # False and requires --workspace-confirmed, because the CLI is the
+        # agent-facing boundary where an *inferred* (unconfirmed) workspace is the
+        # documented risk (CLOSED_20260716_sentinel_workflow.md).
+        self.confirmed = confirmed
 
     def run(self) -> dict:
         actions = [
@@ -101,6 +129,7 @@ class PlanPopulator:
             "workspace": str(self.workspace),
             "dry_run": self.dry_run,
             "force": self.force,
+            "confirmed": self.confirmed,
             "actions": actions,
             "summary": {
                 "populated": populated,
@@ -111,6 +140,16 @@ class PlanPopulator:
         }
 
     def _ensure_file(self, target_name: str, template_name: str) -> dict:
+        # Outermost gate: an unconfirmed workspace is never written to, whatever
+        # the target file's state. Fails safe *before* touching the filesystem.
+        if not self.confirmed:
+            return {
+                "file": target_name, "action": "skipped_unconfirmed",
+                "reason": "workspace not confirmed — no write attempted. Pass "
+                          "--workspace-confirmed only after /sentinel Step 0a.1 (Inference "
+                          "Confirmation Gate) confirms this workspace, or for an explicit "
+                          "--workspace path (see CLOSED_20260716_sentinel_workflow.md).",
+            }
         try:
             target_path = assert_within(self.workspace / target_name, self.workspace)
         except ValueError as exc:
@@ -185,6 +224,10 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--force", action="store_true",
                         help="Also populate a target file that exists but is "
                              "empty/whitespace-only. Never overwrites real content.")
+    parser.add_argument("--workspace-confirmed", action="store_true",
+                        help="Enable writes. WITHOUT it the CLI reports what it would do but "
+                             "writes nothing (defense-in-depth against an unconfirmed / inferred "
+                             "workspace — see module docstring, WORKSPACE-CONFIRMATION GATE).")
     parser.add_argument("--output-json", action="store_true",
                         help="Emit the report as JSON to stdout.")
     parser.add_argument("--quiet", action="store_true",
@@ -210,6 +253,7 @@ def main() -> int:
     populator = PlanPopulator(
         workspace=workspace, templates_dir=templates_dir,
         dry_run=args.dry_run, force=args.force,
+        confirmed=args.workspace_confirmed,
     )
     report = populator.run()
     PlanReporter().render(report, quiet=args.quiet, output_json=args.output_json)
