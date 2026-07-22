@@ -32,7 +32,7 @@ if str(_HERE.parent) not in sys.path:
 from sentinel.recommender_parity import compute_parity, extract_recommender_triples, extract_routing_table
 from sentinel.reporter import SentinelParityReporter
 
-_DEFAULT_DOCUMENTED_SEVERITIES = ["HIGH", "MEDIUM", "LOW"]
+_DEFAULT_DOCUMENTED_SEVERITIES = ["HIGH", "MEDIUM", "LOW", "INFO"]
 
 
 def _parse_args() -> argparse.Namespace:
