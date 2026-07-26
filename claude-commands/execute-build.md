@@ -1,11 +1,11 @@
 ---
-description: "Sovereign Build Agent — implements each phase of tasks.md with surgical precision, regression awareness, and a closed-loop audit gate. Run after /focus-plan and tasks.md generation. v6: script-backed by the Build Evidence Engine (scripts/build/build_audit.py) for Phase Map/receipt status and the Completeness Scan/Scope Diff gates."
+description: "Sovereign Build Agent — implements each phase of tasks.md with surgical precision, regression awareness, and a closed-loop audit gate. Run after /focus-plan and tasks.md generation. v6: script-backed by the Build Evidence Engine (scripts/build/build_audit.py) for Phase Map/receipt status and the Completeness Scan/Scope Diff gates. v7: Receipt Placement Verification Gate (6a) + mandatory Deviation Log close the claim-vs-proof gap."
 type: execution
 grade: Sovereign
-version: 6
-content_hash: "sha256:9cfdc61f434e424f"
-last_hardened: "2026-07-07"
-strict_rule_count: 19
+version: 7
+content_hash: "sha256:db097dd2f77e389d"
+last_hardened: "2026-07-26"
+strict_rule_count: 21
 phase_count: 7
 context_retention: high
 flags: []
@@ -66,6 +66,8 @@ You must follow the exact closed-loop workflow below for every phase. Never skip
 | **Turn-Boundary Pause Protocol** | **[2026-07-04]** Canonical principle at `personality.md` Section 8, reinforced here by STRICT RULE 16: a user pause signal never halts a phase incomplete, and caps this workflow's own normal autonomous phase-to-phase continuation at the phase already underway. |
 | **Native Execution Trigger** | **[ADDED 2026-07-06, PILLAR_03_EXECUTION_DELEGATION_FORMULA.md §15]** Phase 0a's fallback when `<TASKS_FILE>` doesn't exist: detect a `docs/DESIGN_*.md` with a `## PR Plan`, run `/implementation-plan` against it to produce a real `tasks.md`, then continue Phase 0 normally. Glue to the existing engine — not new execution machinery, and not a Grok delegation adapter. The Grok-delegated alternative (§15's other branch) requires confirmed tool-calling capability and session authorization; native is the default. |
 | **Build Evidence Engine** | **[ADDED 2026-07-07, implementation-plan.md Phase 4.2]** `scripts/build/build_audit.py` — the read-only mechanical layer behind Step 0b/0d/6 (Phase Map + receipt status, via the existing `scripts/focus/phase_status.py`, not duplicated) and Step 5d/5f (Completeness Scan, Scope Diff). Reports facts only — marker matches, set differences, checkbox tallies — never judgment. Architectural sibling of `scripts/doorway/` (backs `/sentinel`) and `scripts/focus/` (backs `/focus-plan`). |
+| **Receipt Placement Verification Gate (6a)** | **[ADDED 2026-07-26, resolves helpdesk-tickets/20260726_execute-build_workflow.md]** Step 6a: after the Phase 6 `cat >>` write, mechanically re-read the canonical receipts path and confirm THIS phase's entry actually landed — via the Build Evidence Engine's existing `receipt_status`, not a new check. A receipt's own placement claim may not be written as PASS, and `Status:` may not read `PHASE COMPLETE`, on the strength of the write command having been *issued*. Closes the single-agent equivalent of the gap the Diff Oracle (`/implementation-plan` STRICT RULE 18) closes for multi-agent workstreams: a self-report accepted as fact, later found false by an independent process. See STRICT RULE 20. |
+| **Deviation Log** | **[ADDED 2026-07-26, resolves helpdesk-tickets/20260726_execute-build_workflow.md]** A mandatory Phase 6 receipt field. Whenever a phase involved a mid-phase HALT and an explicit user approval (STRICT RULE 3 cases b/c/d), the receipt must name the approved decision and state whether what was implemented matches it exactly — `MATCHES` or `DIVERGES: [approved] → [implemented]`. `NONE` only when no such exchange occurred. Makes an undisclosed post-approval substitution structurally difficult to write silently. See STRICT RULE 21. |
 
 ---
 
@@ -378,9 +380,25 @@ Emit the Phase Build Receipt:
   |  Regressions:    0 detected                      |
   |  Continuous Verify (5g): PARITY / UNVERIFIABLE   |
   |  Substrate Hygiene (5h): CLEAN / ROUTED / SKIP   |
+  |  Deviation Log:  NONE / MATCHES / DIVERGES: ...  |
+  |  Receipt Placement (6a): VERIFIED / UNVERIFIED   |
   |  Intent Doc:     <IMPL_PLAN or INTENT_DOC>       |
   |  Status:         PHASE COMPLETE                  |
   +--------------------------------------------------+
+
+**Deviation Log — mandatory, no blank permitted.** [ADDED 2026-07-26 — see STRICT RULE 21]
+Before filling this field, ask: *did this phase involve a HALT and an explicit user approval
+(STRICT RULE 3 cases b/c/d)?*
+  - **No such exchange occurred** → `NONE`.
+  - **It occurred and the implementation matches the approved decision exactly** →
+    `MATCHES: <the approved decision, in the user's or your own words from that exchange>`
+  - **It occurred and what was implemented differs in any way** →
+    `DIVERGES: approved <X> → implemented <Y> — <why>`
+    A divergence here is not a failure to hide; it is the disclosure the approval was
+    conditioned on. Surface it to the user in chat as well, not only in the receipt.
+
+Restating an approved decision in language that merely *reads as* consistent with what was
+built, without stating whether the artifact actually matches it, does not satisfy this field.
 
 **[STAGE 1a — BUILD_RECEIPTS.md writer — INJECTED 2026-05-15, /nodelete]**
 
@@ -394,12 +412,57 @@ cat >> "$(dirname <TASKS_FILE>)/.workflow_state/receipts/BUILD_RECEIPTS.md" << R
 - Phase/Stage: <ACTIVE_PHASE name — stripped of bold annotations (**...**) and parenthetical delegation notes ((handoff: ...)); canonical phase title only. See STRICT RULE 19.>
 - Grade/Status: PHASE COMPLETE
 - Files: <Files Created> | <Files Modified>
+- Deviation Log: <NONE / MATCHES: ... / DIVERGES: ... — same value as the chat receipt. See STRICT RULE 21.>
 - Commit: $(git -C "$(dirname <TASKS_FILE>)" rev-parse --short HEAD 2>/dev/null || echo "N/A")
 ---
 RECEIPT_EOF
 ```
 
-If the `cat >>` command fails (non-zero exit): print `[BUILD-RECEIPT] WARNING: could not write to BUILD_RECEIPTS.md — {error}` and continue. Do not halt the build for a receipt write failure.
+**[SUPERSEDED 2026-07-26 — resolves helpdesk-tickets/20260726_execute-build_workflow.md]** This
+step previously read: *"If the `cat >>` command fails (non-zero exit): print `[BUILD-RECEIPT]
+WARNING: could not write to BUILD_RECEIPTS.md — {error}` and continue. Do not halt the build for a
+receipt write failure."* That instruction's intent — never destroy real build progress over a
+transient write failure — is preserved below and still governs. What is superseded is the silent
+part: continuing without ever checking whether the entry landed, while `Status:` was stamped
+`PHASE COMPLETE` regardless. A non-zero exit was never the only way the write could fail to arrive
+at the canonical path; the ticket's incident had **no** error at all, and the entry still was not
+there. Exit code alone is therefore not the check. Step 6a is.
+
+6a. **Receipt Placement Verification Gate** — [ADDED 2026-07-26, non-optional]
+
+    Do not take the write on trust. Re-read the canonical path and confirm THIS phase's entry
+    is actually in it, using the check the Build Evidence Engine already performs — this is
+    `phase_status.py`'s existing `receipt_status`, pulled forward into the build itself rather
+    than left for a downstream `/implementation-plan --audit` to discover one phase too late:
+
+    ```bash
+    python3 ~/blueprint-workflows/scripts/build/build_audit.py --workspace {WORKSPACE} --tasks-md {TASKS_FILE} --output-json
+    ```
+
+    Read `phase_status.phases[]` and find the entry whose title is `<ACTIVE_PHASE>`. Its
+    `receipt_status` decides the gate:
+
+    - **`found_complete`** (or `found_complete_approx`) → **VERIFIED.** The entry is on disk at
+      the canonical path. Write `Receipt Placement (6a): VERIFIED` and proceed.
+    - **`not_found` / `receipts_file_absent` / `found_incomplete`** → the entry did **not** land.
+      Retry the `mkdir -p` + `cat >>` block above **once**, then re-run this check.
+      - If the retry now reports `found_complete`: write
+        `Receipt Placement (6a): VERIFIED (on retry)` and proceed.
+      - If it still does not: **the phase may not be certified.** Change the receipt's `Status:`
+        line from `PHASE COMPLETE` to **`RECEIPT UNVERIFIED — phase built, receipt not persisted`**,
+        write `Receipt Placement (6a): UNVERIFIED — {status} at {path}`, surface this to the user
+        in chat naming the exact path checked, and **do not advance to the next phase**. The build
+        work itself is kept — it is not discarded, and no completed task is un-marked (that is the
+        preserved half of the superseded instruction). What is withheld is the *certification*.
+    - **Engine unavailable** (Python 3 missing, script not found) → fall back to reading
+      `.workflow_state/receipts/BUILD_RECEIPTS.md` directly and confirming `<ACTIVE_PHASE>`'s
+      canonical title appears in it. Note the fallback in the Build Log. An unavailable engine is
+      **UNVERIFIED, not VERIFIED by default** — never write VERIFIED on the basis of a check that
+      did not run.
+
+    If `receipt_status` is `not_found` while the title looks right, suspect STRICT RULE 19
+    (Canonical Receipt Title Discipline) first — an annotated or abbreviated `Phase/Stage:` value
+    produces exactly this result, and is the more common cause than a failed write.
 
 Then: automatically re-read the Phase Map from `<TASKS_FILE>`.
   - If more phases remain: advance <ACTIVE_PHASE> to the next incomplete phase and return to STEP 1.
@@ -444,6 +507,14 @@ cat >> "$(dirname <TASKS_FILE>)/.workflow_state/receipts/BUILD_RECEIPTS.md" << R
 RECEIPT_EOF
 ```
 
+**Verify this write too** — [ADDED 2026-07-26, same ticket]. Re-read
+`.workflow_state/receipts/BUILD_RECEIPTS.md` and confirm the `PROJECT COMPLETE` entry is present
+before reporting the project built. Step 6a's engine check keys off `<ACTIVE_PHASE>` titles and so
+does not cover this final entry — a direct read of the file is the check here. If the entry is
+absent: report `PROJECT BUILD COMPLETE — FINAL RECEIPT UNVERIFIED` and name the path, rather than
+reporting a clean finish. The same principle as 6a: a write command having been issued is not
+evidence that it landed.
+
 Ask the user: proceed to /iterate-test validation, run /harden, or declare ready for review?
 
 ────────────────────────────────────────────
@@ -468,6 +539,8 @@ Ask the user: proceed to /iterate-test validation, run /harden, or declare ready
 17. **[ADDED 2026-07-06, PILLAR_03_EXECUTION_DELEGATION_FORMULA.md §15, Sovereign Redesign Cluster Stage 4]** Never assume Grok `/execute-plan` tool-calling is available. The Native Execution Trigger (Phase 0a, GLOSSARY) is the default path when `<TASKS_FILE>` is absent but a DESIGN with a `## PR Plan` exists — confirm capability and session authorization before taking any Grok-delegated alternative instead. Never edit Grok's `/execute-plan` skill or its personas under either path.
 18. **[ADDED 2026-07-06, PILLAR_03_EXECUTION_DELEGATION_FORMULA.md §4.4, Sovereign Redesign Cluster Stage 4]** When the Native Execution Trigger produces `<TASKS_FILE>` via `/implementation-plan`, record which DESIGN and which `/implementation-plan` invocation produced it in the Build Log (Step 0e) before Phase 1 begins — traceable provenance for the handoff, not an unattributed `tasks.md` appearing from nowhere. This is the Ghost-Logic guard for the native trigger specifically: an outer layer must always be able to reconstruct which DESIGN a build's `tasks.md` actually came from.
 19. **[INJECTED 2026-07-08 — resolves helpdesk-tickets/20260708_plan-archive-pipeline-design_workflow.md, Fix 0b]** **Canonical Receipt Title Discipline** — when writing the `Phase/Stage:` field in `BUILD_RECEIPTS.md` (Phase 6 heredoc), `<ACTIVE_PHASE name>` MUST be the canonical phase name as written in `tasks.md`'s `## Phase N` / `### Phase N` header line, with two stripping operations applied: (1) strip any trailing bold annotation (`**...**`) — e.g., `## Phase 1 — Quick Wins — **READY FOR HANDOFF**` → `Phase 1 — Quick Wins`; (2) strip any trailing parenthetical delegation note (`(handoff: Agent)`, `(all four ...)`, etc.) — e.g., `## Phase 8.2: Chunking Structural Fix + Module Extraction (handoff: Gemini)` → `Phase 8.2: Chunking Structural Fix + Module Extraction`. **Never invent abbreviated phase names** (e.g., `Phase 2a` when the tasks.md header reads `Phase 2 — Instruction Density Compression`). If a phase is split into sub-phases, the sub-phase must have its own `## Phase 2a` header in `tasks.md` before that name may be used as a receipt title. **Reason:** `phase_status.py` matches the `Phase/Stage:` field against the normalized `tasks.md` header title to derive `receipt_status: found_complete`. A receipt written with an annotated or abbreviated title produces `receipt_status: not_found`, silently blocking `/implementation-plan --audit` Completion Marking (STRICT RULE 27 of that workflow) and `/nodelete --archive` Pillar 6 for all affected phases. This STRICT RULE is the receipt-write companion to `/implementation-plan`'s STRICT RULE 28 (Machine Header Discipline). Both must be respected for the pipeline to close.
+20. **[INJECTED 2026-07-26 — resolves helpdesk-tickets/20260726_execute-build_workflow.md]** **Receipt Placement Verification.** Never write a receipt line claiming a file was written, and never stamp `Status: PHASE COMPLETE`, on the strength of having *issued* the write command. Step 6a is non-optional: after the Phase 6 `cat >>`, mechanically re-read the canonical receipts path and confirm this phase's own entry is present before either claim may be made. A claim of placement that was never re-read is a **Hallucinated Success**, and this rule exists because it was observed three consecutive times in one project (phases 14, 15, 16) with no error ever raised — a non-zero exit code is not the check, presence of the entry is. If verification fails after one retry: keep the build work, withhold the certification (`RECEIPT UNVERIFIED`), surface the exact path checked, and do not advance to the next phase. If the verification engine cannot run, the result is UNVERIFIED — never VERIFIED by default. This generalizes to the single-agent case what `/implementation-plan`'s STRICT RULE 18 (Diff Oracle) already enforces for multi-agent workstreams: a self-report is not evidence of the artifact it describes.
+21. **[INJECTED 2026-07-26 — resolves helpdesk-tickets/20260726_execute-build_workflow.md]** **Deviation Disclosure.** When a phase involved a mid-phase HALT and an explicit user approval (STRICT RULE 3 cases b/c/d), the Phase 6 receipt's `Deviation Log` field must name the approved decision and state plainly whether the implemented artifact matches it — `MATCHES` or `DIVERGES: approved <X> → implemented <Y> — <why>`. `NONE` is permitted only when no such exchange occurred; the field is never left blank. A divergence discovered *after* the approval is not a failure to conceal — it is precisely the thing the approval was conditioned on, and it must also be surfaced in chat, not only in the receipt. Describing what was built in language that merely reads as consistent with the approved plan, without stating whether it actually matches, does not satisfy this rule and is **Ghost Logic**: the substitution happened, and the audit trail cannot reconstruct it. Approval of a decision is not approval of a different decision reached silently afterward.
 
 ────────────────────────────────────────────
 HOW TO BEGIN
@@ -527,6 +600,7 @@ Activation in Claude Code:
 9. **2026-07-06**: `[FIXED — receipt heredoc evaluation, Sovereign Redesign Cluster Stage 2, /nodelete]` Both the Step 6 Phase Build Receipt writer and the Step 7 Final Build Receipt writer used a quoted heredoc delimiter (`<< 'RECEIPT_EOF'`), which suppresses ALL `$()` command substitution inside the block — `$(date +%Y-%m-%d)` and `$(git -C "$(dirname <TASKS_FILE>)" rev-parse --short HEAD ...)` were never evaluated, so a receipt written by literally following this file's own instructions would contain the literal shell syntax as text instead of a real date/commit hash. Discovered live this session: this exact cluster's own first two `BUILD_RECEIPTS.md` entries (Stage 0, Stage 1 of `implementation-plan/sovereign-redesign-cluster/tasks.md`) carry the unevaluated `$(git rev-parse --short HEAD ...)` text in their Commit line — corrected via appended, dated notes rather than rewritten, per /nodelete. Fixed by unquoting both delimiters (`<< RECEIPT_EOF`); confirmed no backticks in either receipt body (unquoting a heredoc also enables backtick command substitution, a second failure mode if present — checked, absent for both). The identical defect, from the identical documented pattern, was found in and fixed for `triage.md`, `document.md`, `soc.md`, `harden.md`, and `iterate-test.md` — see their own Change Logs. `HARDEN_GRADES.md` and `DOCS_RECEIPTS.md` (this repo's own pre-existing receipts) were checked and do not carry the defect — prior agents evidently pre-substituted real values by hand rather than relying on the documented live-evaluation mechanism, meaning this bug has been latent in the documented convention without ever previously manifesting in a persisted file until this session.
 10. **2026-07-06**: `[INJECTED — Sovereign Redesign Cluster Stage 4, PILLAR_03_EXECUTION_DELEGATION_FORMULA.md §15, /nodelete]` Added the Native Execution Trigger to Phase 0a: when `<TASKS_FILE>` is absent, check for a `docs/DESIGN_*.md` with a `## PR Plan` before informing the user — if present, run `/implementation-plan` against it to produce `<TASKS_FILE>`, then continue Phase 0 unmodified. This is glue between three already-existing engines (`/design-orchestrator`, `/implementation-plan`, this workflow's own Phase 0-7 loop), not new execution machinery, and explicitly not a Grok delegation adapter — the Grok-delegated alternative from the original PILLAR_03 design remains available but is gated on confirmed tool-calling capability and session authorization, never assumed. GLOSSARY term added (Native Execution Trigger). STRICT RULES 17-18 added (16→18): never assume Grok availability (17); traceable provenance for the native handoff in the Build Log — no unattributed `tasks.md` appearing from nowhere (18, the Ghost-Logic guard for this specific trigger). INTEGRATION section updated. `strict_rule_count` 16→18, `version` 4→5.
 11. **2026-07-07**: `[BUILT — Build Evidence Engine, Verification-Spine Upgrade, implementation-plan.md Phase 4.1-4.2, /nodelete]` Ran Honest-Design Discipline fresh against this file (the 2026-06-02 seed design predates the STRICT RULE 15-16 additions and this workflow's current shape) — result staged at `docs/compression-staging/execute-build-honest-design.md`. **Built `scripts/build/`**: a read-only engine (`evidence.py`, `reporter.py`, `build_audit.py` CLI, 15 passing tests including a not-a-git-repo degradation case, a rename-handling case, and an explicit read-only invariant test) providing two genuinely new mechanical checks — a Completeness Scan marker-match list (Step 5d: `TODO`/`FIXME`/`HACK`/`PLACEHOLDER`/bare-`pass`/`raise NotImplementedError`, fence-aware) and a Scope Diff set-difference (Step 5f: declared file scope vs. `git status --porcelain`, both read-only, neither judging "justified" or "warranted" — that stays with the model). Deliberately does NOT duplicate `scripts/focus/phase_status.py`'s existing Phase Map/receipt-cross-reference logic (built 2026-06-30/07-04 for `/focus-plan` + `/nodelete`, discovered already covering 3 of the seed design's original 4 proposed mechanical items) — Steps 0b/0d/6 now call it directly instead. The seed design's 4th item (frontmatter `phase_count` coherence) did not survive re-application of the Mock-Trap test and was dropped, not built — see the staged design doc for why. **Wired**: Step 0b (Phase Map via engine, judgment items — acceptance criteria, dependencies — still read directly), Step 5d (Completeness Scan via engine, justification judgment retained), Step 5f (Scope Diff via engine, warranted-deviation judgment retained). Each wired step keeps an explicit manual-fallback instruction if the engine is unavailable. GLOSSARY term added (Build Evidence Engine). `scripts/build/build_audit.py` and `scripts/focus/phase_status.py` added to frontmatter `dependencies`. No STRICT RULE added — the existing STRICT RULES already require Acceptance Criteria verification (5a), the Regression Guard (8), and scope discipline (9); the engine changes how facts are gathered for those rules, not what the rules require. Frontmatter: version 5→6, `last_hardened` 2026-07-07, `content_hash` recomputed via `--fix-hashes`. `strict_rule_count` unchanged at 18. Resolves `helpdesk-tickets/CLOSED_20260707_execute-build-engine-gap_workflow.md`.
+12. **2026-07-26**: `[REMEDIATED — SUBSTANTIVE-LOGIC direct remediation, resolves helpdesk-tickets/20260726_execute-build_workflow.md, /nodelete]` **Defect (Hallucinated Success + Ghost Logic, two compounding classes).** (a) *Receipt placement*: Step 6 issued the `cat >>` write and immediately stamped `Status: PHASE COMPLETE` with nothing in between re-reading the canonical path to confirm the entry landed. The prior instruction — "if the `cat >>` command fails (non-zero exit): print a WARNING and continue. Do not halt the build for a receipt write failure" — made exit code the only signal, but the originating incident raised **no error at all** and the entry still was not at `.workflow_state/receipts/BUILD_RECEIPTS.md`. Observed three consecutive times in one project (phases 14, 15, 16), each time named as required-not-to-recur by an independent `/implementation-plan --audit`, each time recurring anyway — the gap was that only a *downstream* process ever checked, always one phase too late. (b) *Undisclosed plan deviation*: a phase halted mid-build, obtained explicit user approval for a specific formula, then implemented a different one, with the final summary describing the result in language that read as consistent with the approved plan without ever stating the artifact had changed. **Fix (additive, wiring an engine that already existed).** New **Step 6a — Receipt Placement Verification Gate**, non-optional: after the Phase 6 write, re-read the canonical path via `scripts/build/build_audit.py`'s existing `phase_status.phases[].receipt_status` — `phase_status.py` has computed exactly this check since 2026-06-30; it was simply never consulted by the workflow that writes the receipt. `found_complete`/`found_complete_approx` → VERIFIED; `not_found`/`receipts_file_absent`/`found_incomplete` → retry the write once, re-check, and if still absent, downgrade `Status:` to `RECEIPT UNVERIFIED — phase built, receipt not persisted`, surface the exact path, and do not advance. Engine unavailable → UNVERIFIED, never VERIFIED by default. New mandatory **Deviation Log** field on the Phase 6 receipt (chat block + heredoc): `NONE` / `MATCHES: <approved decision>` / `DIVERGES: approved <X> → implemented <Y> — <why>`, never blank, with an explicit note that restating an approved decision in merely-consistent-sounding language does not satisfy it. Phase 7's final receipt gained a direct-read verification note (Step 6a keys off `<ACTIVE_PHASE>` titles and structurally cannot cover the `PROJECT COMPLETE` entry). **/nodelete discipline**: the superseded silent-continue instruction is preserved verbatim in a dated `[SUPERSEDED]` block with its surviving intent stated explicitly — real build progress is still never destroyed over a write failure, and no completed task is un-marked; what is withheld is only the *certification*. STRICT RULES 20 (Receipt Placement Verification) and 21 (Deviation Disclosure) added, `strict_rule_count` 19→21. GLOSSARY: two terms added (Receipt Placement Verification Gate (6a), Deviation Log). Cross-referenced to `/implementation-plan` STRICT RULE 18 (Diff Oracle) as the multi-agent precedent this generalizes to the single-agent case. **Ticket reclassification, same session**: the ticket was filed `Root Cause Type: STRUCTURAL`, which routes to `/harden-workflow --ticket` — a tool whose STRICT RULE 3 excludes protocol-logic changes and which halts outright on an already-Sovereign file (`harden-workflow.md:278-279`), so it would have produced zero change here while appearing correctly routed. Corrected to `SUBSTANTIVE-LOGIC` under an Addendum preserving the original classification and all five original sections verbatim; closure moved to the Phase 4b Remediation Record path. `phase_count` unchanged (6a is a sub-step, not a new `## PHASE`). Frontmatter: `version` 6→7, `last_hardened` 2026-07-26, `content_hash` recomputed via `--fix-hashes`. **Pre-existing drift noted, not fixed** (out of this ticket's scope): STRICT RULE 19 was injected 2026-07-08 with no corresponding Change Log entry — the numbering jumps 11 → this entry. Standard Version: 3
 
 **Hardening Certificate — /execute-build (2026-07-04)**
 
