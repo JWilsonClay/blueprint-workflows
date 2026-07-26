@@ -2,10 +2,10 @@
 description: "Sovereign Session Secretary — meta-layer orchestrator that closes every session with SUITE_HEALTH.md + manifest narrative update, HANDOFF.md briefing, ANOMALY_LOG, Suite Learning Registry pass, ledger growth check, and triggers for /document, /receipt-check, and /retrospective. v6: script-backed by the Session Close Evidence Engine (scripts/secretary/secretary_audit.py) for Retrospective Lag, retrospective freshness, artifact freshness, and receipt-family presence."
 type: meta
 grade: Sovereign
-version: 6
-content_hash: "sha256:4bf2183887920aa0"
-last_hardened: "2026-07-07"
-strict_rule_count: 20
+version: 7
+content_hash: "sha256:073556aed6ba069b"
+last_hardened: "2026-07-26"
+strict_rule_count: 21
 phase_count: 8
 context_retention: high
 flags: []
@@ -75,6 +75,7 @@ This workflow does NOT:
 | **manifest/history/** | **[ADDED 2026-07-04]** `~/blueprint-workflows/manifest/history/` — dated shard files (`WORKFLOW_MANIFEST_{YYYY-Q}.md`) holding the Append-Only session narrative that used to live in `WORKFLOW_MANIFEST.md`. Rolled over by `scripts/ledger/monitor.py` on a real calendar-quarter change or a within-quarter size safety valve. Read on demand, never mandatory at session start. |
 | **scripts/ledger/** | **[ADDED 2026-07-04]** The deterministic engine (Step 1.2) that performs narrative-shard rollover and the `SUITE_PHYLOGENY.md` growth warning, config-driven via `ledger_config.toml`. Always uses the real OS clock for quarter determination — never agent inference. |
 | **Retrospective Lag** | **[ADDED 2026-07-05]** Named failure shape: a session closes (Phase 1 writes its `manifest/history/` narrative entry) but its Phase 6 `/retrospective` entry never lands in `PROCESS_LEARNINGS.md` — and the gap persists silently across further sessions because nothing checks the *prior* session's Phase 6, only the current one's (ADDENDUM E). Closed by Step 0b.5's one-step-back consistency check. |
+| **Closed-ticket archival pass** | **[ADDED 2026-07-26, resolves helpdesk-tickets/20260726_ticket-archival-orphaned_workflow.md]** Step 1.0.6: moves `helpdesk-tickets/CLOSED_*` files older than 7 days into `helpdesk-tickets/archive/`, unconditionally, every run. A relocation of `/harden-workflow`'s Step TM-5 — which still exists and still fires on its own path — to a trigger that cannot be bypassed by a ticket's closure-path routing. Uses `mv -n`: archived history is moved, never deleted, and never overwritten. |
 | **Session Close Evidence Engine** | **[ADDED 2026-07-07, implementation-plan.md Phase 4.4]** `scripts/secretary/secretary_audit.py` — the read-only mechanical layer behind Step 0b.5 (Retrospective Lag comparison), ADDENDUM E (retrospective date-match), ADDENDUM F (artifact freshness), and the TRIAGE_RECEIPTS/DESIGN_RECEIPTS consumption blocks (generalized receipt-family presence). Reports facts only — mtimes, date comparisons, file presence — never whether the session's own narrative content is honest or complete. Architectural sibling of `scripts/build/` (backs `/execute-build`) and `scripts/focus/` (backs `/focus-plan`). |
 
 ---
@@ -180,6 +181,32 @@ Read the engine's verdict:
 - **`verdict: REVIEW`** — ingest `manifest/CONTRADICTION_REGISTRY.md`, judge whether a *real recurring* pattern is present (not merely volume), and if one is, file a `/helpdesk-tickets` entry for it. Append `[REVIEWED YYYY-MM-DD]` to the registry to reset the delta. Note in the Secretary Receipt: `REGISTRY: UPDATED — verdict REVIEW, [ticket filed / no new pattern found]`.
 
 This is deliberately a **second, independent trigger** for the same engine `/harden-workflow --ticket`'s Step TM-6 already runs — not a replacement. TM-6 still fires on its own path unchanged. The reason for the duplication: registry freshness had silently depended entirely on `/harden-workflow --ticket` being invoked, which the two-path ticket model (`helpdesk-tickets.md` v3) now structurally bypasses for every Substantive/Logic closure — the majority of recent closures. Tying the pass to `/secretary` instead makes freshness a property of "a session closed," which is far harder to skip than "a specific sub-workflow ran." The engine is deterministic and idempotent; running it twice in one day (once via TM-6, once here) is harmless — it only ever reflects current corpus state, never accumulates duplicate effort.
+
+**1.0.6. Closed-ticket archival pass. [INJECTED 2026-07-26, resolves helpdesk-tickets/20260726_ticket-archival-orphaned_workflow.md]**
+
+Archive closed helpdesk tickets older than 7 days, unconditionally, on **every** `/secretary` run — workflow-suite or project session alike. The ticket corpus at `~/blueprint-workflows/helpdesk-tickets/` is suite-global, not project-specific, so the hardcoded suite path is correct here for the same reason it is correct in Step 1.0.5's registry call:
+
+```bash
+mkdir -p ~/blueprint-workflows/helpdesk-tickets/archive
+find ~/blueprint-workflows/helpdesk-tickets/ -maxdepth 1 -name 'CLOSED_*' -mtime +7 \
+  -exec mv -n {} ~/blueprint-workflows/helpdesk-tickets/archive/ \;
+```
+
+Then report the counts:
+
+```bash
+echo "archived total: $(ls ~/blueprint-workflows/helpdesk-tickets/archive/ | wc -l)"
+echo "closed remaining in root: $(find ~/blueprint-workflows/helpdesk-tickets/ -maxdepth 1 -name 'CLOSED_*' | wc -l)"
+echo "still open: $(find ~/blueprint-workflows/helpdesk-tickets/ -maxdepth 1 -name '*_workflow.md' ! -name 'CLOSED_*' | wc -l)"
+```
+
+Record the result in the Secretary Receipt (Phase 7) as the `TICKET ARCHIVE:` line. If zero tickets moved: `TICKET ARCHIVE: No stale closed tickets found. Directory clean.`
+
+**`mv -n` is deliberate, not incidental — [ADDED 2026-07-26, /nodelete].** Bare `mv` silently overwrites a same-named file already in `archive/`, destroying the archived original with no error and no warning (verified by direct test while building this step, not assumed). No collision exists in the corpus today, but a ticket archived and later re-created under the same filename would be silently destroyed by the un-suffixed form. `-n` refuses the clobber instead. **If any file remains in the root after this runs that the predicate should have moved, a name collision is the likely cause** — surface it in the receipt as a finding rather than re-running with a forcing flag. Archived tickets are moved, never deleted, and never overwritten.
+
+**Known limitation, carried over deliberately from the original TM-5 and not silently changed here**: `-mtime +7` keys off **filesystem modification time**, not the `YYYYMMDD` date in the filename. Editing a closed ticket resets its clock, and a fresh `git clone` resets every ticket's clock at once (delaying the first archival pass by 7 days — self-correcting, not a fault). Age therefore tracks "last touched," not "closed on." This is faithful to the behavior TM-5 has always had; changing the age semantics is a separate decision, deliberately not folded into a relocation. See the governing ticket's Deferred list.
+
+This is deliberately a **second, independent trigger** for the archival `/harden-workflow --ticket`'s Step TM-5 already performs — not a replacement. TM-5 still fires on its own path unchanged. The reason for the duplication is identical to Step 1.0.5's, one paragraph above, and is not a coincidence: ticket archival had silently depended entirely on `/harden-workflow --ticket` being invoked, which the two-path ticket model (`helpdesk-tickets.md` v3) structurally bypasses for every Substantive/Logic closure — in practice, every recent closure. The result was a six-week gap in which 43 closed tickets accumulated in the directory root while `archive/` stopped at `CLOSED_20260602_*`. Tying the pass to `/secretary` makes archival a property of "a session closed," which is far harder to skip than "a specific sub-workflow ran." The operation is idempotent — a second run the same day finds nothing left to move — so running it twice (once via TM-5, once here) is harmless.
 
 **1.1. Scan command files:**
 
@@ -506,6 +533,8 @@ Artifacts produced:
   HANDOFF.md:            WRITTEN — deferred items: [N]
   ANOMALY_LOG.md:        [N entries added / NO ANOMALIES]
   CONTRADICTION_REGISTRY.md: UPDATED — verdict [NONE / REVIEW] — [ADDED 2026-07-04, Step 1.0.5]
+  TICKET ARCHIVE:        [N] archived (>7d) → helpdesk-tickets/archive/ — [N] closed remaining,
+                         [N] still open [| COLLISIONS SKIPPED: filenames] — [ADDED 2026-07-26, Step 1.0.6]
   LEDGER:                active shard = [filename][, ROLLED OVER: reason] — [ADDED 2026-07-04, Step 1.2]
                          SUITE_PHYLOGENY.md: [OK / WARN — entries/bytes]
 
@@ -554,6 +583,7 @@ Status:                SESSION CLOSE COMPLETE
 18. **[INJECTION 2026-07-04]** Phase 1 always runs the Suite Learning Registry pass (Step 1.0.5) on every `/secretary` invocation, regardless of session type — STRICT RULE 11's workflow-suite skip does NOT apply here (registry data is not project-specific). A REVIEW verdict must be ingested and judged per Step 1.0.5, never skipped.
 19. **[INJECTION 2026-07-04]** Phase 1 always runs the ledger growth check (Step 1.2) on every run, without exception — same STRICT RULE 11 exemption as Rule 18. Append the session's narrative entry to whichever shard the monitor reports active; never hardcode a shard filename. A `SUITE_PHYLOGENY.md` WARN is advisory, like a Registry REVIEW verdict — always note the disposition in the Secretary Receipt, never silently absorb it.
 20. **[INJECTION 2026-07-05]** Phase 0 always runs the Retrospective Lag check (Step 0b.5) on every run, without exception — same STRICT RULE 11-independent status as Rules 18-19. A `GAP DETECTED` result is advisory (does not block this session's own Phase 6) but must be noted in the Secretary Receipt every time it fires, never silently absorbed.
+21. **[INJECTION 2026-07-26, resolves helpdesk-tickets/20260726_ticket-archival-orphaned_workflow.md]** Phase 1 always runs the closed-ticket archival pass (Step 1.0.6) on every `/secretary` run, without exception — same STRICT RULE 11-independent status as Rules 18-20, and for the same underlying reason. Archival must never again be contingent on a *specific sub-workflow* having been invoked: it stopped for six weeks precisely because it lived only inside `/harden-workflow --ticket`, a path the two-path ticket model structurally bypasses for every Substantive/Logic closure. A step whose real trigger is "a session ended" belongs to the workflow that owns session boundaries. Use `mv -n`, never bare `mv` — a name collision with an already-archived ticket must be skipped and reported, never silently overwritten (`/nodelete`). The archival result is reported in the Secretary Receipt every run, including the no-op case.
 
 ---
 

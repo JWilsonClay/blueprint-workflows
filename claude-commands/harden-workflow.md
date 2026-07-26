@@ -2,8 +2,8 @@
 description: "Sovereign Workflow Hardening Protocol — Audits and elevates workflow .md files to the highest hardening grade using established Sovereign Suite quality patterns. v4: ticket mode redirects SUBSTANTIVE-LOGIC tickets instead of silently discovering they're out of scope. v5: script-backed by the Structural Assessment Evidence Engine (scripts/harden_workflow/harden_workflow_audit.py) for Phase 1 facts + Degradation Check, Phase 5b /triage gap check, and Phase 7c Completeness Check."
 type: meta
 grade: Sovereign
-version: 5
-content_hash: "sha256:22ad83604755cd0d"
+version: 6
+content_hash: "sha256:9f815d57af5567f6"
 last_hardened: "2026-07-07"
 strict_rule_count: 22
 phase_count: 13
@@ -195,6 +195,10 @@ TICKET ARCHIVE:
 If zero tickets are archived: `TICKET ARCHIVE: No stale closed tickets found. Directory clean.`
 
 This step runs at the END of every ticket-mode session — after all hardening and closures are complete. It is a housekeeping step, not a processing step. Archived tickets retain their full content and `CLOSED_` prefix — they are moved, not deleted, per /nodelete.
+
+**[NOTE — ADDED 2026-07-26, resolves helpdesk-tickets/20260726_ticket-archival-orphaned_workflow.md. This step is NOT removed or superseded; it still runs, unchanged, on this path.]** The sentence directly above — *"a housekeeping step, not a processing step"* — turned out to be the diagnosis of a real defect rather than a description of correct design. Because TM-5 exists only inside ticket mode, and the two-path ticket model (`helpdesk-tickets.md` v3) structurally bypasses `/harden-workflow` for every Substantive/Logic closure, this step silently stopped running around 2026-06-12: 43 closed tickets accumulated in the directory root while `archive/` stopped at `CLOSED_20260602_*`. The mechanism was never broken — it was simply never reached. Housekeeping whose real trigger is *"a session ended"* cannot hang off *"this particular sub-workflow was invoked."*
+
+The archival is therefore now **also** performed by `/secretary` **Step 1.0.6**, unconditionally on every session close, exactly as Step TM-6's Suite Learning Registry pass was re-homed to `/secretary` Step 1.0.5 on 2026-07-04 for the identical reason. Both triggers coexist deliberately: the operation is idempotent, so a same-day run from both paths is harmless, and preserving TM-5 keeps STRICT RULE 18 meaningful rather than stripping it of its referent. **One difference worth carrying across if this copy is ever edited**: Step 1.0.6 uses `mv -n` rather than the bare `mv` above, because bare `mv` silently overwrites a same-named ticket already in `archive/` — verified by direct test, not assumed. This copy is left byte-for-byte as it has always been to keep the historical record honest; the `-n` guard lives in the copy that actually runs every session.
 
 *Step TM-6: Suite Learning Registry pass.*
 
