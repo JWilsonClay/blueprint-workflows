@@ -64,8 +64,49 @@ During the closure of the Triage Governance Campaign, the agent attempted to exe
 The Senior Architect must reconcile the structural assumptions between `/implementation-plan` (which generates rich, descriptive campaign blocks) and `/focus-plan` (which expects rigid `Phase N` boundaries). Introduce an E2E structural boundary standard (e.g., Markdown comments like `<!-- CAMPAIGN START -->`) that allows mechanical tools to confidently capture an entire campaign, from Scope to Task 8, without breaking document cohesion.
 
 ---
+
+## REMEDIATION RECORD — CODE HALF [ADDED 2026-07-22, Claude Code, Senior Architect role — direct SUBSTANTIVE-LOGIC remediation under /quality Maximum]
+
+This ticket bundles two root causes of different types (as Section 4 itself recognizes): a **SUBSTANTIVE-LOGIC code defect** — the `_PHASE_TITLE_RE` narrowness (Remediation item 1, first clause) — and a **STRUCTURAL design gap** — the E2E campaign-boundary standard (Remediation items 1/2/3, Section 5). The code half is resolved this session by direct remediation; the STRUCTURAL half is a design decision that lacks the recurring evidence the code half had, and is deferred. **This ticket therefore remains OPEN** for the STRUCTURAL half — closing it now would be the premature-closure failure this suite's two-path model and Phylogeny gate exist to prevent.
+
+```
+REMEDIATION RECORD
+  Ticket:            20260707_phase-status-campaign-header-scope_workflow.md (CODE HALF only)
+  Faulting module:   scripts/focus/phase_status.py — the `_PHASE_TITLE_RE` header-recognition scope
+  Root cause fixed:  `^(phase|stage)\s+\d+\b` rejected letter/dash-suffixed remediation phases
+                     ("Phase 3B", "Phase 3C-Rem", "Phase 2a") — "3" and "B" are both word
+                     characters, so the `\b` never matched between them — silently undercounting
+                     them. The "Parser Alphanumeric Omission" independently rediscovered on the
+                     Videos and hebrews_6_reader workspaces (PROCESS_LEARNINGS.md, 2026-07-09).
+  Changes made:      phase_status.py:77 — regex broadened to `^(phase|stage)\s+\d+[A-Za-z0-9-]*\b`,
+                     extending the phase SUFFIX only, never the load-bearing `phase|stage`+digit
+                     anchor (descriptive preamble headers "## Scope" / "## Triage Report
+                     Recommendations" stay correctly rejected — the STRUCTURAL half's territory).
+                     Module + parse_tasks_md docstrings updated. test_phase_status.py — 4 new
+                     tests: letter-suffix recognition; Phase 3 vs 3B distinctness (no false
+                     receipt match); descriptive-header regression guard; alphanumeric-phase +
+                     annotation -> found_complete composition (the real hebrews_6_reader shape).
+  Tests:             480/480 pass (was 476; +4). Real-data verified — the workspace's one real
+                     tasks.md (implementation-plan/sovereign-redesign-cluster/tasks.md) has ZERO
+                     headers that change classification under the broadening; no reclassification
+                     risk here, the fix purely adds the letter-suffix convention other workspaces use.
+  Linter:            lint_workflows.py N/A — the code fix touched no workflow .md file; the
+                     480-test suite is this change's verification gate.
+  Deferred:          The STRUCTURAL half — an E2E campaign-boundary standard (Section 4 items 2/3,
+                     Section 5): a `<!-- CAMPAIGN START/END -->` marker, or `/implementation-plan`
+                     enforcing `Phase N` in generated tasks.md, so descriptive campaign preamble
+                     (Scope/Risks/Dependencies) is captured cohesively. A design pass, not a code
+                     defect. Routes to /harden-workflow or a future /focus-plan design pass.
+                     Also CAPTURED by a /divergence pass alongside this fix (built nothing): a
+                     "phases=[] means unrecognized-structure, not empty" consumer-honoring check
+                     across build_audit/receipt_audit/focus-plan — candidate ticket, verify-before-build.
+```
+
+**Phylogeny Disposition** stays PENDING deliberately: the field governs the whole ticket, which is not yet closed. (For the record, the code half alone moved no structural pattern between workflow files — a NO TRANSFER observation — but the STRUCTURAL half's eventual closure resolves this field.)
+
+---
 **Status**: **OPEN**
-**Verification**: PENDING
+**Verification**: Code half — 480/480 tests, real-data verified (see REMEDIATION RECORD — CODE HALF above). STRUCTURAL E2E-boundary half — PENDING (deferred design decision).
 
 ---
 *Signed,*

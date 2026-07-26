@@ -245,5 +245,15 @@ def compute_coverage(workspace: Path) -> dict:
         "checkable_dimensions": checkable_dims,
         "covered_dimensions": covered_dims,
         "gap_percent": gap_percent,
+        "structure_recognized": bool(phases),
+        "structure_note": (
+            None if phases else
+            "tasks.md exists but NO phase headers were recognized (`## Phase N` / "
+            "`## Stage N`). gap_percent is None because coverage could not be computed "
+            "— this is UNRECOGNIZED STRUCTURE, not a clean or empty plan. Do not read "
+            "it as 'nothing to check'. Verify the real unit count with "
+            "`phase_status.py --expect-phases N` and reconcile tasks.md to the canonical "
+            "header format. (helpdesk-tickets/20260722_phase-status-empty-phases-contract)"
+        ),
         "quality_process": quality_process,
     }

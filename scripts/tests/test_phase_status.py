@@ -11,6 +11,7 @@ Run via scripts/run_tests.sh (unittest discover, PYTHONPATH=scripts/).
 """
 
 import shutil
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -20,6 +21,7 @@ from focus.phase_status import (
     build_phase_status_report,
     parse_build_receipts,
     parse_tasks_md,
+    verify_phase_count,
 )
 
 
@@ -248,6 +250,159 @@ class TestBuildPhaseStatusReport(unittest.TestCase):
         )
         report = build_phase_status_report(self.tmp)
         self.assertEqual(report.phases[0].receipt_status, "found_complete_approx")
+
+    def test_alphanumeric_phase_with_annotation_matches_receipt(self):
+        # The real remediation-plan shape (hebrews_6_reader): an alphanumeric
+        # sub-phase carrying a completion annotation. The broadened detection
+        # regex, annotation stripping, and receipt matching must compose end to
+        # end to found_complete — a toy "Phase 3B" alone would not exercise the
+        # detection ↔ _strip_header_annotations ↔ _receipt_status_for interaction.
+        _write(
+            self.tmp / "tasks.md",
+            "## Phase 3C-Rem — Structure — **COMPLETE 2026-07-09**\n- [x] a\n",
+        )
+        _write(
+            self.tmp / BUILD_RECEIPTS_RELPATH,
+            "## 2026-07-09 — /execute-build — Phase 3C-Rem — Structure\n"
+            "- Phase/Stage: Phase 3C-Rem — Structure\n- Grade/Status: PHASE COMPLETE\n---\n",
+        )
+        report = build_phase_status_report(self.tmp)
+        self.assertEqual(len(report.phases), 1)
+        self.assertEqual(report.phases[0].title, "Phase 3C-Rem — Structure — **COMPLETE 2026-07-09**")
+        self.assertEqual(report.phases[0].receipt_status, "found_complete")
+
+    def test_structure_recognized_field(self):
+        # helpdesk-tickets/20260722_phase-status-empty-phases-contract: the
+        # "structure not recognized" signal is now a first-class output field.
+        # found=False (no tasks.md) → False, distinguished from found-but-empty
+        # by `found` itself.
+        r0 = build_phase_status_report(self.tmp)
+        self.assertFalse(r0.found)
+        self.assertFalse(r0.as_dict()["structure_recognized"])
+        # found=True with recognized phases → True.
+        _write(self.tmp / "tasks.md", "## Phase 1: A\n- [x] a\n")
+        self.assertTrue(build_phase_status_report(self.tmp).as_dict()["structure_recognized"])
+        # found=True but only unrecognized headers → False (the ticket's core case).
+        _write(self.tmp / "tasks.md", "## Scope\n- [ ] x\n\n## Milestone A\n- [ ] y\n")
+        r2 = build_phase_status_report(self.tmp)
+        self.assertTrue(r2.found)
+        self.assertFalse(r2.as_dict()["structure_recognized"])
+
+
+class TestAlphanumericSubPhases(unittest.TestCase):
+    """Coverage for the 2026-07-22 _PHASE_TITLE_RE broadening.
+
+    Letter/dash-suffixed remediation phases ("3B", "3C-Rem", "2a") must be
+    recognized, while the by-design rejection of descriptive campaign headers
+    (the ticket's deferred STRUCTURAL half) must be preserved.
+    Resolves the code half of
+    helpdesk-tickets/20260707_phase-status-campaign-header-scope_workflow.md.
+    """
+
+    def test_letter_suffixed_phases_recognized(self):
+        text = (
+            "## Phase 3B: Length Restoration\n- [x] a\n\n"
+            "## Phase 3C-Rem: Structure\n- [ ] b\n\n"
+            "## Phase 2a: Prep\n- [x] c\n"
+        )
+        phases = parse_tasks_md(text)
+        self.assertEqual(
+            [p.title for p in phases],
+            ["Phase 3B: Length Restoration", "Phase 3C-Rem: Structure", "Phase 2a: Prep"],
+        )
+        self.assertEqual(phases[0].status, "complete")
+        self.assertEqual(phases[1].status, "not_started")
+        self.assertEqual(phases[2].status, "complete")
+
+    def test_numeric_and_letter_suffixed_are_distinct_phases(self):
+        # "Phase 3" and "Phase 3B" must NOT collapse into one phase — distinct
+        # normalized keys keep their receipts matched independently, so
+        # broadening detection introduces no false-positive receipt match.
+        text = "## Phase 3: Core\n- [x] a\n\n## Phase 3B: Follow-up\n- [ ] b\n"
+        phases = parse_tasks_md(text)
+        self.assertEqual([p.title for p in phases], ["Phase 3: Core", "Phase 3B: Follow-up"])
+        self.assertEqual(phases[0].status, "complete")
+        self.assertEqual(phases[1].status, "not_started")
+
+    def test_descriptive_campaign_headers_still_rejected(self):
+        # The load-bearing safety property: the broadening extends the phase
+        # SUFFIX, never the phase|stage + digit anchor. Descriptive preamble
+        # headers (Scope/Risks/Triage sections — the ticket's STRUCTURAL,
+        # deferred half) must remain non-phases.
+        text = (
+            "## Scope\n- [ ] x\n\n"
+            "## Triage Report Recommendations\n- [ ] y\n\n"
+            "## Risks & Dependencies\n- [ ] z\n\n"
+            "## Phase 1: Real\n- [x] a\n"
+        )
+        phases = parse_tasks_md(text)
+        self.assertEqual([p.title for p in phases], ["Phase 1: Real"])
+
+
+class TestVerifyPhaseCount(unittest.TestCase):
+    """The count-verification gate — the general fix for undercount by ANY
+    unrecognized header convention (Step N / Part N / descriptive), including
+    the PARTIAL miss that the all-or-nothing structure_recognized boolean is
+    blind to. helpdesk-tickets/20260722_phase-status-empty-phases-contract.
+    """
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_match(self):
+        _write(self.tmp / "tasks.md", "## Phase 1: A\n- [x] a\n\n## Phase 2: B\n- [ ] b\n")
+        result = verify_phase_count(build_phase_status_report(self.tmp), 2)
+        self.assertEqual(result["verdict"], "MATCH")
+        self.assertEqual(result["recognized"], 2)
+
+    def test_mismatch_on_partial_miss(self):
+        # The exact case structure_recognized CANNOT catch: 2 recognized Phase
+        # headers + 1 unrecognized "Step 3". The agent honestly counts 3 units.
+        _write(
+            self.tmp / "tasks.md",
+            "## Phase 1: A\n- [x] a\n\n## Phase 2: B\n- [ ] b\n\n## Step 3: C\n- [ ] c\n",
+        )
+        report = build_phase_status_report(self.tmp)
+        # The boolean is blind to the miss — this is precisely why the gate exists.
+        self.assertTrue(report.structure_recognized)
+        result = verify_phase_count(report, 3)
+        self.assertEqual(result["verdict"], "MISMATCH")
+        self.assertEqual(result["recognized"], 2)
+        self.assertIn("Revise tasks.md", result["message"])
+
+    def test_no_tasks_md(self):
+        result = verify_phase_count(build_phase_status_report(self.tmp), 5)
+        self.assertEqual(result["verdict"], "NO_TASKS_MD")
+
+    def test_cli_mismatch_exits_2(self):
+        # End-to-end: the gate must actually GATE (non-zero exit), via the
+        # module's standalone CLI (self-bootstrapping sys.path, no PYTHONPATH).
+        import subprocess
+        _write(
+            self.tmp / "tasks.md",
+            "## Phase 1: A\n- [x] a\n\n## Step 2: B\n- [ ] b\n",
+        )
+        script = Path(__file__).resolve().parents[1] / "focus" / "phase_status.py"
+        proc = subprocess.run(
+            [sys.executable, str(script), "--workspace", str(self.tmp),
+             "--expect-phases", "2", "--quiet"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(proc.returncode, 2)
+
+    def test_cli_match_exits_0(self):
+        import subprocess
+        _write(self.tmp / "tasks.md", "## Phase 1: A\n- [x] a\n\n## Phase 2: B\n- [ ] b\n")
+        script = Path(__file__).resolve().parents[1] / "focus" / "phase_status.py"
+        proc = subprocess.run(
+            [sys.executable, str(script), "--workspace", str(self.tmp),
+             "--expect-phases", "2", "--quiet"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(proc.returncode, 0)
 
 
 if __name__ == "__main__":

@@ -107,6 +107,23 @@ class TestComputeCoverage(unittest.TestCase):
         self.assertIsNone(report["gap_percent"])
         self.assertEqual(report["phases"], [])
 
+    def test_structure_recognized_and_note(self):
+        # helpdesk-tickets/20260722_phase-status-empty-phases-contract: a tasks.md
+        # that EXISTS but uses only unrecognized headers must not read as a clean
+        # empty plan. gap_percent is None (as when absent), but structure_recognized
+        # is False and a structure_note disambiguates it from the no-tasks.md case.
+        _write(self.ws / "tasks.md", "## Scope\n- [ ] x\n\n## Milestone A\n- [ ] y\n")
+        r = compute_coverage(self.ws)
+        self.assertTrue(r["tasks_md_found"])
+        self.assertFalse(r["structure_recognized"])
+        self.assertIsNone(r["gap_percent"])
+        self.assertIn("UNRECOGNIZED STRUCTURE", r["structure_note"])
+        # Recognized: a real Phase header → recognized True, note cleared.
+        _write(self.ws / "tasks.md", "## Phase 1: A\n- [x] a\n")
+        r2 = compute_coverage(self.ws)
+        self.assertTrue(r2["structure_recognized"])
+        self.assertIsNone(r2["structure_note"])
+
     def test_pending_phase_is_not_a_gap(self):
         # The exact /focus-plan v4 lesson: not-yet-built must never be
         # checked against receipts as though it were a claimed-done gap.

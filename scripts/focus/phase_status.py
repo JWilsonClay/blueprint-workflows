@@ -32,13 +32,34 @@ independently-authored documents, which stays a judgment call for the agent)
 same /execute-build run (execute-build.md L301 marks the tasks, L327/331
 write the receipt from the identical name).
 
+Scope boundary — only a *governing* tasks.md is a Completion-Marking target:
+that same-origin precondition holds for a workspace's governing tasks.md, NOT
+for a nested PR-plan tasks.md that /execute-build's Native Execution Trigger
+spawns under .workflow_state/. Such a nested file's phases are receipted under
+the *outer* master phase's title, never their own, so running this engine
+directly against the nested file correctly returns receipt_status=not_found — a
+safe-direction false negative (it refuses to mark, never mis-marks). That is
+correct-by-design, not a defect; nested PR-plan tasks.md files are transient
+gitignored scratch state, not intended Completion-Marking targets.
+[DOCUMENTED 2026-07-22 — resolves helpdesk-tickets/20260707_nested-tasks-md-
+receipt-title-mismatch_workflow.md via its Recommendation #2 (accept
+correct-by-design + document the boundary), the proportionate resolution for a
+LOW-impact, safe-direction gap affecting only transient scratch files.]
+
 Design note: phase boundaries are detected by title pattern ("Phase N" /
-"Stage N"), not raw header level, so nested sub-headers inside a phase (e.g.
+"Stage N", including alphanumeric sub-phase suffixes like "Phase 3B" /
+"Phase 3C-Rem"), not raw header level, so nested sub-headers inside a phase (e.g.
 "### Acceptance Criteria") are correctly treated as part of that phase's body
 rather than fragmenting into phantom phases. If a workspace's tasks.md uses a
 naming convention this pattern does not recognize, `found` is still True but
 `phases` is empty — the workflow must treat that as "structure not
-recognized," not as "no phases exist."
+recognized," not as "no phases exist." This distinction is now carried
+explicitly in the output as `structure_recognized` (False when found-but-empty),
+and — crucially, for the PARTIAL-miss case that boolean can't see — enforced by
+the `--expect-phases N` count-verification gate: the ingesting agent asserts the
+unit count it read, and the engine refuses (exit 2) if its own recognized count
+differs, so no consumer has to re-derive the contract from this docstring alone.
+[ADDED 2026-07-22 — resolves helpdesk-tickets/20260722_phase-status-empty-phases-contract_workflow.md.]
 
 Architecturally read-only, same contract as the rest of scripts/focus/: no
 write primitives, bounded reads via safe_read.
@@ -74,7 +95,20 @@ TASKS_MD_NAME = "tasks.md"
 BUILD_RECEIPTS_RELPATH = Path(".workflow_state") / "receipts" / "BUILD_RECEIPTS.md"
 
 _HEADER_RE = re.compile(r"^(#{2,4})\s+(.*\S)\s*$")
-_PHASE_TITLE_RE = re.compile(r"^(phase|stage)\s+\d+\b", re.IGNORECASE)
+# Phase-boundary title pattern. The leading "phase|stage" + digit is the required
+# anchor; the trailing [A-Za-z0-9-]* admits alphanumeric sub-phase suffixes
+# ("Phase 3B", "Phase 3C-Rem", "Phase 2a") without loosening that anchor — bare
+# prose headers ("## Scope", "## Triage Report Recommendations") still lack the
+# digit and are correctly NOT treated as phases.
+# [BROADENED 2026-07-22 — resolves the code half of
+#  helpdesk-tickets/20260707_phase-status-campaign-header-scope_workflow.md. The
+#  prior `\d+\b` rejected letter-suffixed remediation phases (the "3B"/"3C-Rem"
+#  Parser Alphanumeric Omission, independently rediscovered across the Videos and
+#  hebrews_6_reader sessions — process_learnings/PROCESS_LEARNINGS.md, 2026-07-09).
+#  This extends the SAME behavior the numeric pattern already had ("## Phase 3 —
+#  anything" was always a boundary) to alphanumeric tokens; it is not a new risk
+#  class. The ticket's STRUCTURAL descriptive-header / E2E-boundary half is deferred.]
+_PHASE_TITLE_RE = re.compile(r"^(phase|stage)\s+\d+[A-Za-z0-9-]*\b", re.IGNORECASE)
 _CHECKBOX_RE = re.compile(r"^\s*[-*]\s+\[([ xX/~])\]\s")
 _FENCE_RE = re.compile(r"^\s*```")
 _RECEIPT_SPLIT_RE = re.compile(r"^\s*---\s*$", re.MULTILINE)
@@ -164,11 +198,25 @@ class TasksMdReport:
     receipts_file_found: bool
     phases: List[Phase] = field(default_factory=list)
 
+    @property
+    def structure_recognized(self) -> bool:
+        """True only when a tasks.md exists AND at least one phase header was
+        recognized. False when found-but-empty — the "structure not recognized"
+        case consumers must NOT read as "no phases exist" (they distinguish it
+        from the no-tasks.md case via `found`). Carried as a first-class output
+        field so the distinction no longer lives only in this docstring, where
+        no consumer executes it — resolves helpdesk-tickets/20260722_phase-
+        status-empty-phases-contract. Note this is the all-or-nothing signal:
+        a PARTIAL miss (some units recognized, others not) leaves it True — the
+        --expect-phases count-verification gate is what catches that case."""
+        return self.found and bool(self.phases)
+
     def as_dict(self) -> dict:
         return {
             "found": self.found,
             "path": self.path,
             "receipts_file_found": self.receipts_file_found,
+            "structure_recognized": self.structure_recognized,
             "phases": [p.as_dict() for p in self.phases],
         }
 
@@ -191,7 +239,8 @@ def parse_tasks_md(text: str) -> List[Phase]:
     Split tasks.md into phases and tally each phase's own checkboxes.
 
     A phase boundary is a level 2-4 header whose title starts with "Phase N"
-    or "Stage N" (case-insensitive) — the vocabulary /execute-build's Phase
+    or "Stage N" (case-insensitive), optionally with an alphanumeric sub-phase
+    suffix ("Phase 3B", "Phase 3C-Rem") — the vocabulary /execute-build's Phase
     Map and receipt writer already use. Other headers (e.g. a "### Acceptance
     Criteria" sub-section) do not start a new phase; their checkboxes count
     toward the enclosing phase.
@@ -361,6 +410,57 @@ def build_phase_status_report(
     )
 
 
+def verify_phase_count(report: TasksMdReport, expected: int) -> dict:
+    """Count-verification gate — the Intelligence-Bridge check for tasks.md ingestion.
+
+    The agent asserts `expected`: the number of plan units (phases / steps /
+    parts / whatever the plan calls them) it counted by *reading* tasks.md with
+    judgment. The engine compares that to `recognized` — the units it matched
+    via the canonical `Phase N` / `Stage N` convention. A MISMATCH means one or
+    more real units use a header this parser cannot see (e.g. "Step 3", "Part 2",
+    a descriptive title), so the engine is working from a PARTIAL parse and must
+    not let downstream verification trust it — it refuses and tells the agent to
+    reconcile tasks.md to the canonical format.
+
+    This is the general answer to a class a regex can never enumerate: rather
+    than trying to anticipate every hallucinated header spelling, the engine
+    verifies its own parse against the agent's ground-truth count. It catches the
+    PARTIAL miss that `structure_recognized` (all-or-nothing) cannot.
+
+    Resolves helpdesk-tickets/20260722_phase-status-empty-phases-contract (rolled
+    in per user direction as the more general form of the fix).
+    """
+    recognized = len(report.phases)
+    if not report.found:
+        return {
+            "expected": expected, "recognized": 0, "verdict": "NO_TASKS_MD",
+            "message": (
+                f"No tasks.md found — nothing to count against your asserted {expected}. "
+                "Either the plan has no tasks.md yet, or you are pointed at the wrong "
+                "workspace/path."
+            ),
+        }
+    if recognized == expected:
+        return {
+            "expected": expected, "recognized": recognized, "verdict": "MATCH",
+            "message": (
+                f"Engine recognizes all {recognized} unit(s) via the canonical "
+                "Phase/Stage convention — the parse is complete; proceed."
+            ),
+        }
+    return {
+        "expected": expected, "recognized": recognized, "verdict": "MISMATCH",
+        "message": (
+            f"You assert {expected} unit(s); the engine recognizes {recognized} via the "
+            "canonical `Phase N` / `Stage N` (+ alphanumeric suffix) header convention. "
+            f"The difference of {abs(expected - recognized)} is unit(s) whose header this "
+            "parser cannot match (e.g. 'Step N', 'Part N', a descriptive title). Revise "
+            "tasks.md so every unit uses a `## Phase N` / `## Stage N` header, then re-run "
+            "— downstream verification must not trust a partial parse."
+        ),
+    }
+
+
 def _parse_args() -> "argparse.Namespace":
     import argparse
     p = argparse.ArgumentParser(
@@ -374,6 +474,13 @@ def _parse_args() -> "argparse.Namespace":
     p.add_argument("--tasks-file", default=None, type=str,
                    help="Optional explicit path to tasks.md, overriding the default "
                         "workspace/tasks.md lookup.")
+    p.add_argument("--expect-phases", default=None, type=int, metavar="N",
+                   help="Count-verification gate: the number of plan units (phases / "
+                        "steps / parts) YOU counted by reading tasks.md. The engine "
+                        "cross-checks its own recognized count against N and reports "
+                        "MISMATCH (exit 2) if any unit uses a header convention it cannot "
+                        "parse — forcing reconciliation to the canonical `## Phase N` "
+                        "format before downstream work trusts the parse. Read-only.")
     p.add_argument("--output-json", action="store_true", help="Emit JSON to stdout.")
     p.add_argument("--quiet", action="store_true", help="Suppress human-readable output.")
     return p.parse_args()
@@ -386,16 +493,32 @@ def main() -> int:
         Path(args.workspace),
         tasks_md_path=Path(args.tasks_file) if args.tasks_file else None,
     )
+    count_check = (
+        verify_phase_count(report, args.expect_phases)
+        if args.expect_phases is not None else None
+    )
     if args.output_json:
-        print(_json.dumps(report.as_dict(), indent=2))
+        payload = report.as_dict()
+        if count_check is not None:
+            payload["count_verification"] = count_check
+        print(_json.dumps(payload, indent=2))
     elif not args.quiet:
         if not report.found:
             print("tasks.md: NOT FOUND")
         else:
             print(f"tasks.md: {report.path}")
             print(f"BUILD_RECEIPTS.md: {'found' if report.receipts_file_found else 'absent'}")
+            print(f"structure_recognized: {report.structure_recognized}")
             for phase in report.phases:
                 print(f"  {phase.title}: status={phase.status} receipt_status={phase.receipt_status}")
+        if count_check is not None:
+            print(f"count_verification: {count_check['verdict']} "
+                  f"(expected {count_check['expected']}, recognized {count_check['recognized']})")
+            print(f"  {count_check['message']}")
+    # A failed count gate exits non-zero so it functions as a real gate; the
+    # default (no --expect-phases) path is unchanged and always exits 0.
+    if count_check is not None and count_check["verdict"] in ("MISMATCH", "NO_TASKS_MD"):
+        return 2
     return 0
 
 

@@ -55,7 +55,16 @@ _ADVISORY = (
     "anchor may be Ghost Logic OR a legitimately not-yet-built item — check "
     "tasks_md.phases for that item's phase status before classifying it. No "
     "tasks_md ('found': false) means the plan has no execution phases yet — "
-    "treat absences as PENDING, not a failure signal."
+    "treat absences as PENDING, not a failure signal. But a tasks.md that "
+    "EXISTS yet yields zero phases ('found': true, 'structure_recognized': false) "
+    "is UNRECOGNIZED STRUCTURE, not 'no phases' — do NOT treat its absences as "
+    "PENDING; the plan has units the parser could not read. And because a PARTIAL "
+    "miss (some units recognized, others not) leaves structure_recognized true, "
+    "run the count-verification gate before trusting any phase-based judgment: "
+    "count the plan's units (phases/steps/parts) by reading tasks.md yourself, "
+    "then `phase_status.py --workspace <ws> --expect-phases <your-count>`; a "
+    "MISMATCH (exit 2) means revise tasks.md to the canonical `## Phase N` format "
+    "before proceeding. (helpdesk-tickets/20260722_phase-status-empty-phases-contract)"
 )
 
 
