@@ -8,6 +8,15 @@ implementation-plan/audits/*
 scripts/doorway/templates/*
 .obsidian/
 
+# --- Client-confidential tickets (kept local at full fidelity; never published) ---
+# This repo is public. Tickets naming a client project's internal business data are
+# excluded individually rather than redacted, so the local forensic record stays intact.
+# Added 2026-07-26: describes a client financial model's balance-sheet check formula,
+# equity line items, and literal cell references. Its /execute-build structural finding
+# is preserved publicly in claude-commands/execute-build.md (Step 6a, STRICT RULES 20-21)
+# and .changelogs/ — only the client-specific evidence is withheld.
+helpdesk-tickets/CLOSED_20260726_execute-build_workflow.md
+
 # >>> Sovereign Suite — managed block (auto-generated; edit above/below, not inside) >>>
 # (managed by scripts/gitignore — re-run /sentinel to refresh; never edit between the markers)
 # --- Suite-generated / ingestion-banned (never tracked) ---

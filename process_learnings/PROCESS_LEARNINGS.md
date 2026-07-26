@@ -857,3 +857,73 @@ NO PROBLEMS DETECTED. One near-miss handled correctly: a /divergence-surfaced "s
 "Harvest hot context" generalizes beyond this suite: any expensive context-load done for a small fix (deep-reading a subsystem) carries surplus that is cheap to mine while the context is loaded and expensive to rediscover cold — a bounded divergent pass amortizes it. The guardrail that keeps it safe is CAPTURE != BUILD: expand the map, never the current fix.
 
 ---
+
+## 2026-07-22 — blueprint-workflows — phase_status.py boundary tickets + count-verification gate (Intelligence Bridge)
+
+### Session Summary
+- Boundary: this conversation (suite/governance session). Opened by committing + pushing 4 backlogged commits to origin/main.
+- Goal: commit/push; address the paired phase_status.py boundary tickets the prior HANDOFF deferred together; take a /sentinel meta-examination; file + (if greenlit) close a divergence-surfaced finding; close the session.
+- Outcome: ACHIEVED.
+- Workflows used: /role, /personality, /quality (Maximum), /divergence (Remediation Divergence Gate — contextual, ×1), /sentinel, /helpdesk-tickets (file + close), /secretary, /retrospective. Build-pipeline workflows (/focus-plan, /execute-build, /iterate-test, /harden, /soc) N/A — no downstream code built.
+- Workflows skipped (unjustified): NONE. /document + /receipt-check correctly SKIPPED per /secretary STRICT RULE 11 (suite session).
+- Regressions: NONE. Suite 476 → 487 (+11 tests), 0 CRITICAL lint, lifecycle engine CLEAN on all touched tickets, sentinel parity CLEAN.
+- Key decisions: broadened _PHASE_TITLE_RE for alphanumeric sub-phases (code half only; deferred the STRUCTURAL E2E-boundary half); closed nested-tasks-md via correct-by-design documentation (Direction 2, not the redundant-receipt Direction 1); rolled in the user's count-verification gate as the GENERAL form of the empty-phases fix rather than the narrower structure_recognized field alone; ran /sentinel read-only to avoid seeding a spurious root plan placeholder.
+
+### Problem Log
+NO PROBLEMS DETECTED. One design refinement mid-execution: the `structure_recognized` boolean (the empty-phases ticket's §4) was recognized — before it shipped — to be blind to PARTIAL misses (some units recognized, others not). Caught by the user's count-gate nuance and generalized, not shipped narrow. Verify-before-build and the greenlit-nuance path worked as designed.
+
+### Pattern Observations
+- **FIRST OCCURRENCE (monitoring) — "harvest hot context" compounding across a session, not just one fix**: the whole session orbited one module (phase_status.py). The regex fix loaded deep parser context; that fix's Remediation-Divergence CAPTURE surfaced the empty-phases-contract finding; addressing it loaded the consumer map, which the user's nuance then generalized into the count-gate. Each step's already-paid context fed the next — role.md's Remediation Divergence Gate "harvest hot context" principle scaling from a single fix to a session-long chain.
+- **PATTERN — Intelligence Bridge beats regex enumeration for unbounded deviation classes**: a mechanical parser cannot pre-enumerate every hallucinated header spelling (Step N / Part N / descriptive). The robust answer is not a bigger regex but an agent-asserted ground-truth count the engine verifies its own parse against (`--expect-phases N`, exit 2 on MISMATCH). Convergent with the /sentinel Recommender/Routing-Table Parity Engine's count cross-check — a second instance of the same "verify the count, don't guess the content" shape in the suite.
+- **PATTERN — a divergence CAPTURE ran its full lifecycle in one session**: captured (built nothing) during the regex fix under CAPTURE-≠-BUILD; surfaced to the user; re-verified against live consumer code on greenlight; then built. The gate's capture → verify-before-build → build cycle completed end-to-end within a single session rather than across sessions.
+
+### Workflow Improvement Suggestion
+- Problem observed: the new `--expect-phases` count-verification gate is built into phase_status.py but wired only into /focus-plan's runtime advisory; the other tasks.md consumers (/execute-build, /triage, /receipt-check) get the passive `structure_recognized` field but do not invoke the active gate at ingestion.
+- Proposed change: add a "count-verification gate at tasks.md ingestion" step to /execute-build (Phase 0) and the /focus-plan pre-gate prose — the ingesting agent counts the plan's units by reading tasks.md and asserts `--expect-phases N`, reconciling to the canonical `## Phase N` format on MISMATCH before any phase-based verification proceeds.
+- Change type: Modified step (new ingestion sub-gate) across the build-pipeline consumers.
+- Priority: MEDIUM.
+- Rationale: makes the Intelligence-Bridge check a standard ingestion gate rather than a single-consumer advisory, closing the false-clear class at the earliest point for every consumer, not just /focus-plan.
+
+### Cross-Project Insight
+The Intelligence-Bridge count-gate generalizes beyond this suite: any pipeline where a mechanical parser must trust a human/agent-authored document's structure is safer verifying its parse against an agent-asserted ground-truth count than trying to anticipate every possible malformation. Enumerate-the-deviations scales with imagination; verify-the-count scales with the parser. When the deviation space is open-ended (natural-language headers, free-form config, hand-written manifests), cross-check the count.
+
+---
+
+## 2026-07-26 — blueprint-workflows — Ticket misrouting, an orphaned housekeeping step, and the difference between stating a lesson and executing it
+
+### Session Summary
+- Boundary: this conversation (suite/governance session). Opened with /sentinel, closed with /secretary.
+- Goal: run /helpdesk-tickets on an inherited CRITICAL ticket; then diagnose why closed-ticket archival had stopped; then build the fix.
+- Outcome: ACHIEVED. Two tickets closed (one inherited CRITICAL, one filed-and-closed this session). Three workflow files revised.
+- Workflows used: /sentinel, /helpdesk-tickets (×2), /quality (Maximum, user-invoked), /secretary. /harden-workflow deliberately NOT used — see Problem Log.
+- Workflows skipped (unjustified): NONE. /document + /receipt-check correctly SKIPPED per /secretary STRICT RULE 11 (suite session).
+- Regressions: NONE. Suite 487/487 throughout (no Python changed — both remediations were workflow .md protocol surfaces). Linter 0 CRITICAL / 19 WARNING, baseline unchanged; CLEAN individually on all three edited files.
+- Key decisions: reclassified a ticket's Root Cause Type against its filed value; preserved TM-5 rather than moving it; carried the `-mtime` imprecision forward verbatim rather than folding a semantic change into a relocation; deliberately did NOT run the archival at build time so /secretary's own run would be a genuine trial.
+
+### Problem Log
+
+**1. A ticket's routing label sent real work to a tool structurally incapable of doing it.** `20260726_execute-build` was filed `STRUCTURAL`, which routes to `/harden-workflow --ticket`. That tool excludes protocol-logic changes by its own STRICT RULE 3 and halts on an already-Sovereign file. Following the ticket's own Verification line would have produced an Assessment Card, "no hardening required," and zero change — while the ticket appeared correctly routed. TM-1.5's redirect exists to catch exactly this but reads the ticket's *self-declared* field, so a mislabelled ticket passes the guard. **This is the same self-report-accepted-as-fact shape as the defect the ticket itself reports, occurring one level up, in the layer that manages the reports.**
+
+**2. Closed-ticket archival had been silently dead for six weeks.** Not broken — unreachable. `/harden-workflow` TM-5's predicate correctly identified 39 of 43 eligible tickets when run directly. It never ran because it lives only in ticket mode, and every closure since mid-June took the Substantive/Logic path. Archive stopped at `CLOSED_20260602_*`; root started at `CLOSED_20260612_*` — matching to the day the registry/phylogeny freeze that `helpdesk-tickets.md` Change Log entry 4 recorded on 2026-07-04.
+
+**3. A latent `/nodelete` violation, found only because the code was being relocated.** TM-5's bare `mv` silently overwrites a same-named ticket already in `archive/`. Verified by direct test in a sandbox — the archived original was destroyed with no error and no warning. "Moved, not deleted" was true only so long as no filename ever repeated. Fixed with `mv -n` in the relocated copy.
+
+**4. Self-inflicted, caught by the engine.** The first attempt at the reclassification appended the correction note *inline* on the `Root Cause Type:` line, which broke the machine-readable field `helpdesk_tickets_audit.py` parses. Re-running validation before closing caught it. Same shape as STRICT RULE 19's title discipline: a human-readable annotation silently defeating a mechanical check.
+
+### Pattern Observations
+
+**Stating a general lesson is not the same as executing the enumeration it calls for.** `helpdesk-tickets.md` Change Log entry 4 (2026-07-04) diagnosed the two-path fork fallout correctly, fixed two casualties (Phylogeny → Step 4a.5, Registry → `/secretary` 1.0.5), and closed with: *"when a pipeline is forked into two legitimate paths, audit everything that assumed the old path was the only one in, not just the routing logic itself."* That sentence is exactly right. It was written, and then the audit it demanded was performed only on the instances already in view. TM-5 was the third rider on that path and went unlisted for six weeks. **A lesson stated in prose satisfies nothing; the deliverable is a written enumeration with a result, not a principle.**
+
+**Two named failure patterns recurred in the same session, at different altitudes.** Hallucinated Success in the build layer (a receipt claiming a file was written that wasn't) and the identical shape in the meta layer (a ticket's self-declared type accepted by the tool that consumes it). Both were fixed by the same move: make the consuming process re-derive the fact mechanically instead of trusting the producer's claim.
+
+**The engine caught the human, twice.** `helpdesk_tickets_audit.py` caught the broken Root Cause Type field, and separately surfaced that two citations had stopped resolving mid-session. Neither would have been noticed by re-reading. This is the Verification Rail earning its cost.
+
+### Workflow Improvement Suggestion
+
+**`/harden-workflow` TM-1.5 should cross-check the ticket's *requested remediation* against its own stated scope, not just read the ticket's self-declared Root Cause Type.** A ticket asking for a new protocol step, a decision gate, or anything under `scripts/` is Logic regardless of what its header says. `scripts/helpdesk_tickets/` already has the parsing layer this would need. Until then, a mislabelled Logic ticket will keep passing the guard and dying quietly at the already-Sovereign halt — which is precisely what happened this session and would have happened again unnoticed if the validation pass hadn't been run manually.
+
+**Secondary**: audit `/harden-workflow`'s remaining `TM-*` steps as a class. Two of them (TM-5, TM-6) turned out to be suite-wide housekeeping wearing a hardening-step costume, and both needed re-homing. Nobody has checked whether there is a third.
+
+### Cross-Project Insight
+
+**When a fix's verification depends on a run that hasn't happened yet, leave the ticket OPEN and leave the backlog un-cleared.** The archival remediation was built, sandbox-verified across five cases including the collision path, and then *deliberately not executed* — so that the next `/secretary` invocation would be a real trial against 39 real tickets rather than a no-op against an already-clean directory. Closing on the sandbox result would have been defensible-sounding and wrong: the entire defect was reachability on a specific path, and only that path's own run could prove it. It archived 39, exactly as predicted, zero collisions. **The temptation to tidy up before the test is the temptation to make the test meaningless.**
