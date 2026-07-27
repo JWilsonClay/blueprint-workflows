@@ -9,13 +9,22 @@ scripts/doorway/templates/*
 .obsidian/
 
 # --- Client-confidential tickets (kept local at full fidelity; never published) ---
-# This repo is public. Tickets naming a client project's internal business data are
-# excluded individually rather than redacted, so the local forensic record stays intact.
-# Added 2026-07-26: describes a client financial model's balance-sheet check formula,
-# equity line items, and literal cell references. Its /execute-build structural finding
-# is preserved publicly in claude-commands/execute-build.md (Step 6a, STRICT RULES 20-21)
-# and .changelogs/ — only the client-specific evidence is withheld.
+# This repo is public. Any ticket whose forensic evidence includes client-project
+# cell references, dollar amounts, module names, or internal business data is excluded
+# individually rather than redacted, so the local forensic record stays intact.
+# The structural/workflow finding (if any) is preserved publicly in claude-commands/
+# or .changelogs/ — only the client-specific evidence is withheld.
+# Pattern: open or closed status does not change eligibility; content does.
+#
+# Added 2026-07-26: balance-sheet check formula, equity line items, cell references
+# for Continuum North End pro forma. /execute-build structural finding preserved in
+# claude-commands/execute-build.md (Step 6a, STRICT RULES 20-21) and .changelogs/.
 helpdesk-tickets/CLOSED_20260726_execute-build_workflow.md
+# Added 2026-07-27: P11_Concrete_Batch phase-local debt service gap — names module,
+# sheet rows (06_Consolidated_CF!row23, 07_Income_Statement!row28), dollar figures
+# ($3.85M loan, $334K/yr). Latent finding; substantive fix deferred to a future
+# full P&I audit phase (logged in tasks.md Phase 23 forward-reference).
+helpdesk-tickets/20260726_proforma-p11-debt-service_workflow.md
 
 # >>> Sovereign Suite — managed block (auto-generated; edit above/below, not inside) >>>
 # (managed by scripts/gitignore — re-run /sentinel to refresh; never edit between the markers)
