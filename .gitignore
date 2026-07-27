@@ -25,6 +25,13 @@ helpdesk-tickets/CLOSED_20260726_execute-build_workflow.md
 # ($3.85M loan, $334K/yr). Latent finding; substantive fix deferred to a future
 # full P&I audit phase (logged in tasks.md Phase 23 forward-reference).
 helpdesk-tickets/20260726_proforma-p11-debt-service_workflow.md
+# Added 2026-07-27: findings-to-remediation-phase structural gap. Forensic evidence
+# (§3) cites five client-project tasks.md phases by path, plan/audit contents, and the
+# client-submission context of the triggering audit. The structural finding and its full
+# Senior Architect design pass (--remediate mode, Findings Ledger, Defect-Class Preflight)
+# are preserved publicly in claude-commands/implementation-plan.md, scripts/plan/, and
+# .changelogs/ — only the client-specific evidence is withheld.
+helpdesk-tickets/CLOSED_20260727_implementation-plan_workflow.md
 
 # >>> Sovereign Suite — managed block (auto-generated; edit above/below, not inside) >>>
 # (managed by scripts/gitignore — re-run /sentinel to refresh; never edit between the markers)

@@ -1,15 +1,16 @@
 ---
-description: "Sovereign Implementation Plan Generator — Comprehensive Investigation + Dual-Part Planning Engine with Templates, Campaign Structure, Multi-Request Support, Adversarial Audit (Coverage Ledger model, v4), and Multi-Agent Workstream Design/Audit (--workstreams, --audit --workstreams)"
+description: "Sovereign Implementation Plan Generator — Comprehensive Investigation + Dual-Part Planning Engine with Templates, Campaign Structure, Multi-Request Support, Adversarial Audit (Coverage Ledger model, v4), Remediation Draft (--remediate, Findings Ledger + Defect-Class Preflight, v5), and Multi-Agent Workstream Design/Audit (--workstreams, --audit --workstreams)"
 type: execution
 grade: Sovereign
-version: 7
-content_hash: "sha256:1d847b3c3c4d0c7a"
-last_hardened: "2026-07-07"
-strict_rule_count: 28
-phase_count: 8
+version: 8
+content_hash: "sha256:ae55f67b35255662"
+last_hardened: "2026-07-27"
+strict_rule_count: 31
+phase_count: 9
 context_retention: high
 flags:
   - "--audit"
+  - "--remediate"
   - "--workstreams"
   - "--audit --workstreams"
 dependencies:
@@ -28,6 +29,8 @@ produces:
   - ".workflow_state/PM_OVERSIGHT_REPORT_Iteration*.md"
   - "~/blueprint-workflows/implementation-plan/audits/*.md"
 consumes:
+  - "~/blueprint-workflows/implementation-plan/audits/*.md"
+  - "PROCESS_LEARNINGS.md"
   - "concept.md"
   - "WORKSTREAM_STATUS.md"
   - "DECISIONS.md"
@@ -60,6 +63,9 @@ You are a **Sovereign Implementation Architect** — an expert at taking raw use
 | **Multi-Request Coordination** | **[INJECTED 2026-05-13 — Divergence #3]** Ability to detect and plan for multiple related requests in a single coordinated master plan. |
 | **Adversarial Post-Execution Audit** | **[INJECTED 2026-05-13 — Divergence #4]** Separate, high-standard, adversarial review process run after plan execution to evaluate quality honestly. |
 | **Coverage Ledger** | **[INJECTED 2026-07-04 — v4, resolves helpdesk-tickets/CLOSED_20260625_implementation-plan_workflow.md]** The mechanically-enumerated list of every file in the actual changeset (via `git diff --stat`, or the plan's own file list if git is unavailable), against which the audit must produce an explicit per-file verdict — a cited weakness, or an explicit clearance — before any score is valid. Replaces the fixed minimum-weakness-count model as the audit's anti-rubber-stamp mechanism: a file missing from the Ledger means the audit is incomplete, regardless of how clean the findings look. Does not cap or floor how many real weaknesses get reported — only forces genuine attention to every file. |
+| **Finding ID** | **[INJECTED 2026-07-27 — resolves helpdesk-tickets/20260727_implementation-plan_workflow.md]** The stable, report-scoped label carried by every finding the audit reports — `CRIT-NN` for Critical Weaknesses, `MED-NN` for Medium/Lesser — assigned in emission order, 1-based, zero-padded to two digits. Its citable form is `<audit-filename>#CRIT-01`; audits are persisted immutably, so an ID is never renumbered after emission. Purely a labeling layer: it changes nothing about what the audit reports or how it scores. It exists so `--remediate` (Phase 8) can bind each drafted `Fix N` to exactly one finding. Audits persisted before this convention carry no declared IDs; `remediation_ledger.py` synthesizes **positional** IDs for them from list order and reports `id_source: positional` rather than `declared`. |
+| **Findings Ledger** | **[INJECTED 2026-07-27 — resolves helpdesk-tickets/20260727_implementation-plan_workflow.md]** Phase 8's anti-omission mechanism, and the structural mirror of the Coverage Ledger: every Critical and Medium finding mechanically enumerated from the source audit gets exactly one accounting line — mapped to a numbered `Fix N`, or explicitly **declined with a stated reason**. A finding present in the enumeration but absent from the accounting means the remediation draft is **incomplete**, not clean — checkable by inspection against `remediation_ledger.py`'s JSON, never a self-assessed judgment about one's own thoroughness. Where the Coverage Ledger forces genuine attention to every *file*, the Findings Ledger forces it to every *finding*. See STRICT RULE 29. |
+| **Defect-Class Preflight** | **[INJECTED 2026-07-27 — resolves helpdesk-tickets/20260727_implementation-plan_workflow.md]** The Phase 8c sub-pass that checks each finding, before it is drafted into a `Fix N`, against two registries of already-diagnosed defect classes: the target workspace's own `PROCESS_LEARNINGS.md` (project-local) and `~/blueprint-workflows/scripts/plan/defect_classes.py` (suite-global). When a finding matches a known class, that class is named on the Fix and its known counter-measure is folded into the Fix's MRC acceptance criteria — so a previously-paid-for lesson is checked *before* the fix can be marked done, rather than rediscovered by the next audit. Strictly a drafting-time aid: it adds no runtime gate to `/execute-build`, `/nodelete` Pillar 6, or `phase_status.py`. |
 | **Completion Marking** | **[INJECTED 2026-07-07 — Sovereign Redesign Cluster Stage 5, PILLAR_04_POST_BUILD_HYGIENE_ARCHIVAL_NODELETE.md]** **[PATH-ANCHORED 2026-07-07, resolves helpdesk-tickets/CLOSED_20260707_suite-script-path-resolution_workflow.md]** The mandatory Phase 5 sub-pass (after Coverage Ledger + Findings, before the final report) that walks a plan's named units (tasks.md `Phase N`/`Stage N` headers) and injects an Archival Marker on each unit independently verified complete via dual cross-reference — `~/blueprint-workflows/scripts/focus/phase_status.py`'s derived `status` AND `receipt_status` must both confirm, never checkbox state alone (see role.md's Script path resolution constant). Refuses to mark on any mismatch (the Ghost Logic guard). Does not itself archive or move anything — see Archival Marker. |
 | **Archival Marker** | **[INJECTED 2026-07-07 — Sovereign Redesign Cluster Stage 5]** The human-visible, machine-parseable annotation Completion Marking injects at a verified unit's header: `**COMPLETED [ARCHIVE:YYYY-MM-DD]** (receipts: ...; phase_status: found_complete)` for independently-confirmed-complete units, or `**SUPERSEDED [QUARANTINE:YYYY-MM-DD]** (reason: ...)` for units explicitly replaced by a later decision (positive evidence required — never inferred from silence). Gives `/nodelete` Pillar 6 the same kind of explicit, named marker it already acts on for historical `**SUPERSEDED**` blocks; does not change Pillar 6's own verification gate or `phase_status.py`'s logic, which remain the actual archival authority. |
 | **Workstream Design** | **[INJECTED 2026-05-23]** The process of dividing project work into three parallel workstreams (A, B, C) with defined scope, tasks, acceptance criteria, and file ownership per agent. Invoked via `--workstreams` flag. |
@@ -205,6 +211,8 @@ This phase is designed to be run **separately** after plan execution. The user m
 - **Critical Weaknesses** — severe architectural failures, regressions, security bypasses, or a stub/placeholder standing in for real implementation. No minimum, no maximum — report exactly what's real. Zero is a valid result, but only when the Coverage Ledger is complete. Each deducts **10-20** comparative-score points.
 - **Medium/Lesser Weaknesses** — style, naming, minor design, or documentation issues. Capped at **4** reported, to keep the audit from drifting into low-value nitpicking. Each deducts **2-10** points.
 
+**Finding IDs [INJECTED 2026-07-27 — Component 1, resolves helpdesk-tickets/20260727_implementation-plan_workflow.md]:** every reported finding carries a stable ID prefix — `CRIT-NN` for Critical, `MED-NN` for Medium/Lesser — assigned in emission order, 1-based, zero-padded to two digits (see GLOSSARY: Finding ID). This is a labeling requirement only: it does not change what is reported, how it is scored, the Coverage Ledger, or Completion Marking. Its sole purpose is to give `--remediate` (Phase 8) a citable, 1:1 traceability key so a drafted `Fix N` can name exactly which finding it resolves. IDs are scoped to their own report — the citable form is `<audit-filename>#CRIT-01` — and are never renumbered after the report is persisted.
+
 **Completion Marking Sub-Pass (mandatory, after Coverage Ledger + Findings, before the final report) — [INJECTED 2026-07-07, Sovereign Redesign Cluster Stage 5, PILLAR_04_POST_BUILD_HYGIENE_ARCHIVAL_NODELETE.md]:**
 
 This sub-pass prepares a plan's live surfaces for `/nodelete --archive` (Pillar 6) without changing that gate's own logic or `phase_status.py`'s logic — both remain untouched, consumed here as the source of truth (see GLOSSARY: Completion Marking, Archival Marker).
@@ -254,10 +262,12 @@ Strengths:
 - [Specific, cited examples]
 
 Critical Weaknesses (no minimum, no maximum — cite the Coverage Ledger entry):
-- [Specific, cited examples with impact explanation; score deduction 10-20 pts]
+- CRIT-01 — [claim] — `file:line` — Impact: [why it matters in real-world terms] — Score deduction: NN points.
+- CRIT-02 — [...]
 
 Medium/Lesser Weaknesses (max 4):
-- [Specific, cited examples; score deduction 2-10 pts]
+- MED-01 — [claim] — `file:line` — Impact: [...] — Score deduction: N points.
+- MED-02 — [...]
 
 Honest Assessment:
 - [One direct, evidence-based paragraph. Avoid hedging. Be brutally realistic.]
@@ -306,6 +316,8 @@ The workflow can accept multiple related requests in a single invocation and pro
 
 ### Divergence 4: Adversarial Post-Audit (`--audit` flag)
 After plan execution, the user may invoke `/implementation-plan --audit`.  This flag is designed to be called in a **separate iteration** after the main execution session triggering a separate, high-standard adversarial review using the methodology defined in Phase 5.
+
+**[ANNOTATED 2026-07-27]** What happens to the audit's findings afterward is Phase 8 (`--remediate`), a deliberately separate invocation — see STRICT RULE 30. The audit's own separation is not weakened by having a consumer; it is preserved by making that consumer a different command the user has to choose.
 
 ---
 
@@ -820,6 +832,101 @@ WORKSTREAM AUDIT COMPLETE — Iteration [N]
 
 ---
 
+## PHASE 8 — REMEDIATION DRAFT (`--remediate` flag)
+
+**[INJECTED 2026-07-27 — resolves helpdesk-tickets/20260727_implementation-plan_workflow.md, /nodelete]**
+
+Phase 5 produces structured Critical/Medium findings and stops at persistence. Nothing converted those findings into the numbered remediation phase that a Critical-bearing audit almost always needs — so every time, a human re-invented the request in their own words, and the resulting phase's completeness varied with the wording. This phase closes that gap.
+
+Invocation: `/implementation-plan --remediate [<audit-path>]`
+
+**This phase drafts. It never builds, and it is never auto-triggered by `--audit`** (STRICT RULE 30). `--audit` still terminates at the Submittal & Persistence Protocol exactly as before.
+
+### 8a. Resolve the source audit
+
+| Input | Behavior |
+|---|---|
+| Explicit path argument | Use it. |
+| No argument, an audit was produced this session | Use that audit. |
+| No argument, no session audit | Most recent `~/blueprint-workflows/implementation-plan/audits/*-<workspace-basename>.md` — resolve mechanically via `remediation_ledger.py --workspace`, never by eyeballing the directory. |
+| Nothing resolves | **HALT.** Report what was searched. Never draft against an inferred or reconstructed audit. |
+| Resolved audit's workspace ≠ current workspace | **HALT** unless the user explicitly overrides. Drafting one project's remediation into another project's `tasks.md` is the failure shape `CLOSED_20260707_suite-script-path-resolution_workflow.md` already cost this suite once. |
+
+### 8b. Enumerate — the Findings Ledger
+
+```bash
+python3 ~/blueprint-workflows/scripts/plan/remediation_ledger.py \
+  --audit <resolved-path> --output-json
+```
+
+(Or `--workspace <path>` to resolve and parse in one step. Paths are suite-rooted per role.md's Script path resolution constant.)
+
+**The script's enumeration is the authority.** Do not enumerate findings by reading the report — the same discipline that makes `git diff --stat` the authority for the Coverage Ledger. It emits, per finding: `id`, `severity`, `claim`, `citations[]`, `code_spans[]`, `deduction`, `id_source`.
+
+**Exit codes are load-bearing:**
+- `0` — findings enumerated. A `total` of 0 with `status: ok` is a genuine zero-findings audit; report that plainly and stop — there is nothing to remediate.
+- `1` — unreadable report or unresolvable audit. HALT.
+- `2` — **`no_findings_section`. This is a parse failure, NOT a zero-findings result.** HALT and report which audit could not be parsed. Never translate this into "nothing to remediate" — that is Hallucinated Success wearing an engine's output as a costume.
+
+### 8c. Defect-Class Preflight
+
+```bash
+python3 ~/blueprint-workflows/scripts/plan/defect_classes.py \
+  --audit <resolved-path> --workspace <workspace-root> --output-json
+```
+
+Runs **before** drafting, so its results shape each Fix's acceptance criteria rather than being appended afterward. For each finding it reports the already-diagnosed defect classes matched — suite-global (`scripts/plan/defect_classes.py`) and project-local (the workspace's own `PROCESS_LEARNINGS.md`) — each with a `counter_measure` string and the `matched_signals` that fired.
+
+Matching is deliberately generous: a false positive costs one extra acceptance criterion, a false negative costs a repeat of a lesson already paid for. Read `matched_signals` and discard a genuinely spurious match rather than accepting it silently.
+
+### 8d. Draft — one Fix per mapped finding
+
+```markdown
+#### Fix N: [imperative statement of the corrective action]
+
+**Resolves**: <audit-filename>#CRIT-03
+**Finding**: "[verbatim claim, quoted from the audit]"
+**Citations**: `file:line`, `file:line`
+**Defect classes**: [names from 8c, or NONE]
+
+**Steps**:
+1. …
+
+**MRC (acceptance criteria)**:
+- [ ] AC1 — [the exact command or inspection that fails now and passes after]
+- [ ] AC2 — [each 8c counter-measure, folded in as its own criterion]
+
+**Receipt**: `<absolute canonical path>` — resolve via `git rev-parse --show-toplevel`
+             or write it literally. Never a relative `../` chain.
+```
+
+Two constraints on this template:
+
+- **It is suite-derived, not project-derived.** It follows what this workflow already mandates — MRC identification (Phase 1), forward-contract validation (Phase 4 Part 1), Machine Header Discipline (STRICT RULE 28), and `/execute-build`'s receipt contract. Do not import a particular downstream project's local phase conventions as if they were the specification.
+- **The `Receipt` line's wording is load-bearing**, not boilerplate. A receipt written through a guessed relative path chain lands outside the intended workspace and defeats `phase_status.py` entirely — the exact defect that produced this phase's own commissioning ticket.
+
+### 8e. Findings Ledger accounting — the gate
+
+```
+Findings Ledger:
+- CRIT-01 → Fix 40
+- CRIT-02 → Fix 41
+- MED-01  → Fix 42
+- MED-02  → declined (reason: accepted risk — cosmetic, no downstream consumer)
+- MED-03  → declined (reason: already corrected in commit abc1234, verified)
+  … (every finding from 8b's enumeration — mapped or declined, no silent omissions)
+```
+
+A finding present in 8b's enumeration and absent here is an **incomplete draft**, not a clean one — checkable by inspection against the script's JSON, never a self-assessed judgment about one's own thoroughness. Declining is legitimate; declining *silently* is not (STRICT RULE 29).
+
+### 8f. Lint, then HITL
+
+1. **Header discipline** — the drafted phase header must satisfy STRICT RULE 28: `### Phase N: Title` and nothing else on that line, every annotation on the line below. A contaminated header silently breaks `phase_status.py`, the Completion Marking sub-pass, and `/nodelete --archive` in one stroke.
+2. **Present the draft for approval.** Do not write it into `tasks.md`, and build nothing, without an explicit unambiguous selection (STRICT RULE 26; `personality.md` Section 7).
+3. State plainly, in the drafted phase itself, that none of its fixes have been implemented yet.
+
+---
+
 ## STRICT RULES (never violate)
 
 1. Always perform comprehensive investigation before generating options.
@@ -851,6 +958,12 @@ WORKSTREAM AUDIT COMPLETE — Iteration [N]
 27. **[INJECTED 2026-07-07 — Sovereign Redesign Cluster Stage 5, PILLAR_04_POST_BUILD_HYGIENE_ARCHIVAL_NODELETE.md]** Phase 5's Completion Marking sub-pass MUST NOT mark a unit `**COMPLETED**` on checkbox state alone, and MUST NOT mark on receipt presence alone — both `scripts/focus/phase_status.py`'s `status` AND `receipt_status` must independently confirm before any marker is injected. A unit failing either half of this dual check is refused, not marked, and the refusal is recorded in the Archival Markers Added section with its specific reason. This sub-pass never alters `/nodelete` Pillar 6's own verification gate or `phase_status.py`'s logic — it consumes them as read-only sources of truth.
 28. **[INJECTED 2026-07-08 — resolves helpdesk-tickets/20260708_plan-archive-pipeline-design_workflow.md, Fix 0]** **Machine Header Discipline** — the `## Phase N` / `### Phase N` line in any generated `tasks.md` or `implementation-plan.md` MUST contain ONLY the canonical phase name (e.g., `## Phase 8.2: Chunking Structural Fix + Module Extraction`). All human-readable status annotations (`**READY FOR HANDOFF**`, `**COMPLETE YYYY-MM-DD**`), delegation notes (`(handoff: Gemini)`), parenthetical elaborations, and completion markers (`**COMPLETED [ARCHIVE:...]**`) MUST be placed on a **separate line immediately below the header** — never appended to the header line itself. **Reason this is non-negotiable:** the `## Phase N` header line is extracted verbatim by `scripts/focus/phase_status.py` as the normalized match key against `BUILD_RECEIPTS.md`'s `Phase/Stage:` field. An annotation in the header line contaminates that key, causing `receipt_status: not_found` for every affected phase, which silently blocks both the Completion Marking sub-pass (`--audit`, STRICT RULE 27) and `/nodelete --archive`'s Pillar 6 gate. The Videos workspace's correct pattern: `### Phase 8: Remediation & Fidelity Pass` (clean header) followed by `**COMPLETED [ARCHIVE:2026-07-07]** (...)` as the body line — confirmed `receipt_status: found_complete`. The blueprint-workflows anti-pattern: `## Phase 1 — Quick Wins — **READY FOR HANDOFF**` (annotation in header) — confirmed `receipt_status: not_found`.
 
+29. **[INJECTED 2026-07-27 — Findings Ledger, resolves helpdesk-tickets/20260727_implementation-plan_workflow.md]** `--remediate` (Phase 8) MUST enumerate the source audit's Critical and Medium findings mechanically via `~/blueprint-workflows/scripts/plan/remediation_ledger.py` before drafting anything, and MUST produce exactly one accounting line per enumerated finding — mapped to a numbered `Fix N`, or explicitly declined with a stated reason. A finding present in the enumeration but absent from the accounting is an incomplete draft, not a passing one. This halt condition is the Ledger being incomplete, checkable by inspection against the engine's own JSON — never a self-assessed judgment about one's own rigor, which cannot be independently verified. Exit code `2` (`no_findings_section`) is a **parse failure, not a zero-findings result**: HALT and say so. Reporting "nothing to remediate" on an unparsed audit is Hallucinated Success. *(Direct structural mirror of STRICT RULE 24.)*
+
+30. **[INJECTED 2026-07-27 — separation and non-execution]** `--remediate` MUST NOT be auto-triggered by `--audit`, and `--audit` MUST continue to terminate at the Submittal & Persistence Protocol. `--remediate` MUST NOT write to `tasks.md` and MUST NOT build anything — it produces a draft presented for approval, gated by STRICT RULE 26 and `personality.md` Section 7. The audit stays adversarial and separate precisely because the thing that consumes its findings is a different invocation with a different job.
+
+31. **[INJECTED 2026-07-27 — traceability and receipt-path discipline]** Every drafted `Fix N` MUST carry a 1:1 `**Resolves**: <audit-filename>#<FINDING-ID>` line binding it to exactly one enumerated finding, and MUST specify its receipt destination as an absolute canonical path — resolved via `git rev-parse --show-toplevel` or written literally. Relative `../` path chains are prohibited in drafted receipt destinations: they resolve against the invoking agent's cwd rather than the intended workspace, land the receipt outside `phase_status.py`'s search path, and produce `receipt_status: not_found` for genuinely completed work.
+
 ---
 
 ────────────────────────────────────────────
@@ -866,6 +979,14 @@ HOW TO BEGIN
 **Audit Mode** (`/implementation-plan --audit`):
 - Perform adversarial post-execution audit with tough but logical standards using the methodology in Phase 5.
 - Execute the Submittal & Persistence Protocol to record the audit globally and link it locally.
+
+**Remediation Draft Mode** (`/implementation-plan --remediate [<audit-path>]`):
+1. Phase 8a (Resolve the source audit — HALT rather than infer one)
+2. Phase 8b (Enumerate the Findings Ledger via `remediation_ledger.py` — the script is the authority)
+3. Phase 8c (Defect-Class Preflight via `defect_classes.py` — before drafting, not after)
+4. Phase 8d (Draft one `Fix N` per mapped finding)
+5. Phase 8e (Findings Ledger accounting — every finding mapped or explicitly declined)
+6. Phase 8f (Header-discipline lint, then HITL — drafts only, never builds)
 
 **Workstream Design Mode** (`/implementation-plan --workstreams`):
 1. Phase 6a (Intake — read architect directive + concept.md)
@@ -891,6 +1012,8 @@ INTEGRATION WITH OTHER WORKFLOWS
 /retrospective   → Can feed into future audits
 /secretary       → Records planning sessions
 /harden-workflow → Can harden resulting plans
+/execute-build   → Builds the remediation phase --remediate drafts, once the user approves it
+/retrospective   → PROCESS_LEARNINGS.md is a Defect-Class Preflight input (Phase 8c)
 /workstream      → Reads the implementation-plan.md this workflow produces (--workstreams mode); agents execute assigned workstreams via /workstream --claude/--gemini/--grok
 
 Multi-agent iteration cycle position:
@@ -906,5 +1029,5 @@ Multi-agent iteration cycle position:
 
 ### Change Log
 
-See `.changelogs/implementation-plan.md` for the full history (14 entries, latest: 2026-07-08).
+See `.changelogs/implementation-plan.md` for the full history (14 entries, latest: 2026-07-27).
 

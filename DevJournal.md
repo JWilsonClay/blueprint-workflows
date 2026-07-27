@@ -198,3 +198,92 @@
 - **Modified**: `execute-build.md`, `implementation-plan.md`, `sentinel.md`, `helpdesk-tickets.md`, `nodelete.md` (pre-existing, unmodified — consumed only), `focus-plan.md`, `workstream.md`, `triage.md`, `secretary.md`, `role.md`, `.gitignore` (twice, two distinct root causes), `scripts/doorway/{doorway,integrity}.py`, `scripts/engine_utils.py`.
 - **Closed tickets**: `CLOSED_20260705_doorway_lazy-scan-stale-readme_workflow.md`, `CLOSED_20260706_gitignore-untracked-self-and-ledgers_workflow.md` (closed same-session as filed), `CLOSED_20260707_history-archive-gitignored_workflow.md` (closed same-session as filed).
 - **Appended**: this entry; `manifest/history/WORKFLOW_MANIFEST_2026-Q3b.md`; `.history/archive/pr-06-02-tasks.md.ledger.md` (first-ever real entry in this ledger).
+
+---
+
+## 2026-07-27 — /implementation-plan --remediate: the Findings-to-Remediation Bridge (3 components, engine-backed)
+
+### Today's Progress
+- Filed-ticket intake → **design pass → user approval → build**, in that order. Ticket `20260727_implementation-plan_workflow.md` reported that `/implementation-plan --audit` produced structured Critical/Medium findings and then simply stopped: nothing converted them into the numbered `Fix N` remediation phase that a Critical-bearing audit needs nearly every time. Five recurrences in one downstream project, each bridged by an ad-hoc, differently-worded human prompt.
+- Wrote a full **Senior Architect Design Pass** into the ticket itself (append-only) before writing any code. User approved all three components explicitly; only then did execution begin.
+- **Component 1 — Finding IDs.** Phase 5 findings now carry `CRIT-NN` / `MED-NN`, emission order, citable as `<audit-filename>#CRIT-01`. Purely additive: STRICT RULES 8/24/25/27 untouched, scoring unchanged.
+- **Component 2 — Phase 8 (`--remediate`).** 8a resolve source audit → 8b enumerate → 8c preflight → 8d draft → 8e Findings Ledger accounting → 8f header lint + HITL. STRICT RULES 29-31 added (28→31). `phase_count` 8→9, `version` 7→8.
+- **Component 3 — Defect-Class Preflight.** `scripts/plan/defect_classes.py`: six suite-global defect classes plus project-local `PROCESS_LEARNINGS.md` loading, folding each matched class's counter-measure into the drafted fix's MRC.
+- **Engines built** under `scripts/plan/`: `findings.py` (audit parser), `remediation_ledger.py` (CLI), `defect_classes.py`, plus `LedgerReporter` added to the existing `reporter.py`.
+- Verification: **533/533 tests green** (46 new), `lint_workflows.py` **CLEAN** on the modified workflow, live regression oracle passed, full 68-audit corpus swept.
+- Ticket closed (`CLOSED_` prefix) with a Remediation Record; `.changelogs/implementation-plan.md` entry 14 appended.
+- Client-confidentiality flag raised and actioned: the ticket carried five references to a client project name in a public repo. Added to `.gitignore` following the existing per-ticket exclusion convention, and the ignore entry was re-pinned when the file was renamed to `CLOSED_`.
+
+### Architecture Updates
+- **The Findings Ledger is the real architectural addition**, not the flag. It is the deliberate structural mirror of Phase 5's Coverage Ledger: every enumerated finding gets exactly one accounting line — mapped to a `Fix N` or explicitly declined with a reason — so completeness is checkable by inspection against the engine's JSON rather than dependent on how carefully someone read the report. A flag alone would not have fixed the reported defect; it would have made the same variance easier to invoke.
+- **Placement answered the open bloat ticket rather than ignoring it.** `20260707_workflow-architectural-bloat_workflow.md` (OPEN/CRITICAL) names files of this shape "non-execution monoliths." The mode stayed in `implementation-plan.md` — it is definitionally coupled to Phase 5's output format, and a separate command file would create an unenforced cross-file contract — while its mechanics went into `scripts/plan/`, following the engine-backed pattern nearly every Sovereign workflow now uses. Prose grew 910→1031 lines (+13% against a projected +10%; the overrun is recorded, not rounded away).
+- **Division of labor held**: the scripts enumerate and verify; they never draft. Mapping a finding to a corrective action is judgment and stays with the agent — the same split as `/focus-plan`, `/execute-build`, `/triage`, `/redteam`, and the rest of the engine-backed suite.
+- **Structural additions**: `scripts/plan/` grew from 3 to 6 modules; `scripts/tests/` gained `test_remediation_ledger.py` and `test_defect_classes.py`. No files deleted, no existing behavior altered.
+
+### Implementation Plan
+Build order executed as designed (dependency-correct), and now complete:
+1. Component 1 schema (Phase 5 + GLOSSARY) — **done**
+2. `remediation_ledger.py` + `findings.py` + 24 tests — **done**
+3. `defect_classes.py` + 22 tests — **done**
+4. Phase 8 prose + STRICT RULES 29-31 + frontmatter — **done**
+5. Full suite + linter + live regression oracle — **done**
+6. Changelog entry 14 + ticket closure — **done**
+
+Remaining (not started, not authorized): commit the working tree; journal backfill for 2026-07-08 → 2026-07-26.
+
+### Key Decisions & Learnings
+- **The ticket's own remediation proposal was corrected twice, and both corrections stuck.** (a) The flag is `--remediate`, not the floated `--dnd`, which reads as "do not disturb." (b) The `Fix N` template is suite-derived — MRC from Phase 1, forward-contract validation from Phase 4 Part 1, STRICT RULE 28 header discipline, `/execute-build`'s receipt contract — **not** derived from the commissioning project's own phases. Encoding one downstream project's local conventions into a project-agnostic suite command would import local practice as universal law.
+- **The answer to "why did the lesson recur?" was sharper than "project memory failed."** The suite *already had* two mechanisms aimed at that exact defect class — STRICT RULE 28 and STRICT RULE 27's dual cross-reference — and both fired correctly, returning `receipt_status: not_found`. The phases were marked `**COMPLETED**` anyway. The gap was never detection; it was that nothing consulted already-diagnosed classes at *drafting* time, when the correct acceptance criterion could still be written into the fix. That reframing is what Component 3 was built against.
+- **The single most important correctness property of the engine** is that a genuine zero-findings audit and an unparseable one are never conflated. Enforced at three layers: the parser's `status` field, CLI exit code 2, and STRICT RULE 29's explicit HALT. Reporting "nothing to remediate" on an unparsed audit would be Hallucinated Success in engine form.
+- **A design premise was too small a sample, and saying so mattered more than defending it.** The design asserted the audit findings shape "held across both sampled audits." True for the two recent ones; the real corpus is 68 audits spanning every scoring model this workflow has ever had, with the findings heading written ~20 ways and **four** distinct item conventions. The conclusion survived (the positional-ID fallback existed for exactly this), but the evidence offered for it did not.
+- **A loud refusal beats a confident guess.** Three May-2026 `## Audit Findings`-shaped reports and six workstream audits correctly HALT with exit code 2 rather than being force-fit. Guessing severity for an unlabeled finding was judged worse than halting.
+
+### Challenges & Resolutions
+- **12 false negatives across the audit corpus**, found by live runs rather than by unit tests. Three separate item conventions were silently unparsed: `###` sub-headings (the section collector was terminating on them), `- **Deduction:** N points` detail lists nested beneath those, and bare labelled paragraph lines (`**C1 — claim**`, `WEAKNESS 1 — claim`). All four conventions now parse with explicit precedence. Deductions parse in three formats including a unicode-minus parenthetical `(−12)`.
+- **Citations were initially noise** — every backticked span, including `None`, `FAIL`, and `wb.save()`. Split into `citations` (path-like: no whitespace, plus a separator or `name.ext` tail) and `code_spans`, deduplicated, with `raw` preserving the finding verbatim so nothing is lost.
+- **Claims degraded to enumeration labels** (`"W1"`, `"1"`) under the sub-heading conventions, because the em-dash split returned the label. Fixed by stripping a leading enumeration label and sourcing the claim from the boundary line where the convention puts it there.
+- **A shell working-directory drift produced a false finding during the follow-on `/sentinel` run** — an earlier `cd` into `implementation-plan/audits/` persisted, so a relative-path check reported no `DevJournal.md` and no `.changelogs/`. Both exist. Caught and re-verified with absolute paths before any conclusion was drawn or acted on.
+- **Changelog entry 14 did not exist**, though the workflow footer claimed "14 entries, latest 2026-07-08" — STRICT RULE 28's addition was never logged. Today's entry took number 14 and stated the gap explicitly rather than retroactively fabricating the missing one.
+
+### Next Actions
+1. **Commit the working tree** — 4 modified, 5 new files, currently uncommitted. Nothing has been committed or pushed.
+2. **Exercise `--remediate` live** against a real Critical-bearing audit end-to-end, so the mode has a worked precedent the way `--audit` does.
+3. **Backfill the journal gap**: 2026-07-08 → 2026-07-26 is unjournaled (29 commits). Record lives in `git log`, `.changelogs/`, and `manifest/history/` — this entry deliberately does not invent a narrative for work it was not present for.
+4. **Watch the bloat ticket**: `implementation-plan.md` is now 1031 lines. It remains the strongest candidate in the suite for the externalization the bloat ticket calls for.
+5. **Do not create the 39 missing READMEs** the Tier-2 sentinel finding lists — that is the exact anti-pattern the Doorway Design Invariant forbids. Noted here so a future session does not "fix" it.
+
+### Documentation Changes Summary
+- **Created**: `scripts/plan/findings.py`, `scripts/plan/remediation_ledger.py`, `scripts/plan/defect_classes.py`, `scripts/tests/test_remediation_ledger.py`, `scripts/tests/test_defect_classes.py`
+- **Modified**: `claude-commands/implementation-plan.md` (Phase 5 schema, Phase 8, STRICT RULES 29-31, GLOSSARY ×3, HOW TO BEGIN, INTEGRATION, frontmatter), `scripts/plan/reporter.py` (`LedgerReporter`), `.gitignore` (client-confidential ticket exclusion, re-pinned on rename)
+- **Appended**: `.changelogs/implementation-plan.md` entry 14; this entry
+- **Closed tickets**: `CLOSED_20260727_implementation-plan_workflow.md` (filed and closed same day; gitignored — client-confidential forensic evidence)
+
+
+## 2026-07-27 -- Workspace Edit Boundary Review & Sentinel Drift Check
+
+### Today's Progress
+- Reviewed and contextualized helpdesk ticket 20260727_personality_workflow.md regarding the Workspace Edit Boundary.
+- Performed a /sentinel scan and /document invocation to record the incident.
+
+### Architecture Updates
+- Identified a structural precedence conflict between `personality.md` Section 6 (Workspace Edit Boundary) and Sovereign Suite workflows' hardcoded external paths.
+- Confirmed an interim policy where invoking a workflow with hardcoded external paths serves as standing authorization for those specific operations.
+
+### Implementation Plan
+- N/A for this session.
+
+### Key Decisions & Learnings
+- The strict edit boundary defined in `personality.md` lacked a carve-out for the Sovereign Suite's own required cross-workspace operations (e.g., audit submittals and ticket filing).
+- Workflows hardened independently can accumulate conflicting assumptions that surface only during active use across diverse project structures.
+
+### Challenges & Resolutions
+- Challenge: Executing `/helpdesk-tickets` or `/implementation-plan` flagged boundary violations because they write outside the active workspace.
+- Resolution: Interim policy granted to treat workflow invocation as explicit authorization. Permanent fix deferred to Senior Architect review for `personality.md` and `CLAUDE.md`.
+
+### Next Actions
+1. Review and apply proposed permanent fix to `personality.md` Section 6 and `~/.claude/CLAUDE.md`.
+2. Audit existing external-write targets across all suite workflows to ensure their scope remains minimal.
+
+---
+**Documentation Changes Summary**
+- `DevJournal.md`: Appended Workspace Edit Boundary incident context.
