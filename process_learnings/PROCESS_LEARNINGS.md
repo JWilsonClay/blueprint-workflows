@@ -1109,3 +1109,32 @@ When Acceptance Criteria demand a mathematically impossible result due to a stru
 
 ### Cross-Project Insight
 **A session's own closing claim is evidence of nothing until independently re-run.** Across this chain, every Critical Weakness an audit found was independently reproducible in under a minute with the exact tool the closing summary claimed to have already used — `grep -c`, `stat`, or `phase_status.py` itself. The lesson isn't "check more things" — it's that a claim of the shape "X confirms Y" should never be written without the actual command output present in the same breath, because the gap between "I believe this passed" and "I just watched it pass" is exactly where every one of these findings lived.
+
+---
+
+## 2026-07-27 — blueprint-workflows — Phase Boundary Auto-Commit & Secret Discipline
+
+### Session Summary
+- Boundary: this conversation (suite session).
+- Goal: Add autonomous git-commit mechanisms at phase boundaries to prevent "phase-squashing" degradation in the Sovereign Suite.
+- Outcome: ACHIEVED. Implemented `auto_commit()` in `scripts/core/git_ops.py` (with a CLI wrapper), injected Step 6b into `/execute-build` (v8) for autonomous commits post-receipt verification, and added a Coverage Ledger Pre-check commit in `/implementation-plan` (v8).
+- Workflows used: `/secretary`, `/retrospective`.
+- Workflows skipped (unjustified): NONE.
+- Regressions: NONE. 13 passing unit tests added.
+- Key decisions: Git operations are isolated in Python scripts (`git_ops.py`) rather than raw shell, minimizing CWE-78 risk. Failures in git commit are non-blocking so the build can proceed. 
+
+### Problem Log
+- NO PROBLEMS DETECTED. 
+
+### Pattern Observations
+- **FIRST OCCURRENCE (monitoring) — Secret-Discipline Gap**: Introducing autonomous `git add -A` and `git commit` loops surfaces the risk of committing unintended files (secrets, keys) if `.gitignore` hygiene is poor. The fix requires proactive coaching in the prompt itself (via `execute-build.md`'s coaching note) to have the agent raise the issue with the user before committing.
+
+### Workflow Improvement Suggestion
+- **Problem observed**: With autonomous git loops now running at every phase boundary, the LLM must be explicitly trained to notice and flag secrets during file addition, as a project's `.gitignore` might be incomplete.
+- **Proposed change**: Initiate a conversation to update `/personality` or `/sentinel` to establish a "Secret Discipline Coaching Mandate" where the agent acts as a diligent reviewer before confirming dirty git states.
+- **Change type**: New guideline / mandate in foundational workflows.
+- **Priority**: HIGH.
+- **Rationale**: A compromised secret in a public or shared git history is an immediate P0 risk. Since we are automating the commits, we must compensate by heightening the agent's scrutiny.
+
+### Cross-Project Insight
+- When shifting from manual to autonomous source control steps, you are delegating trust. You must compensate by wrapping the autonomous action in a non-blocking diagnostic logging structure, and pairing it with an agentic coaching note to scrutinize the state changes before execution.

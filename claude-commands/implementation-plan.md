@@ -202,7 +202,24 @@ This phase is designed to be run **separately** after plan execution. The user m
 - You must compare the plan against what a **top 10% senior staff engineer** would have produced.
 
 **Coverage Ledger (mandatory — see GLOSSARY; this is what replaced the old minimum-weakness-count requirement):**
+**Pre-Ledger Commit Boundary Check [ADDED 2026-07-27 — resolves helpdesk-tickets/20260727_implementation-plan_workflow.md]:** The Coverage Ledger's `git diff --stat` (Step 1) assumes the workspace is committed — an uncommitted workspace produces a multi-phase diff that silently corrupts the Ledger's changeset boundary. Before Step 1, verify and enforce a clean boundary:
+```bash
+# Check for uncommitted changes in the workspace
+git -C {WORKSPACE} status --porcelain 2>/dev/null
+```
+- **Clean (no output):** proceed to Step 1 normally.
+- **Dirty (output present):** autonomously commit before enumeration:
+  ```bash
+  python3 ~/blueprint-workflows/scripts/git/auto_commit.py \
+      --workspace {WORKSPACE} \
+      --message "pre-audit: uncommitted work checkpoint [{workspace basename}]" \
+      --output-json
+  ```
+  Log the result as `[PRE-AUDIT COMMIT] {short_hash} — workspace was dirty, auto-committed before Coverage Ledger enumeration` in the audit report's Coverage Ledger header. Then proceed to Step 1 with a now-clean boundary.
+- **Git unavailable:** log `[PRE-AUDIT] git unavailable — falling back to plan file list` and proceed to Step 1's git-unavailable fallback (every file the plan itself lists as touched).
+
 1. Before writing anything, enumerate the actual changeset mechanically: `git diff --stat` against the base this plan was executed from, or — if git is unavailable — every file the plan itself lists as touched.
+
 2. For every file in that enumeration, produce exactly one line: either a cited weakness (see Findings below), or an explicit clearance: `[file] — reviewed, no critical-level issue: [one-clause reason]`.
 3. A file present in the enumeration but absent from this accounting means the audit is **incomplete**, not a passing result — see STRICT RULE 24.
 4. If the changeset is too large to fully cover in one pass: **HALT.** Report exactly which files were reviewed and which were not. Do not emit a score against incomplete coverage. Let the user decide whether to invoke the audit again for the remainder or explicitly accept partial coverage.
