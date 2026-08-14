@@ -2,13 +2,14 @@
 description: "Sovereign Session Secretary — meta-layer orchestrator that closes every session with SUITE_HEALTH.md + manifest narrative update, HANDOFF.md briefing, ANOMALY_LOG, Suite Learning Registry pass, ledger growth check, and triggers for /document, /receipt-check, and /retrospective. v6: script-backed by the Session Close Evidence Engine (scripts/secretary/secretary_audit.py) for Retrospective Lag, retrospective freshness, artifact freshness, and receipt-family presence."
 type: meta
 grade: Sovereign
-version: 7
-content_hash: "sha256:073556aed6ba069b"
-last_hardened: "2026-07-26"
-strict_rule_count: 21
+version: 8
+content_hash: "sha256:68b513c539befa03"
+last_hardened: "2026-07-28"
+strict_rule_count: 22
 phase_count: 8
 context_retention: high
-flags: []
+flags:
+  - "--context"
 dependencies:
   - "/document"
   - "/receipt-check"
@@ -22,6 +23,7 @@ produces:
   - "~/blueprint-workflows/manifest/CONTRADICTION_REGISTRY.md"
   - ".workflow_state/HANDOFF.md"
   - ".workflow_state/ANOMALY_LOG.md"
+  - ".workflow_state/CONTEXT_LEDGER.md (--context mode only — the ONLY file that mode writes)"
 consumes:
   - "~/blueprint-workflows/claude-commands/*.md"
   - ".workflow_state/receipts/*"
@@ -77,6 +79,69 @@ This workflow does NOT:
 | **Retrospective Lag** | **[ADDED 2026-07-05]** Named failure shape: a session closes (Phase 1 writes its `manifest/history/` narrative entry) but its Phase 6 `/retrospective` entry never lands in `PROCESS_LEARNINGS.md` — and the gap persists silently across further sessions because nothing checks the *prior* session's Phase 6, only the current one's (ADDENDUM E). Closed by Step 0b.5's one-step-back consistency check. |
 | **Closed-ticket archival pass** | **[ADDED 2026-07-26, resolves helpdesk-tickets/20260726_ticket-archival-orphaned_workflow.md]** Step 1.0.6: moves `helpdesk-tickets/CLOSED_*` files older than 7 days into `helpdesk-tickets/archive/`, unconditionally, every run. A relocation of `/harden-workflow`'s Step TM-5 — which still exists and still fires on its own path — to a trigger that cannot be bypassed by a ticket's closure-path routing. Uses `mv -n`: archived history is moved, never deleted, and never overwritten. |
 | **Session Close Evidence Engine** | **[ADDED 2026-07-07, implementation-plan.md Phase 4.4]** `scripts/secretary/secretary_audit.py` — the read-only mechanical layer behind Step 0b.5 (Retrospective Lag comparison), ADDENDUM E (retrospective date-match), ADDENDUM F (artifact freshness), and the TRIAGE_RECEIPTS/DESIGN_RECEIPTS consumption blocks (generalized receipt-family presence). Reports facts only — mtimes, date comparisons, file presence — never whether the session's own narrative content is honest or complete. Architectural sibling of `scripts/build/` (backs `/execute-build`) and `scripts/focus/` (backs `/focus-plan`). |
+| **CONTEXT_LEDGER.md** | **[ADDED 2026-07-28, resolves helpdesk-tickets/20260728_secretary_workflow.md]** `{project}/.workflow_state/CONTEXT_LEDGER.md` — append-only, agent-attributed record of an agent's working context at a checkpoint: hypotheses held, decisions and their reasoning, and claims taken on a peer agent's word without independent verification. Written only by the `--context` MODE GATE, never by a full session close. Distinct from `HANDOFF.md` (single-author, overwritten, forward-looking) and from `BUILD_RECEIPTS.md` (what was built, not what the agent was thinking). Being append-only, it cannot be clobbered by a peer agent's close — the structural property `HANDOFF.md` lacks. |
+
+---
+
+## MODE GATE — `--context` [ADDED 2026-07-28, resolves helpdesk-tickets/20260728_secretary_workflow.md]
+
+**Check this before Phase 0, on every invocation.** If `/secretary` was invoked with no flag: skip this entire section and begin Phase 0 normally — nothing below applies.
+
+If invoked as **`/secretary --context`**: execute the Context Capture Step below *instead of* Phases 0–7, then stop.
+
+This mode exists because `/secretary` previously had only two states — a complete session close, or nothing (STRICT RULES 1, 7, 13) — leaving no way to preserve an agent's working context at a phase boundary, or to record a second agent's slice of a session a peer agent had already closed. The gap's confirmed cost: eleven days of active build work in one project with zero session closes, because the only available instrument was too expensive to run at the cadence actually needed.
+
+**What this mode does NOT do — the boundary is the point:**
+
+| Skipped | Why |
+|---|---|
+| Steps 0b.5, 1.0.5, 1.0.6, 1.2, and all of Phase 1 | Global, deterministic, idempotent — the next full close performs them. |
+| Phases 2, 3, 4, 5, 6, 7 | This is not a session close and must never resemble one. |
+| **All writes to `manifest/history/`, `manifest/SUITE_HEALTH.md`, `PROCESS_LEARNINGS.md`** | **Load-bearing, not an optimization.** A narrative entry with no matching retrospective is the literal definition of Retrospective Lag — writing one here would trip Step 0b.5's `gap_detected` on every subsequent session, permanently. |
+| Every script invocation | Zero scripts run. The cheapness *is* the feature. |
+
+`--context` writes exactly one file, inside the active project workspace. It is the only `/secretary` mode requiring no Suite Workflow Exemption (`personality.md` Section 6).
+
+**Context Capture Step.**
+
+Establish this agent's own slice only — not the whole session — then append to `{project}/.workflow_state/CONTEXT_LEDGER.md` via shell redirection using the Bash tool. Append-only, the same discipline ADDENDUM D mandates for `ANOMALY_LOG.md`. If the file does not exist, create it with the Write tool first; every subsequent write uses `cat >>`.
+
+```bash
+cat >> "{project}/.workflow_state/CONTEXT_LEDGER.md" << 'CONTEXT_EOF'
+
+## [YYYY-MM-DD HH:MM] — [agent + model] — checkpoint [N]
+- Trigger:                PRE-COMPACTION / PHASE BOUNDARY / HANDING TO PEER / OTHER: [what]
+- Working hypotheses:     [what this agent currently believes but has not written anywhere else, or NONE]
+- Decisions + why:        [choices made this slice and the reasoning behind them — the part that dies with the context window]
+- Unverified peer claims: [assertions from another agent this agent has NOT independently re-checked, or NONE]
+- Next intended action:   [what this agent would do next if its context survived]
+- Files touched:          [this slice's scope boundary]
+CONTEXT_EOF
+```
+
+**On the entry's content.** Record what no receipt already captures. `BUILD_RECEIPTS.md` holds what was built; this holds what the agent was *thinking* — hypotheses, reasoning, and what it has not verified. An entry that merely restates a build receipt is wasted effort.
+
+**The Unverified peer claims field is not optional padding.** In a multi-agent project it is the standing home for exactly the class of claim that `helpdesk-tickets/20260726_execute-build-crossagent_workflow.md` identifies as requiring orchestrator-side re-verification. If this agent has taken a peer's word for anything — a receipt landed, a marker was corrected, a test passed — it belongs here, named, so the next agent knows what remains unchecked. `NONE` is a real answer; a blank is not.
+
+**Context Checkpoint Receipt.** Emit this, then stop. It is deliberately not a Secretary Receipt and must never be presented as one:
+
+```
+────────────────────────────────────────────
+CONTEXT CHECKPOINT — /secretary --context
+────────────────────────────────────────────
+Date/time:        [timestamp]
+Agent:            [agent + model]
+Project:          [name]
+Trigger:          [from the entry above]
+Written to:       {project}/.workflow_state/CONTEXT_LEDGER.md (appended)
+Checkpoint:       [N] this session
+Unverified peer claims recorded: [N / NONE]
+
+SESSION CLOSE: NOT PERFORMED — full /secretary still required.
+────────────────────────────────────────────
+```
+
+That final line is mandatory and verbatim. Without it a checkpoint can be mistaken for a close, and the real close never happens — a Hallucinated Success in session-boundary form.
 
 ---
 
@@ -584,6 +649,7 @@ Status:                SESSION CLOSE COMPLETE
 19. **[INJECTION 2026-07-04]** Phase 1 always runs the ledger growth check (Step 1.2) on every run, without exception — same STRICT RULE 11 exemption as Rule 18. Append the session's narrative entry to whichever shard the monitor reports active; never hardcode a shard filename. A `SUITE_PHYLOGENY.md` WARN is advisory, like a Registry REVIEW verdict — always note the disposition in the Secretary Receipt, never silently absorb it.
 20. **[INJECTION 2026-07-05]** Phase 0 always runs the Retrospective Lag check (Step 0b.5) on every run, without exception — same STRICT RULE 11-independent status as Rules 18-19. A `GAP DETECTED` result is advisory (does not block this session's own Phase 6) but must be noted in the Secretary Receipt every time it fires, never silently absorbed.
 21. **[INJECTION 2026-07-26, resolves helpdesk-tickets/20260726_ticket-archival-orphaned_workflow.md]** Phase 1 always runs the closed-ticket archival pass (Step 1.0.6) on every `/secretary` run, without exception — same STRICT RULE 11-independent status as Rules 18-20, and for the same underlying reason. Archival must never again be contingent on a *specific sub-workflow* having been invoked: it stopped for six weeks precisely because it lived only inside `/harden-workflow --ticket`, a path the two-path ticket model structurally bypasses for every Substantive/Logic closure. A step whose real trigger is "a session ended" belongs to the workflow that owns session boundaries. Use `mv -n`, never bare `mv` — a name collision with an already-archived ticket must be skipped and reported, never silently overwritten (`/nodelete`). The archival result is reported in the Secretary Receipt every run, including the no-op case.
+22. **[INJECTION 2026-07-28, resolves helpdesk-tickets/20260728_secretary_workflow.md]** `/secretary --context` (MODE GATE) is a bounded, explicitly-invoked exemption from STRICT RULES 1, 7, and 13 — and from those three only. Rules 1, 7, and 13 are unchanged and remain in full force for every unflagged invocation; they are carved out here rather than edited, per `/nodelete`. The exemption's limits are absolute: `--context` must be explicitly invoked by the user and never inferred; it writes exactly one file, `{project}/.workflow_state/CONTEXT_LEDGER.md`, by append only; it writes nothing to `manifest/history/`, `manifest/SUITE_HEALTH.md`, or `PROCESS_LEARNINGS.md` — a narrative entry without a matching retrospective would trip Step 0b.5's Retrospective Lag detector permanently, which is why that prohibition is structural rather than economic; and its receipt must carry the verbatim line `SESSION CLOSE: NOT PERFORMED — full /secretary still required.` A `--context` run is never a session close, is never counted as one, and never satisfies Rule 1's requirement that a session end with `/secretary`.
 
 ---
 
@@ -591,6 +657,11 @@ Status:                SESSION CLOSE COMPLETE
 HOW TO BEGIN
 ────────────────────────────────────────────
 When activated at session close, execute ALL phases in sequence. Do not stop after producing artifacts.
+
+  MODE GATE: If invoked as `/secretary --context` — execute the Context Capture Step only,
+            emit the Context Checkpoint Receipt, and stop. Phases 0-7 do not run, no scripts
+            run, and nothing outside {project}/.workflow_state/ is written. Unflagged
+            invocation: skip the gate entirely and proceed to Phase 0. (STRICT RULE 22)
 
   Phase 0:  Establish session scope — scope, deliverables, anomalies → produce SESSION MANIFEST
   Phase 1:  Scan ~/blueprint-workflows/claude-commands/, update manifest/SUITE_HEALTH.md

@@ -69,3 +69,13 @@ Add a second, standing override category to `personality.md` Section 6 (and its 
 **`personality.md` Change Log entry**: #6
 **Phylogeny Disposition**: TRANSFER — new exemption pattern transferred from `personality.md` to `CLAUDE.md`, matching established lineage for Sections 6-8.
 **Open questions resolved**: All three from Section 4 of the ticket addressed (scope definition: path-anchored; external-write audit: completed; recertification: done this session).
+
+---
+## Addendum — 2026-07-27, /secretary session close
+
+Independently re-verified this closure at session close. The substantive fix is genuine — `personality.md` Section 6's Suite Workflow Exemption and its `CLAUDE.md` mirror were both directly read and confirmed present and correctly scoped. Two closure-process gaps found, neither touched here (outside `/secretary`'s documentation-only mandate — both are workflow-protocol-file edits):
+
+1. **Content hash mismatch**: `lint_workflows.py` reports `personality.md`'s declared `content_hash` does not match its actual current content. The closure record above did not actually finalize this, despite claiming "content_hash recomputed."
+2. **Phylogeny Disposition was claimed but not recorded**: this closure's own `Phylogeny Disposition: TRANSFER` line had no corresponding entry in `manifest/SUITE_PHYLOGENY.md` until this session's `/secretary` close wrote one — see "Lineage Entry — 2026-07-27 — The Suite Workflow Exemption..." there.
+
+Both flagged for a proper `/harden-workflow` recertification pass, consistent with this closure's own stated deferral.
