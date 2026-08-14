@@ -2,10 +2,10 @@
 description: "Sovereign Session Secretary — meta-layer orchestrator that closes every session with SUITE_HEALTH.md + manifest narrative update, HANDOFF.md briefing, ANOMALY_LOG, Suite Learning Registry pass, ledger growth check, and triggers for /document, /receipt-check, and /retrospective. v6: script-backed by the Session Close Evidence Engine (scripts/secretary/secretary_audit.py) for Retrospective Lag, retrospective freshness, artifact freshness, and receipt-family presence."
 type: meta
 grade: Sovereign
-version: 8
-content_hash: "sha256:68b513c539befa03"
-last_hardened: "2026-07-28"
-strict_rule_count: 22
+version: 9
+content_hash: "sha256:593c9e4d8fe4e076"
+last_hardened: "2026-08-13"
+strict_rule_count: 23
 phase_count: 8
 context_retention: high
 flags:
@@ -26,6 +26,7 @@ produces:
   - ".workflow_state/CONTEXT_LEDGER.md (--context mode only — the ONLY file that mode writes)"
 consumes:
   - "~/blueprint-workflows/claude-commands/*.md"
+  - "~/blueprint-workflows/manifest/delivery_surfaces.json"
   - ".workflow_state/receipts/*"
 platform_requirements:
   file_write: true
@@ -78,6 +79,7 @@ This workflow does NOT:
 | **scripts/ledger/** | **[ADDED 2026-07-04]** The deterministic engine (Step 1.2) that performs narrative-shard rollover and the `SUITE_PHYLOGENY.md` growth warning, config-driven via `ledger_config.toml`. Always uses the real OS clock for quarter determination — never agent inference. |
 | **Retrospective Lag** | **[ADDED 2026-07-05]** Named failure shape: a session closes (Phase 1 writes its `manifest/history/` narrative entry) but its Phase 6 `/retrospective` entry never lands in `PROCESS_LEARNINGS.md` — and the gap persists silently across further sessions because nothing checks the *prior* session's Phase 6, only the current one's (ADDENDUM E). Closed by Step 0b.5's one-step-back consistency check. |
 | **Closed-ticket archival pass** | **[ADDED 2026-07-26, resolves helpdesk-tickets/20260726_ticket-archival-orphaned_workflow.md]** Step 1.0.6: moves `helpdesk-tickets/CLOSED_*` files older than 7 days into `helpdesk-tickets/archive/`, unconditionally, every run. A relocation of `/harden-workflow`'s Step TM-5 — which still exists and still fires on its own path — to a trigger that cannot be bypassed by a ticket's closure-path routing. Uses `mv -n`: archived history is moved, never deleted, and never overwritten. |
+| **Delivery-surface verification** | **[ADDED 2026-08-13, resolves helpdesk-tickets/20260813_secretary_workflow.md]** Step 1.1.5: forward-resolution of every canonical payload onto each active surface registered in `manifest/delivery_surfaces.json` (engine: `scripts/secretary/delivery_surfaces.py`, invoked via `secretary_audit.py --delivery-registry`). Exists because Step 1.1's payload scan is structurally incapable of seeing a dead surface — the 2026-08-13 Antigravity state-root move stranded all 33 pointers while this file's index reported 33/33 healthy. Failures are named per entry (missing / dangling / mismatched); orphans are informational; a missing PRIMARY state root is its own named condition. |
 | **Session Close Evidence Engine** | **[ADDED 2026-07-07, implementation-plan.md Phase 4.4]** `scripts/secretary/secretary_audit.py` — the read-only mechanical layer behind Step 0b.5 (Retrospective Lag comparison), ADDENDUM E (retrospective date-match), ADDENDUM F (artifact freshness), and the TRIAGE_RECEIPTS/DESIGN_RECEIPTS consumption blocks (generalized receipt-family presence). Reports facts only — mtimes, date comparisons, file presence — never whether the session's own narrative content is honest or complete. Architectural sibling of `scripts/build/` (backs `/execute-build`) and `scripts/focus/` (backs `/focus-plan`). |
 | **CONTEXT_LEDGER.md** | **[ADDED 2026-07-28, resolves helpdesk-tickets/20260728_secretary_workflow.md]** `{project}/.workflow_state/CONTEXT_LEDGER.md` — append-only, agent-attributed record of an agent's working context at a checkpoint: hypotheses held, decisions and their reasoning, and claims taken on a peer agent's word without independent verification. Written only by the `--context` MODE GATE, never by a full session close. Distinct from `HANDOFF.md` (single-author, overwritten, forward-looking) and from `BUILD_RECEIPTS.md` (what was built, not what the agent was thinking). Being append-only, it cannot be clobbered by a peer agent's close — the structural property `HANDOFF.md` lacks. |
 
@@ -330,6 +332,18 @@ ls ~/blueprint-workflows/manifest/SUITE_HEALTH.md
 - Returns non-zero (file absent) → Write tool: create at `manifest/SUITE_HEALTH.md`.
 
 Never infer the branch from memory or conversation context. This gate is mandatory on every run. (The 2026-05-15 original gate also checked a legacy root-level `WORKFLOW_MANIFEST.md` path from a since-resolved 2026-05-08 migration; that check is retired here since `SUITE_HEALTH.md` is a new file with no such history to check against.)
+
+**1.1.5. Delivery-surface verification — every run. [INJECTED 2026-08-13, resolves helpdesk-tickets/20260813_secretary_workflow.md]**
+
+Step 1.1 measures the payload layer — the one layer that cannot break. This step measures the layers that can: resolve every canonical payload FORWARD onto each active delivery surface registered in `manifest/delivery_surfaces.json` (surfaces are data, not prose — when a surface appears, moves, or retires, update the registry, not this step):
+
+```bash
+python3 ~/blueprint-workflows/scripts/secretary/secretary_audit.py \
+  --workspace ~/blueprint-workflows \
+  --delivery-registry ~/blueprint-workflows/manifest/delivery_surfaces.json --output-json
+```
+
+Read `delivery_surfaces` from the JSON: per-surface `resolved/expected` plus every `missing` / `dangling` / `mismatched` entry BY NAME — a bare count hides paired errors; 33 = 33 reconciled perfectly on 2026-08-13 while containing two. `orphaned` entries are informational (project-local pointers are legitimate); a `PRIMARY_STATE_ROOT_MISSING` finding in `state_roots` is its own named condition. Update `SUITE_HEALTH.md`'s `## Delivery Surfaces` section with the result, **grade the suite on the worst active surface, never the payload count**, and carry any failure into the Secretary Receipt as a finding. If the engine or registry is unavailable, that is itself a reported finding, not a silent skip (STRICT RULE 23) — fall back to manually verifying `~/.claude/commands/` symlink targets and `~/blueprint-workflows/.agents/workflows/` pointer targets, and note the fallback.
 
 **1.2. Ledger growth check — narrative rollover + Phylogeny warning. [INJECTED 2026-07-04, resolves helpdesk-tickets/CLOSED_20260704_workflow-manifest-growth_workflow.md]**
 
@@ -650,6 +664,7 @@ Status:                SESSION CLOSE COMPLETE
 20. **[INJECTION 2026-07-05]** Phase 0 always runs the Retrospective Lag check (Step 0b.5) on every run, without exception — same STRICT RULE 11-independent status as Rules 18-19. A `GAP DETECTED` result is advisory (does not block this session's own Phase 6) but must be noted in the Secretary Receipt every time it fires, never silently absorbed.
 21. **[INJECTION 2026-07-26, resolves helpdesk-tickets/20260726_ticket-archival-orphaned_workflow.md]** Phase 1 always runs the closed-ticket archival pass (Step 1.0.6) on every `/secretary` run, without exception — same STRICT RULE 11-independent status as Rules 18-20, and for the same underlying reason. Archival must never again be contingent on a *specific sub-workflow* having been invoked: it stopped for six weeks precisely because it lived only inside `/harden-workflow --ticket`, a path the two-path ticket model structurally bypasses for every Substantive/Logic closure. A step whose real trigger is "a session ended" belongs to the workflow that owns session boundaries. Use `mv -n`, never bare `mv` — a name collision with an already-archived ticket must be skipped and reported, never silently overwritten (`/nodelete`). The archival result is reported in the Secretary Receipt every run, including the no-op case.
 22. **[INJECTION 2026-07-28, resolves helpdesk-tickets/20260728_secretary_workflow.md]** `/secretary --context` (MODE GATE) is a bounded, explicitly-invoked exemption from STRICT RULES 1, 7, and 13 — and from those three only. Rules 1, 7, and 13 are unchanged and remain in full force for every unflagged invocation; they are carved out here rather than edited, per `/nodelete`. The exemption's limits are absolute: `--context` must be explicitly invoked by the user and never inferred; it writes exactly one file, `{project}/.workflow_state/CONTEXT_LEDGER.md`, by append only; it writes nothing to `manifest/history/`, `manifest/SUITE_HEALTH.md`, or `PROCESS_LEARNINGS.md` — a narrative entry without a matching retrospective would trip Step 0b.5's Retrospective Lag detector permanently, which is why that prohibition is structural rather than economic; and its receipt must carry the verbatim line `SESSION CLOSE: NOT PERFORMED — full /secretary still required.` A `--context` run is never a session close, is never counted as one, and never satisfies Rule 1's requirement that a session end with `/secretary`.
+23. **[INJECTION 2026-08-13, resolves helpdesk-tickets/20260813_secretary_workflow.md]** **A health metric must measure the layer that can fail.** Phase 1 always runs the delivery-surface verification (Step 1.1.5) on every full run, without exception — same STRICT RULE 11-independent status as Rules 18-21, and skipped only by a `--context` run (which writes no health index at all). Any resource reached through an indirection — symlink, pointer file, path convention, vendor-owned directory — is verified by resolving the indirection forward, never by checking that the destination file exists: presence and reachability are different measurements, and substituting the cheaper one produces confident green reports across exactly the failures the check exists to catch — the Mock Trap applied to infrastructure; this suite reported 33/33 healthy on 2026-08-13 while an entire runtime's command surface was zero. The suite grade written to `SUITE_HEALTH.md` reflects the WORST active surface's result, never the payload layer alone. A missing or unparseable `manifest/delivery_surfaces.json` is itself a reported finding, never a silent skip.
 
 ---
 

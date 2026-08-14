@@ -23,6 +23,10 @@ Optional:
     --receipts-dir PATH           Receipts directory (enables receipt-family
                                   presence check).
     --receipt-files NAME [...]    Filenames to check under --receipts-dir.
+    --delivery-registry PATH      Delivery-surface registry JSON (enables the
+                                  Step 1.1.5 forward-resolution check of every
+                                  canonical payload on every active surface —
+                                  helpdesk-tickets/20260813_secretary_workflow.md).
     --output-json                 Emit the evidence report as JSON to stdout.
     --quiet                       Suppress human-readable output.
 
@@ -41,6 +45,7 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE.parent) not in sys.path:
     sys.path.insert(0, str(_HERE.parent))
 
+from secretary.delivery_surfaces import verify_delivery_surfaces
 from secretary.freshness import check_freshness
 from secretary.receipt_presence import check_receipt_family
 from secretary.reporter import SecretaryEvidenceReporter
@@ -68,6 +73,8 @@ def _parse_args() -> argparse.Namespace:
                    help="Receipts directory for the receipt-family presence check.")
     p.add_argument("--receipt-files", nargs="*", default=None,
                    help="Filenames to check under --receipts-dir.")
+    p.add_argument("--delivery-registry", type=str, default=None,
+                   help="Delivery-surface registry JSON for the forward-resolution check.")
     p.add_argument("--output-json", action="store_true", help="Emit JSON to stdout.")
     p.add_argument("--quiet", action="store_true", help="Suppress human-readable output.")
     return p.parse_args()
@@ -113,11 +120,16 @@ def main() -> int:
             r.as_dict() for r in check_receipt_family(receipts_dir, args.receipt_files)
         ]
 
+    delivery_surfaces = None
+    if args.delivery_registry is not None:
+        delivery_surfaces = verify_delivery_surfaces(os.path.expanduser(args.delivery_registry))
+
     report = {
         "freshness": freshness,
         "retrospective_freshness": retrospective_freshness,
         "retrospective_lag": retrospective_lag,
         "receipt_family": receipt_family,
+        "delivery_surfaces": delivery_surfaces,
     }
     SecretaryEvidenceReporter().render(report, quiet=args.quiet, output_json=args.output_json)
     return 0

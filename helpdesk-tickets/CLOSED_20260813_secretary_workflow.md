@@ -6,7 +6,7 @@
 **Subject**: The Antigravity release installed 2026-08-13 relocated its agent state root from `~/.gemini/antigravity/` to `~/.gemini/antigravity-ide/`. All 33 Antigravity pointer files remain intact at the old root and are now unreachable by the running IDE. `/secretary` Phase 1 — the suite's only recurring health pass — scans `claude-commands/*.md` alone, so it has reported and will continue to report a healthy 33/33 suite while one of the two live runtimes has no command surface at all.
 **Urgency**: CRITICAL (Architectural)
 **Root Cause Type**: SUBSTANTIVE-LOGIC
-**Phylogeny Disposition**: PENDING
+**Phylogeny Disposition**: NO TRANSFER *(resolved 2026-08-13 at closure — see the Closure section; the cluster's workflow-file changes touched `secretary.md` alone, and the candidate patterns are named there for future lineage if they ever propagate)*
 **Meta Status**: **META TICKET** as of 2026-08-13 (same day, later session) — governs the **Antigravity Restoration Cluster**; see Addendum at end of file. *(Injected marker; original header otherwise untouched per /nodelete.)*
 
 ---
@@ -114,8 +114,8 @@ The restore target — remediation step 1's (A)/(B) branch — was put to the us
 The cheapest way to collapse the branch, if the architect wants it: one disposable probe pointer in each candidate root, opened once in Antigravity, observing which appear. That distinguishes all three live explanations — per-installation state binding, changed pointer-execution format, and global-surface deprecation — in a single round-trip, and none of them are distinguishable without it.
 
 ---
-**Status**: **OPEN**
-**Verification**: PENDING — closure requires (a) the Antigravity read path confirmed empirically by the user, (b) 33 resolving pointers at that path with `limitations.md` removed and `design-orchestrator.md` added, and (c) a `/secretary` Phase 1 step that fails when a surface count or a pointer target does not resolve. Item (c) is the one that closes the failure class; (a) and (b) only close this instance.
+**Status**: **REMEDIATED (instance restored + failure class closed: 33 pointers live at the probe-confirmed workspace-scoped surface, user-confirmed in the IDE 2026-08-13; delivery-surface registry + forward-resolution engine + /secretary v9 Step 1.1.5 + STRICT RULE 23 worst-surface grading built and verified — see Closure section)**
+**Verification**: ALL THREE ITEMS SATISFIED — (a) read path confirmed empirically by user probe observation (Addendum 2) and final user confirmation of full restoration in the IDE (2026-08-13, verbatim: "the workflows have been restored in full in antigravity ide, confirmed completed"); (b) 33 resolving pointers at the confirmed surface, `limitations.md` removed, `design-orchestrator.md` added, membership 1:1 with canonical, mechanically verified (Addendum 2) and visually confirmed by the user; (c) `/secretary` Phase 1 Step 1.1.5 built, engine-backed, proven-by-test to produce a named failing verdict on any unresolved surface count or pointer target (Addendum 3). Original bar text preserved in this line's history via the addenda; item (c) closed the failure class, (a)/(b) closed the instance — exactly as scoped at filing.
 
 ---
 *Signed,*
@@ -182,3 +182,75 @@ The cheapest way to collapse the branch, if the architect wants it: one disposab
 *Signed,*
 **Claude Fable 5**
 *(Senior Architect of Workflows — blueprint-workflows session, 2026-08-13)*
+
+---
+
+## Addendum 3 — Work Item 2 (Failure-Class Fix) Built and Verified (2026-08-13, same session, /quality Maximum, user-approved design)
+
+*(Sequencing note: Addendum 2's sequencing constraint was cleared before this work — the v8 edit was reconciled, its ticket closed as `CLOSED_20260728_secretary_workflow.md`, and the working tree committed at `181a22a` — so this item 2 edit landed on clean, committed substrate as v8→v9.)*
+
+**Built, per the design the user approved as a whole:** (A) `manifest/delivery_surfaces.json` — the surface registry, machine-readable, with `data_class` DERIVED/PRIMARY per surface and state root (Section 4 step 5 + the sibling ticket's Section 5 recommendation); (B) `scripts/secretary/delivery_surfaces.py` — read-only forward-resolution engine, every failure named per entry (missing/dangling/mismatched), orphans informational, missing PRIMARY state root its own named condition; wired into `secretary_audit.py --delivery-registry` (Section 4 step 3); (C) `secretary.md` v9 — Step 1.1.5 (every full run, worst-active-surface grading, manual fallback) + STRICT RULE 23 ("a health metric must measure the layer that can fail" — the general form Section 5 recommended); (D) `SUITE_HEALTH.md` live `## Delivery Surfaces` section, stale Architecture Notes struck in place per /nodelete (Section 4 step 4); (E) `scripts/surface/populate_workspace.py` — per-workspace pointer population for the workspace-scoped delivery reality Addendum 2 established.
+
+**Verification evidence:** 37 new tests, full suite 537→**574/574**, 0 regressions; linter 0 CRITICAL; live run against the real registry: **claude-code 33/33, antigravity-workspace 33/33, 0 missing / 0 dangling / 0 mismatched, both retired surfaces skipped-with-note, 3/3 PRIMARY state roots present.**
+
+**Verification item (c) — satisfied, with its semantics stated so they are never silently reinterpreted:** (c) asked for a step that "fails when a surface count or a pointer target does not resolve." The engine reports a named failing verdict (`verdict_hint: SURFACE_FINDINGS`, per-entry findings) rather than a nonzero exit — the same report-verdict semantics every engine in this suite uses (`harden_audit.py`, `lint_workflows.py --quiet` precedents), with Step 1.1.5 and STRICT RULE 23 mandating the verdict be carried into SUITE_HEALTH and the Secretary Receipt as a failure, worst surface governing the grade. Proven by test: a dead surface yields `SURFACE_FINDINGS` and `surfaces_ok: false` (`test_verify_dead_surface_yields_findings_verdict`), and a vanished registry is itself a reported finding, never a silent skip (`test_verify_missing_registry_is_fail_visible`).
+
+**Cluster state after this addendum:** work items 1, 2, and 4 complete; work item 3 (sibling, state migration) open independently by design. Verification (a) SATISFIED, (c) SATISFIED; (b) SATISFIED by construction and by mechanical resolution — its one outstanding live half is the user's visual confirmation that the 33 canonical workflows now appear in the Antigravity IDE. **This ticket may close via Step 4d upon that confirmation**, with the sibling's disposition snapshotted at closure.
+
+**Honest scope boundary, restated:** the engine verifies this repo's own `.agents/workflows/` instance; other workspaces (`game_one`, RustCRM, …) are populated and checked per-workspace via `populate_workspace.py`, invoked or approved by the user per target — their surfaces are NOT covered by this suite-level pass, and the SUITE_HEALTH table says whose instance was verified.
+
+*Signed,*
+**Claude Fable 5**
+*(Senior Architect of Workflows — blueprint-workflows session, 2026-08-13)*
+
+---
+
+## Closure — 2026-08-13 — Step 4d Meta Closure: Sibling Snapshot, Phylogeny, Remediation Record
+
+**Closure trigger**: the user's confirmation, 2026-08-13, verbatim: *"the workflows have been restored in full in antigravity ide, confirmed completed"* — the last outstanding verification half, given in direct response to the stated consequence that this confirmation closes the ticket.
+
+### Step 4d — Sibling disposition snapshot (status recorded, not acted on)
+
+| Sibling | Disposition at meta closure |
+|---|---|
+| `20260813_antigravity-state-migration_workflow.md` | **remains OPEN — deliberately.** Investigation-first by design: 6.2 GB of PRIMARY agent history preserved intact at the frozen old root; next step is checking for a vendor migration path before any hand-rolled copy; "preserve, don't migrate" is a legitimate closure. Not a defect awaiting a fix, and not a blocker to this closure per Step 4d's explicit non-requirement. The standing order (nothing writes into or deletes from `~/.gemini/antigravity/`) survives this ticket's closure — it is restated in the sibling's own Section 4 step 1 and in `manifest/delivery_surfaces.json`'s registry notes, both of which remain live. |
+
+*(Not a sibling, noted to prevent misreading: `20260813_secretary-deferred-items_workflow.md` belongs to the `CLOSED_20260728` closure, not to this cluster.)*
+
+### Step 4a.5 — Phylogeny Disposition: NO TRANSFER
+
+The cluster's remediation touched exactly one workflow file (`secretary.md`, v8→v9) plus non-workflow substrate (manifest files, `scripts/`, `DevJournal.md`, `.agents/workflows/` pointers). No structural pattern moved between two or more workflow files. Candidates named rather than lost, per Step 4a.5's over-caution instruction: (1) the **forward-resolution / worst-surface health pattern** (STRICT RULE 23's "a health metric must measure the layer that can fail") and (2) the **machine-readable surface registry** pattern — if `/sentinel`, `/triage`, or any other workflow later adopts either, that session owes `manifest/SUITE_PHYLOGENY.md` the lineage entry, with this ticket as origin.
+
+### REMEDIATION RECORD (final, whole cluster scope of THIS ticket)
+
+```
+Ticket:            20260813_secretary_workflow.md (META — Antigravity Restoration Cluster)
+Faulting workflow: /secretary (failure-class half); external vendor state-root move (instance half)
+Root cause fixed:  The suite measured payload presence, never delivery reachability — a whole
+                   runtime's command surface went to zero without a single check failing.
+Changes made:      Work item 1 (instance): 33 pointers restored at the probe-confirmed
+                   workspace-scoped surface ~/blueprint-workflows/.agents/workflows/
+                   (32 copied from the frozen old root + design-orchestrator.md written;
+                   limitations.md retired out; committed at 181a22a).
+                   Work item 2 (failure class): manifest/delivery_surfaces.json (registry,
+                   data_class DERIVED/PRIMARY); scripts/secretary/delivery_surfaces.py
+                   (read-only forward-resolution engine, failures named per entry) wired
+                   into secretary_audit.py; secretary.md v9 — Step 1.1.5 + STRICT RULE 23
+                   (worst active surface governs the grade; registry absence is a reported
+                   finding); SUITE_HEALTH.md live Delivery Surfaces section, stale
+                   Architecture Notes struck per /nodelete; scripts/surface/
+                   populate_workspace.py for per-workspace population.
+                   Work item 4: DevJournal.md L33 inverted-learning + L69 stale-architecture
+                   correction markers, originals preserved.
+Tests:             574/574 passing (537 pre-existing + 37 new), 0 regressions — 2026-08-13.
+Linter:            0 CRITICAL / 22 WARNING (pre-existing count unchanged); secretary.md CLEAN.
+Live verification: Engine against the real registry: claude-code 33/33, antigravity-workspace
+                   33/33, 0 missing/dangling/mismatched, 3/3 PRIMARY state roots present.
+                   User visual confirmation in the running IDE, 2026-08-13: restored in full.
+Deferred:          NONE within this ticket's scope. The state-migration work continues in the
+                   sibling (open by design, snapshotted above); other workspaces' population
+                   is per-workspace user invocation of populate_workspace.py, by declared
+                   scope boundary (Addendum 3), not a deferral.
+```
+
+*Closed by: Claude Fable 5, Senior Architect of Workflows — direct SUBSTANTIVE-LOGIC remediation path, /helpdesk-tickets Phase 4 + Step 4d, user-confirmed 2026-08-13.*
