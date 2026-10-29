@@ -66,3 +66,8 @@ node_modules/
 .vscode/
 # <<< Sovereign Suite — managed block <<<
 MANIFEST.md
+
+# Local decode key for the 2026-10-29 code-quality panel.
+# Measurements live in docs/studies/2026-10-29-code-quality-panel.md.
+# This key is the name map. It stays off the public history.
+docs/studies/.quality-panel-key.md
