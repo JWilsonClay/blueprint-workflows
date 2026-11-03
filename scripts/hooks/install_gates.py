@@ -650,7 +650,9 @@ def _ceilings(workspace, created):
     except ConfigError:
         # Present and rejected. The hook fail-closes, so neither missing-file
         # defaults nor a parsed ceiling is what the suite sections enforce.
-        return (None, None, None, None, None, "rejected")
+        # null is falsy, so a reader of `value or 500` would adopt the built-in.
+        rejected = "rejected"
+        return (rejected, rejected, rejected, rejected, rejected, rejected)
     return (cfg.reject, cfg.maintain, cfg.aim, cfg.cognitive, cfg.max_args, "config")
 
 

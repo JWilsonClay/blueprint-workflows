@@ -223,12 +223,26 @@ class Repo(unittest.TestCase):
     def assert_rejected_ceilings(self, report):
         self.assertEqual(report["config_action"], "left-existing")
         self.assertEqual(report["ceilings_source"], "rejected")
-        for key in ("loc_reject", "loc_maintain", "loc_aim", "cognitive", "max_args"):
-            self.assertIsNone(report[key])
+        builtins = {
+            "loc_reject": 500,
+            "loc_maintain": 200,
+            "loc_aim": 150,
+            "cognitive": 15,
+            "max_args": 5,
+        }
+        for key, builtin in builtins.items():
+            self.assertEqual(report[key], "rejected")
+            self.assertIsNotNone(report[key])
+            self.assertNotEqual(report[key], builtin)
         line = install_gates._format_human(report)
         self.assertIn("ceilings_source=rejected", line)
-        self.assertIn("loc_reject=null", line)
+        self.assertIn("loc_reject=rejected", line)
+        self.assertNotIn("loc_reject=null", line)
         self.assertNotIn("loc_reject=500", line)
+        self.assertNotIn("loc_maintain=200", line)
+        self.assertNotIn("loc_aim=150", line)
+        self.assertNotIn("cognitive=15", line)
+        self.assertNotIn("max_args=5", line)
 
     def assert_hook_rejects_config(self, name="ok.py"):
         self.write(name, "x = 1\n")
