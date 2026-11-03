@@ -2,6 +2,8 @@
 
 import re
 
+from hooks.config import AIM, COGNITIVE, MAX_ARGS, MAINTAIN, REJECT
+
 
 LOUD_LINE = (
     "SUITE GATES SKIPPED — SUITE_GATES_SKIP is set for this commit only. "
@@ -10,7 +12,7 @@ LOUD_LINE = (
 FAIL_PYTHON = "SUITE GATES FAILED CLOSED — python3 is not on PATH."
 MARKER_LINE = "# suite-hook:set-hooks-path"
 
-CONFIG_TEXT = """\
+CONFIG_TEXT = f"""\
 # suite-gates.cfg — created by scripts/hooks/install_gates.py because the file was absent.
 # The integers below are the defaults. A later edit is the live ceiling for
 # suite-installed sections only. Constraints, or the hook fails closed:
@@ -20,13 +22,13 @@ CONFIG_TEXT = """\
 # The installer does not git add this file.
 
 [loc]
-reject = 500
-maintain = 200
-aim = 150
+reject = {REJECT}
+maintain = {MAINTAIN}
+aim = {AIM}
 
 [complexity]
-cognitive = 15
-max_args = 5
+cognitive = {COGNITIVE}
+max_args = {MAX_ARGS}
 """
 
 _LOC_BLOCK = """\

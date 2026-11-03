@@ -220,6 +220,27 @@ class Repo(unittest.TestCase):
         self.assertEqual(report["max_args"], 5)
         self.assertEqual(report["ceilings_source"], source)
 
+    def assert_rejected_ceilings(self, report):
+        self.assertEqual(report["config_action"], "left-existing")
+        self.assertEqual(report["ceilings_source"], "rejected")
+        for key in ("loc_reject", "loc_maintain", "loc_aim", "cognitive", "max_args"):
+            self.assertIsNone(report[key])
+        line = install_gates._format_human(report)
+        self.assertIn("ceilings_source=rejected", line)
+        self.assertIn("loc_reject=null", line)
+        self.assertNotIn("loc_reject=500", line)
+
+    def assert_hook_rejects_config(self, name="ok.py"):
+        self.write(name, "x = 1\n")
+        self.add(name)
+        proc = self.product_commit("small file", [name])
+        self.assertEqual(proc.returncode, 1)
+        stream = commit_hook_output(proc)
+        self.assertIn("suite-gates.cfg rejected:", stream)
+        self.assertNotIn("loc ", stream)
+        self.assertIsNone(self.rev())
+        return stream
+
     def assert_noop(self, report):
         self.assertEqual(report["loc_action"], "noop")
         self.assertEqual(report["complexity_action"], "noop")
@@ -657,11 +678,44 @@ class TestInstall(Repo):
         self.assertEqual(report["loc_action"], "left-existing")
         self.assertEqual(report["complexity_action"], "installed")
         self.assertEqual(report["hooks_path_action"], "unchanged")
+        self.assertIs(report["length_runs"], True)
         proc = subprocess.run([str(hook)], cwd=self.ws, capture_output=True, text=True)
         self.assertEqual(proc.returncode, 3)
         self.assertIn("DORMANT-RAN", proc.stdout)
         self.assertNotIn("complexity", proc.stdout)
         self.assertNotIn("SUITE GATES", proc.stdout)
+
+    def test_trampoline_length_runs_when_the_workspace_path_has_a_quote(self):
+        parent = self.keep(Path(tempfile.mkdtemp()))
+        ws = parent / "a'b"
+        ws.mkdir()
+        _git(ws, "init", "-q")
+        _git(ws, "config", "user.email", "test@example.com")
+        _git(ws, "config", "user.name", "Test")
+        dormant = ws / ".githooks" / "pre-commit"
+        dormant.parent.mkdir()
+        dormant.write_text("#!/bin/sh\n# LOC-EXEMPT: dormant\nexit 0\n")
+        dormant.chmod(0o755)
+        pre_push = ws / ".git" / "hooks" / "pre-push"
+        pre_push.write_text("#!/bin/sh\nexit 0\n")
+        pre_push.chmod(0o755)
+        report = install(ws, confirmed=True)
+        hook = ws / ".git" / "hooks" / "pre-commit"
+        text = hook.read_text()
+        quoted = hook_text.shell_quote(str(dormant.resolve()))
+        self.assertNotIn(str(dormant.resolve()), text)
+        self.assertIn(quoted, text)
+        self.assertNotIn("loc_gate.py", text)
+        self.assertEqual(report["chain"], "trampoline")
+        self.assertIs(report["length_runs"], True)
+        before = hook.read_bytes()
+        again = install(ws, confirmed=True)
+        self.assertEqual(again["loc_action"], "noop")
+        self.assertEqual(again["complexity_action"], "noop")
+        self.assertIs(again["length_runs"], True)
+        self.assertIs(again["wrote"], False)
+        self.assertEqual(again["chain"], "none")
+        self.assertEqual(hook.read_bytes(), before)
 
     def test_case_2b_dormant_not_executable_refuses(self):
         dormant = self.write(".githooks/pre-commit", "#!/bin/sh\n# LOC-EXEMPT\nexit 0\n", 0o644)
@@ -715,8 +769,23 @@ class TestInstall(Repo):
             "exit 0\n"
         )
         hook = self.write_exec(".githooks/pre-commit", body)
-        code, _data, err, witness = self.install_refusing_config(hook)
+        code, data, err, witness = self.install_refusing_config(hook)
         self.assertEqual(code, 0, err)
+        self.assertEqual(data["loc_action"], "left-existing")
+        self.assertEqual(data["complexity_action"], "left-existing")
+        self.assertIs(data["wrote"], False)
+        self.assertEqual(data["hooks_path_action"], "unchanged")
+        self.assertEqual(data["chain"], "none")
+        self.assertIs(data["length_runs"], False)
+        self.assertNotEqual(
+            (data["loc_action"], data["wrote"], data["hooks_path_action"]),
+            ("noop", False, "unchanged"),
+        )
+        self.assertNotEqual(
+            (data["loc_action"], data["wrote"], data["hooks_path_action"]),
+            ("noop", True, "set:.githooks"),
+        )
+        self.assertFalse((self.ws / ".githooks" / "suite-gates.cfg").exists())
         self.assertEqual(hook.read_text(), body)
         self.assertNotIn(MARKER, witness.read_text())
         self.assertIsNone(self.hooks_path())
@@ -904,7 +973,7 @@ class TestInstall(Repo):
         self.assertIn("outside the workspace", err)
 
     def test_non_executable_pre_commit_refuses(self):
-        original = "#!/bin/sh\necho stay\nexit 0\n"
+        original = "#!/bin/sh\n# LOC-EXEMPT: off\necho stay\nexit 0\n"
         live = self.write(".git/hooks/pre-commit", original, 0o644)
         code, out, err = self.cli(
             ["--workspace", str(self.ws), "--workspace-confirmed", "--output-json"]
@@ -915,6 +984,7 @@ class TestInstall(Repo):
         self.assertEqual(data["complexity_action"], "refused")
         self.assertEqual(data["hooks_path_action"], "unchanged")
         self.assertIs(data["wrote"], False)
+        self.assertIs(data["length_runs"], False)
         self.assertEqual(live.read_text(), original)
         self.assertEqual(stat.S_IMODE(live.stat().st_mode), 0o644)
         self.assertFalse((live.parent / "pre-commit.suite-preserved").exists())
@@ -969,8 +1039,9 @@ class TestInstall(Repo):
         report = self.confirmed()
         self.assertEqual(path.read_bytes(), b"")
         self.assertEqual(path.stat().st_mtime_ns, before)
-        self.assertEqual(report["config_action"], "left-existing")
-        self.assert_default_ceilings(report)
+        self.assert_rejected_ceilings(report)
+        stream = self.assert_hook_rejects_config("empty_cfg.py")
+        self.assertIn("suite-gates.cfg rejected: whitespace-only", stream)
 
     def test_unparsable_config_stays_byte_identical(self):
         path = self.seed_config("[[[broken\n")
@@ -979,8 +1050,8 @@ class TestInstall(Repo):
         report = self.confirmed()
         self.assertEqual(path.read_bytes(), before)
         self.assertEqual(path.stat().st_mtime_ns, stamp)
-        self.assertEqual(report["config_action"], "left-existing")
-        self.assert_default_ceilings(report)
+        self.assert_rejected_ceilings(report)
+        self.assert_hook_rejects_config("bad_cfg.py")
 
 
 class TestHookRuntime(Repo):

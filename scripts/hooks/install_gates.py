@@ -8,13 +8,13 @@ import shutil
 import stat
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 _SCRIPTS = Path(__file__).resolve().parents[1]
 if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 
+from engine_utils import atomic_write
 from hooks import hook_text
 from hooks.config import (
     AIM,
@@ -144,25 +144,6 @@ def _resolve_repo_path(workspace, raw):
     if not path.is_absolute():
         path = workspace / path
     return path.resolve()
-
-
-def atomic_write(path, content, mode):
-    """Same-directory temp file plus os.replace. Matches the gitignore writer."""
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.tmp.")
-    tmp_path = Path(tmp_name)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
-            handle.write(content)
-        os.chmod(tmp_path, mode)
-        os.replace(tmp_path, path)
-    except Exception:
-        try:
-            tmp_path.unlink(missing_ok=True)
-        except OSError:
-            pass
-        raise
 
 
 def _create_config_excl(path, body):
@@ -302,7 +283,6 @@ def _inspect(workspace):
     texts = {path: _read(path) for path in detected}
     active = effective_pre.resolve() if effective_pre.is_file() and not effective_pre.name.endswith(".sample") else None
     return {
-        "hooks_raw": hooks_raw,
         "hooks_resolved": hooks_resolved,
         "hooks_set": hooks_raw is not None,
         "effective": effective,
@@ -329,7 +309,10 @@ def _executed_blob(workspace, active, texts):
     if preserved.is_file() and "pre-commit.suite-preserved" in text:
         parts.append(texts.get(preserved.resolve(), _read(preserved)))
     dormant = (workspace / ".githooks" / "pre-commit").resolve()
-    if dormant.is_file() and dormant != active and str(dormant) in text:
+    # shell_quote splits an embedded quote, so the raw path is not always contiguous.
+    if dormant.is_file() and dormant != active and (
+        str(dormant) in text or hook_text.shell_quote(str(dormant)) in text
+    ):
         parts.append(texts.get(dormant, _read(dormant)))
     return "\n".join(parts)
 
@@ -398,17 +381,27 @@ def _splice_plan(workspace, ctx, base, path, text):
     return plan
 
 
-def _existing_plan(workspace, ctx, base, path):
+def _usable_or_refuse(base, path, text):
     if not _executable(path):
-        return _refuse(base, "pre-commit is not executable", path=path)
-    text = ctx["texts"].get(path, _read(path))
-    preserved = path.parent / "pre-commit.suite-preserved"
+        return _refuse(base, "pre-commit is not executable", path=path), text
+    preserved = Path(path).parent / "pre-commit.suite-preserved"
     if preserved.exists() and "suite-hook:chain" not in text:
-        return _refuse(
-            base,
-            "preserved hook exists and the live hook is not a chain",
-            path=path,
+        return (
+            _refuse(
+                base,
+                "preserved hook exists and the live hook is not a chain",
+                path=path,
+            ),
+            text,
         )
+    return None, text
+
+
+def _existing_plan(workspace, ctx, base, path):
+    text = ctx["texts"].get(path, _read(path))
+    refusal, text = _usable_or_refuse(base, path, text)
+    if refusal is not None:
+        return refusal
     if "suite-hook:chain" in text:
         return _splice_plan(workspace, ctx, base, path, text)
     if not base["install_length"] and not base["install_complexity"]:
@@ -420,16 +413,10 @@ def _existing_plan(workspace, ctx, base, path):
 
 def _dormant_plan(workspace, ctx, base):
     path = ctx["githooks_pre"]
-    if not _executable(path):
-        return _refuse(base, "pre-commit is not executable", path=path)
     text = ctx["texts"].get(path, _read(path))
-    preserved = path.parent / "pre-commit.suite-preserved"
-    if preserved.exists() and "suite-hook:chain" not in text:
-        return _refuse(
-            base,
-            "preserved hook exists and the live hook is not a chain",
-            path=path,
-        )
+    refusal, text = _usable_or_refuse(base, path, text)
+    if refusal is not None:
+        return refusal
     if _length_signal(text) and _complexity_signal(text):
         plan = dict(base)
         plan.update({
@@ -488,9 +475,6 @@ def _decide(workspace, ctx):
             return plan
         return _existing_plan(workspace, ctx, base, ctx["dotgit_pre"])
     if hooks_set and ctx["hooks_resolved"] is not None and _is_inside(ctx["hooks_resolved"], workspace):
-        githooks_pre = (workspace / ".githooks" / "pre-commit").resolve()
-        if ctx["active"] is not None and ctx["active"] == githooks_pre:
-            return _existing_plan(workspace, ctx, base, ctx["active"])
         if ctx["active"] is not None:
             return _existing_plan(workspace, ctx, base, ctx["active"])
         plan = dict(base)
@@ -525,7 +509,7 @@ def _guard_write(path, workspace):
 
 def _write_hook(path, text, workspace, mode=0o755):
     _guard_write(path, workspace)
-    atomic_write(path, text, mode)
+    atomic_write(path, text, mode=mode)
 
 
 def _perform(workspace, plan, *, write):
@@ -664,14 +648,17 @@ def _ceilings(workspace, created):
     try:
         cfg = load_config(path)
     except ConfigError:
-        return defaults
+        # Present and rejected. The hook fail-closes, so neither missing-file
+        # defaults nor a parsed ceiling is what the suite sections enforce.
+        return (None, None, None, None, None, "rejected")
     return (cfg.reject, cfg.maintain, cfg.aim, cfg.cognitive, cfg.max_args, "config")
 
 
 def _length_runs(workspace):
     ctx = _inspect(workspace)
     active = _running_hook(ctx)
-    if active is None:
+    # Git does not run a hook that lacks the executable bit.
+    if active is None or not _executable(active):
         return False
     return _real_length(_executed_blob(workspace, active, ctx["texts"]))
 
@@ -775,7 +762,9 @@ def _format_human(report):
     parts = []
     for key in _REPORT_KEYS:
         value = report[key]
-        if isinstance(value, bool):
+        if value is None:
+            shown = "null"
+        elif isinstance(value, bool):
             shown = "true" if value else "false"
         else:
             shown = value
