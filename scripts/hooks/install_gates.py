@@ -764,9 +764,7 @@ def _format_human(report):
     parts = []
     for key in _REPORT_KEYS:
         value = report[key]
-        if value is None:
-            shown = "null"
-        elif isinstance(value, bool):
+        if isinstance(value, bool):
             shown = "true" if value else "false"
         else:
             shown = value
