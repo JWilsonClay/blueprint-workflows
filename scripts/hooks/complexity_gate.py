@@ -25,8 +25,10 @@ def _touched(item, posts):
         return set(posts)
     pre_facts = []
     if item.pre_image is not None:
-        scoring.executable_line_count(item.pre_image)
-        pre_tree = scoring.parse_module(scoring.decode_source(item.pre_image))
+        try:
+            pre_tree = scoring.parse_module(scoring.decode_source(item.pre_image))
+        except scoring.GateSyntaxError:
+            return set(posts)
         pre_facts = scoring.iter_functions(pre_tree)
     pre_by = defaultdict(list)
     for fact in pre_facts:
@@ -91,7 +93,6 @@ def main(argv=None):
     failed = False
     for item in prepared.files:
         try:
-            scoring.executable_line_count(item.blob)
             tree = scoring.parse_module(scoring.decode_source(item.blob))
             exempt = scoring.exemptions(item.blob)
             posts = scoring.iter_functions(tree)

@@ -91,6 +91,8 @@ def load(path):
         text = raw.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
         raise ConfigError(f"unreadable ({exc.reason})") from exc
+    if text.strip() == "":
+        raise ConfigError("whitespace-only")
     parser = configparser.ConfigParser(interpolation=None)
     try:
         parser.read_string(text)

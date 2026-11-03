@@ -503,6 +503,48 @@ class TestSyntax(RepoMixin, unittest.TestCase):
             self.assertNotIn("UnicodeDecodeError", stderr)
             self.assertNotIn("executable=0", stdout)
 
+    def test_preimage_syntax_error_does_not_fail_a_valid_staged_function(self):
+        self.write("a.py", "def broken(:\n")
+        self.add("a.py")
+        self.commit()
+        self.write("a.py", "def ok():\n    return 1\n")
+        self.add("a.py")
+        loc = self.loc()
+        cog = self.cog()
+        self.assertEqual(loc.returncode, 0)
+        self.assertEqual(loc.stdout, "")
+        self.assertEqual(cog.returncode, 0)
+        self.assertEqual(cog.stdout, "")
+        self.assertNotIn("syntax error", cog.stdout)
+        self.assertNotIn("ok", cog.stdout)
+
+    def test_preimage_syntax_error_still_rejects_a_function_over_the_ceiling(self):
+        self.write("a.py", "def broken(:\n")
+        self.add("a.py")
+        self.commit()
+        self.write("a.py", _ifs(16))
+        self.add("a.py")
+        loc = self.loc()
+        cog = self.cog()
+        self.assertEqual(loc.returncode, 0)
+        self.assertNotIn("syntax error", loc.stdout)
+        self.assertEqual(cog.returncode, 1)
+        self.assertNotIn("syntax error", cog.stdout)
+        self.assertIn("a.py::keep ", cog.stdout)
+        self.assertIn("cognitive=16", cog.stdout)
+        self.assertIn("result=reject", cog.stdout)
+
+    def test_preimage_decode_error_does_not_fail_a_valid_staged_function(self):
+        self.write("a.py", b"\xff\xfe")
+        self.add("a.py")
+        self.commit()
+        self.write("a.py", "def ok():\n    return 1\n")
+        self.add("a.py")
+        cog = self.cog()
+        self.assertEqual(cog.returncode, 0)
+        self.assertEqual(cog.stdout, "")
+        self.assertNotIn("syntax error", cog.stdout)
+
 
 class TestDeletionAndRename(RepoMixin, unittest.TestCase):
     def setUp(self):
@@ -626,6 +668,84 @@ class TestDeletionAndRename(RepoMixin, unittest.TestCase):
         self.assertNotIn("keep", cog.stdout)
 
 
+class TestPlainHunks(RepoMixin, unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        self.plant_cfg()
+
+    def test_color_diff_always_still_rejects_a_500_line_modify(self):
+        _git(self.ws, "config", "color.diff", "always")
+        self.write("a.py", "x = 1\n")
+        self.add("a.py")
+        self.commit()
+        self.write("a.py", _statements(500))
+        self.add("a.py")
+        loc = self.loc()
+        cog = self.cog()
+        self.assertEqual(loc.returncode, 1)
+        self.assertIn("loc a.py", loc.stdout)
+        self.assertIn("executable=500", loc.stdout)
+        self.assertIn("band=reject", loc.stdout)
+        self.assertNotEqual(loc.stdout, "")
+        self.assertEqual(cog.returncode, 0)
+
+    def test_color_diff_always_still_rejects_a_content_rename(self):
+        _git(self.ws, "config", "color.diff", "always")
+        self.write("a.py", _statements(500))
+        self.add("a.py")
+        self.commit()
+        _git(self.ws, "mv", "a.py", "b.py")
+        self.write("b.py", _statements(499) + "y = 2\n")
+        self.add("b.py")
+        loc = self.loc()
+        self.assertEqual(loc.returncode, 1)
+        self.assertIn("loc b.py", loc.stdout)
+        self.assertIn("executable=500", loc.stdout)
+        self.assertIn("band=reject", loc.stdout)
+
+    def test_nul_modify_is_rejected(self):
+        self.write("a.py", "x = 1\n")
+        self.add("a.py")
+        self.commit()
+        self.write("a.py", b"x = 1\n" * 500 + b"\x00")
+        self.add("a.py")
+        raw = _git(self.ws, "diff", "--cached", "-M", "-U0", "--", "a.py")
+        self.assertIn("Binary files", raw.stdout)
+        self.assertNotIn("@@", raw.stdout)
+        for script in (LOC_GATE, COG_GATE):
+            proc = subprocess.run(
+                [sys.executable, str(script), "--staged", "--workspace", str(self.ws)],
+                capture_output=True,
+                text=False,
+            )
+            stdout = proc.stdout.decode("utf-8", "replace")
+            stderr = proc.stderr.decode("utf-8", "replace")
+            self.assertEqual(proc.returncode, 1, script.name)
+            self.assertIn("syntax error in a.py", stdout)
+            self.assertNotIn("Traceback", stderr)
+            self.assertNotIn("UnicodeDecodeError", stderr)
+            self.assertNotIn("executable=0", stdout)
+
+    def test_binary_attribute_modify_is_still_judged(self):
+        self.write(".gitattributes", "*.py binary\n")
+        self.write("a.py", "x = 1\n")
+        self.add(".gitattributes", "a.py")
+        self.commit()
+        self.write("a.py", _statements(500))
+        self.add("a.py")
+        raw = _git(self.ws, "diff", "--cached", "-M", "-U0", "--", "a.py")
+        self.assertIn("Binary files", raw.stdout)
+        self.assertNotIn("@@", raw.stdout)
+        loc = self.loc()
+        cog = self.cog()
+        self.assertEqual(loc.returncode, 1)
+        self.assertIn("loc a.py", loc.stdout)
+        self.assertIn("executable=500", loc.stdout)
+        self.assertIn("band=reject", loc.stdout)
+        self.assertEqual(cog.returncode, 0)
+        self.assertNotIn("syntax error", loc.stdout)
+
+
 class TestConfigCli(RepoMixin, unittest.TestCase):
     def test_missing_config_prints_defaults_and_still_rejects_at_500(self):
         self.write("a.py", _statements(500))
@@ -648,14 +768,22 @@ class TestConfigCli(RepoMixin, unittest.TestCase):
         self.assertEqual(proc.returncode, 1)
         self.assertIn("suite-gates.cfg rejected:", proc.stdout)
         self.assertNotIn("suite-gates.cfg missing; using defaults", proc.stdout)
+        self.assertNotIn("missing key", proc.stdout)
         self.assertNotIn("executable=", proc.stdout)
         cog = self.cog()
         self.assertEqual(cog.returncode, 1)
         self.assertIn("suite-gates.cfg rejected:", cog.stdout)
         self.assertNotIn("suite-gates.cfg missing; using defaults", cog.stdout)
+        self.assertNotIn("missing key", cog.stdout)
 
     def test_whitespace_only_is_rejected(self):
         self._rejected(" \n\t\n")
+
+    def test_bom_only_is_rejected(self):
+        self._rejected("\ufeff")
+
+    def test_bom_plus_whitespace_is_rejected(self):
+        self._rejected("\ufeff \t\n")
 
     def test_parse_error_is_rejected(self):
         self._rejected("[loc\nreject = 500\n")

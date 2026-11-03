@@ -19,10 +19,7 @@ class UsageError(Exception):
 
 
 class Hunk:
-    def __init__(self, old_start, old_count, new_start, new_count, old_lines, new_lines):
-        self.old_start = old_start
-        self.old_count = old_count
-        self.new_start = new_start
+    def __init__(self, new_count, old_lines, new_lines):
         self.new_count = new_count
         self.old_lines = old_lines
         self.new_lines = new_lines
@@ -66,7 +63,11 @@ def _stderr(proc):
 
 
 def _git(cwd, args, text):
-    proc = _run(["git", "--no-pager", "-c", "color.ui=false", *args], cwd, text)
+    proc = _run(
+        ["git", "--no-pager", "-c", "color.ui=false", "-c", "color.diff=false", *args],
+        cwd,
+        text,
+    )
     if proc.returncode != 0:
         raise GitError(_stderr(proc) or "git command failed")
     return proc.stdout
@@ -135,10 +136,9 @@ def _parse_patch(patch):
         match = _HUNK_RE.match(line)
         if match is not None:
             old_start = int(match.group(1))
-            old_count = int(match.group(2)) if match.group(2) is not None else 1
             new_start = int(match.group(3))
             new_count = int(match.group(4)) if match.group(4) is not None else 1
-            current = Hunk(old_start, old_count, new_start, new_count, [], [])
+            current = Hunk(new_count, [], [])
             hunks.append(current)
             old_line = old_start
             new_line = new_start
@@ -157,16 +157,12 @@ def _parse_patch(patch):
     return hunks
 
 
-def _has_hunk(patch):
-    return any(line.startswith(b"@@") for line in patch.splitlines())
-
-
 def _show(cwd, spec):
     return _git(cwd, ["show", spec], text=False)
 
 
 def _cached_diff(cwd, paths):
-    return _git(cwd, ["diff", "--cached", "-M", "-U0", "--", *paths], text=False)
+    return _git(cwd, ["diff", "--cached", "-M", "-U0", "--text", "--", *paths], text=False)
 
 
 def staged_python(toplevel):
@@ -185,11 +181,11 @@ def staged_python(toplevel):
             patch = _cached_diff(toplevel, [old, new])
         else:
             patch = _cached_diff(toplevel, [new])
-        has_hunk = _has_hunk(patch)
-        # A copy is judged as an add. A pure rename (no @@ hunk) is not judged.
-        if letter == "R" and not has_hunk:
+        hunks = _parse_patch(patch)
+        # A configured diff.renames=copies can still emit C even though this command does not pass -C.
+        if letter == "R" and not hunks:
             continue
-        if letter not in {"A", "C", "R"} and not has_hunk:
+        if letter not in {"A", "C", "R"} and not hunks:
             continue
         added = letter in {"A", "C"}
         blob = _show(toplevel, f":{new}")
@@ -197,7 +193,7 @@ def staged_python(toplevel):
         if not added:
             pre_spec = old if letter == "R" else new
             pre_image = _show(toplevel, f"HEAD:{pre_spec}")
-        judged.append(StagedPy(new, added, blob, pre_image, _parse_patch(patch)))
+        judged.append(StagedPy(new, added, blob, pre_image, hunks))
     return judged
 
 

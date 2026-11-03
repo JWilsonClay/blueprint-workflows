@@ -1,7 +1,9 @@
 """Library tests for the stdlib commit-gate scorers. No git."""
 
 import ast
+import tempfile
 import unittest
+from pathlib import Path
 
 from hooks import config
 from hooks.scoring import (
@@ -135,14 +137,15 @@ class TestCognitive(unittest.TestCase):
             "        return 0\n"
         )
         self.assertEqual(cognitive(_fn(src), 0), 1)
-        star = (
-            "def f(a):\n"
-            "    try:\n"
-            "        return a\n"
-            "    except* Exception:\n"
-            "        return 0\n"
-        )
-        self.assertEqual(cognitive(_fn(star), 0), 1)
+        if hasattr(ast, "TryStar"):
+            star = (
+                "def f(a):\n"
+                "    try:\n"
+                "        return a\n"
+                "    except* Exception:\n"
+                "        return 0\n"
+            )
+            self.assertEqual(cognitive(_fn(star), 0), 1)
 
     def test_try_else_and_loop_else(self):
         src = (
@@ -368,6 +371,15 @@ class TestConfigDefaults(unittest.TestCase):
         self.assertEqual(cfg.cognitive, 15)
         self.assertEqual(cfg.max_args, 5)
         self.assertEqual(cfg.missing_keys, [])
+
+    def test_bom_only_and_bom_whitespace_are_whitespace_only(self):
+        for payload in (b"\xef\xbb\xbf", b"\xef\xbb\xbf \t\n"):
+            with tempfile.TemporaryDirectory() as tmp:
+                path = Path(tmp) / "suite-gates.cfg"
+                path.write_bytes(payload)
+                with self.assertRaises(config.ConfigError) as caught:
+                    config.load(path)
+                self.assertEqual(caught.exception.message, "whitespace-only")
 
 
 if __name__ == "__main__":
