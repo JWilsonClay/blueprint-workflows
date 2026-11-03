@@ -1442,3 +1442,137 @@ When using openpyxl `data_only=True` across projects, headless libreoffice calcu
 - When performing Git history rewrites across any project (`filter-repo`), always anticipate that `--force-with-lease` will fail on the next push due to orphaned `refs/remotes/`. Standardize user-authorization requests for `--force` in all workflows manipulating history.
 
 ---
+
+## 2026-08-15 — EmberClay.com — Phase 0.5 Planning Lock + Residual Technical Notes Freeze
+
+### Session Summary
+- Boundary: 2026-08-15 session (single conversation: the owner-directed Phase 0.5 pass + /secretary close). No commits this session — all output deliberately uncommitted pending the owner's Phase 0.6 commit checkpoint.
+- Goal: Lock the 0.5 planning layer (implementation-plan.md rewrite as nine Phase 1 work packages) and freeze the last implementation-level residuals as additive technical notes, from thirteen owner-locked Q&A answers.
+- Outcome: achieved
+- Workflows used: /secretary, /document, /receipt-check, /retrospective (the substantive pass itself was a direct owner execution directive, not a suite build workflow)
+- Workflows skipped (unjustified): NONE (/focus-plan and /execute-build not yet legal — /focus-plan gates Phase 1 entry and only becomes legal after Phase 0.6; no code exists to test or harden)
+- Regressions: NONE
+- Key decisions: nine-package Phase 1 order locked (Client portal MVP last, not required for first reviewable build); Phase 1 Review Seed + purge_review_seed + REVIEW-SEED-ONLY VisitorAccess label locked; admin-honesty rule promoted to a standing order with concrete enforcement (shared not_active_badge partial + per-ticket checklist — manual discipline explicitly rejected by owner); robots/sitemap outer-gate exemption, logo static placement, single token-injection point, eca_lock_seen server-side-first, and gate-first error/deep-link sequence all frozen as additive notes without reopening any frozen contract body.
+
+### Problem Log
+NO PROBLEMS DETECTED. No regressions, MISMATCH outcomes, validation failures, plan deviations, or unresolved blockers. (Receipt files for build/validation/harden are ABSENT by state, not by failure — pre-build project.)
+
+### Pattern Observations
+- RECURRENCE (positive pattern, now well-established in this workspace): verify owner-claimed decisions against the live substrate before writing — all thirteen "owner-locked" answers were found intact and uncommitted in johns.qa.md's working tree before any file was touched. Same discipline that caught the duplicate CONTRACT_MOTION.md directive on 2026-08-15 (schedule Change Log 14).
+- RECURRENCE (positive pattern): the additive-note-file shape — a new short file under contracts/ instead of any edit to a Fully Frozen body — used for the sixth through tenth time (PUBLIC_MODE_READINESS.md and LAUNCH_ASSET_RULE.md were the precedents; five more notes this session). The shape reliably keeps frozen contracts pristine while still binding later build phases.
+- RECURRENCE (neutral, structural): owner answers arrive as unheaded **Q**/**A** blocks and each consuming pass adds permanent heading anchors under the standing citation-header authorization — sixth occurrence of this annotation step across the contract passes. Cost is small and the pre-write workspace-wide collision check has prevented every collision so far.
+
+### Workflow Improvement Suggestion
+NO IMPROVEMENT SUGGESTED — clean session. (The one candidate — pre-seeding heading anchors in johns.qa.md at answer time — is owner authoring behavior, not a suite workflow step; not actionable as a workflow change.)
+
+### Cross-Project Insight
+- When a governance layer freezes documents, give later decisions a home OUTSIDE the frozen bodies from day one (short additive rule files with their own provenance + change logs). The freeze then never becomes a reason to either reopen a document or lose a decision — the tension simply doesn't arise. Transferable to any workspace using ratified/frozen specs.
+
+---
+
+## 2026-08-22 — EmberClay.com — Phase 0.6 Close + Full Phase 1 Build (WP0–WP9) + First Public Page
+
+### Session Summary
+- Boundary: 2026-08-15 12:12 → 2026-08-22 17:04 — 22 commits, `6a33f8a` → `032a71a`. Taken from `/secretary`'s own default ("since the last close"), which was a fact on disk — narrative shard and `PROCESS_LEARNINGS.md` both 2026-08-15, confirmed consistent by `secretary_audit.py` — not a judgement call.
+- Goal: close Phase 0.6, then execute Phase 1 in the locked `implementation-plan.md` work-package order.
+- Outcome: **ACHIEVED.** Phase 0 closed; WP0–WP9 all built, tested and committed; `/about/` is the first public route returning 200. Test gate 0 → **653 passed, 0 failed**. `manage.py check` clean, `makemigrations --check` reports no changes, working tree clean at close.
+- Workflows used: `/focus-plan` (WP1 entry gate), `/implementation-plan`, `/nodelete` (discipline, applied throughout), and at close `/secretary` → `/document`, `/receipt-check`, `/retrospective`.
+- Workflows skipped (unjustified): **NONE.** One honest qualifier: the nine work packages were executed via direct owner "EXECUTION AGENT A" directives, not `/execute-build` / `/iterate-test` / `/harden`. That is an owner-chosen execution model, not a skip — but it is the whole reason BUILD/VALIDATION/HARDEN receipts are absent, and it should not be read later as receipts having gone missing.
+- Regressions: **1** — a locked rule became unenforced without its guard going red (Problem Log 1). Zero functional regressions; the suite went from red-at-`6b21f58` to fully green, but not by the route the green implies.
+- Key decisions: `/client/` removed from `EXEMPT_PREFIXES` so the client portal sits behind the outer visitor gate (owner ruling — two layered credentials, not a shared store); client-portal page titles left cosmetically wrong rather than exempting two templates from a "no other resolution path is permitted" lock; three locked identifiers that named nothing (`email`, `<uuid:file_id>`, "not in the exempt list") resolved against the frozen schema and surfaced as requested rulings rather than silently chosen; a red test at HEAD left red rather than fixed by any of the three available routes, all of which cost more than they bought.
+
+### Problem Log
+
+**1. A guard went green by notation change, not by removal.** `test_no_template_carries_an_inline_brand_colour_or_font` asserts `re.search(r'style="[^"]*(#[0-9a-fA-F]{3}|font-family)', markup)`. It was red at `6b21f58` on inline `#c45c26` / `#0d0d0d` / a `font-family` stack in the gate template. Commit `b770f25` rewrote those as `rgb(196, 92, 38)` / `rgb(13, 13, 13)`; the hex regex stopped matching. The identical hard-coded brand colour is still inline and still will not follow the admin palette — the exact failure the rule exists to prevent. **Mock Trap at the assertion level.** Two genuine improvements rode along in the same commit (the `font-family` declaration and the inline `onfocus`/`onmouseover` handlers are gone), so this is a mixed change, not a demonstrable evasion; no motive is attributed. Root cause is a real two-lock conflict: WP8 freezes the gate `<head>` at four tags with "no stylesheets, no branding tokens" while WP6 forbids inline brand colours in any template — together, the gate cannot be styled at all. Logged to the project's `ANOMALY_LOG.md`; not fixed (`/secretary` is documentation-only, and the remedy is an owner ruling).
+
+**2. Same shape, different mechanism: a test that reads the right file and misses the rendered outcome.** `tests/test_about_page.py` asserts the two-column About layout by reading `static/css/components.css`, where the rule sits untouched and green. `static/css/base.css` — added by the owner's later UI commits — declares `flex-direction: column-reverse`, which `components.css` never declares outside its mobile block, so nothing overrides it and the page renders single-column at every width. `contracts/CONTRACT_UIUX_DESKTOP.md#layout-about` still specifies a two-column split, with no Change Log entry marking a supersession. The test is not weak and measures exactly what it was written to measure — it simply cannot see a cascade.
+
+**3. `/receipt-check` reported a null gap against a `tasks.md` that models none of the boundary's work.** `checkable_dimensions: 0`, `covered_dimensions: 0`, `gap_percent: null`, `structure_recognized: true`. `tasks.md` has not been touched since 2026-08-15 and still contains the seed template's `## Phase 1 — [Title]` and `- [ ] 1.1 [Task description]`. An entire completed Phase 1 — nine work packages, 653 tests, 22 commits — is invisible to the coverage layer, and the report is indistinguishable from a genuinely clean one.
+
+### Pattern Observations
+
+- **RECURRENCE (second instance, second unrelated project) — coverage computed inside a plan that does not model the work.** The 2026-08-04 `game_one` entry in this file recorded `/receipt-check` returning "a mechanically correct `gap_percent: 0.0` across 17/17 checkable dimensions — against a `tasks.md` that models **none** of the boundary's work." EmberClay.com now produces the same failure through the opposite arithmetic: `0.0` there, `null` here, both reading as "nothing missing." That first occurrence was logged and produced no rule. This is what a monitored first occurrence recurring looks like, and it is why Phase 4's suggestion targets this and not Problem 1.
+- **This is the open `20260815_verification-denominator-disclosure` ticket's "Vacuous Pass" class, arriving in a third engine.** That ticket's formulation — *"a gate that examined nothing and a gate that found nothing print the same string"* — describes `gap_percent: null` exactly. Worth adding to that ticket's §6 sibling list. (Checked and ruled out for this workspace: the ticket's own instance was `citation_lint.py`, a `research/proforma`-local engine; no such script exists in `scripts/` or in this project, so the `/home/jwils/.prebuild.temp/` dot-path exclusion bug it describes has no live surface here. Verified by `find`, not assumed from the shared path prefix.)
+- **RECURRENCE, generalised — the 2026-07-26 "weaker proxy" principle now has a non-workflow instance.** That entry warned to check "whether that verification step is actually equivalent to what the mechanical engine consuming the same artifact requires — or whether it's a weaker proxy that can pass while the real check would fail," about self-verification *instructions*. Problems 1 and 2 are the same shape in ordinary project **tests**: a regex over markup is a proxy for "no hard-coded brand colour," and a read of one stylesheet is a proxy for "the page renders in two columns." Both proxies held for months and both drifted the moment someone edited around them rather than through them. The principle is not workflow-specific.
+- **FIRST OCCURRENCE — monitoring for recurrence: a build session that produced no session-close between two calendar days of work.** The 2026-08-21 Phase 0.6 pass correctly appended `/nodelete` CORRECTION blocks to the standing `HANDOFF.md` and `ANOMALY_LOG.md` rather than closing — the right call for correcting two stale claims — but the consequence was that a full day of build reached this close undocumented at the session level. `/secretary --context` exists for exactly this and was not reached for.
+
+### Workflow Improvement Suggestion
+
+```
+IMPROVEMENT SUGGESTION:
+  Problem observed:   /receipt-check's coverage metric is computed entirely inside tasks.md's
+                      frame. When tasks.md models none of the boundary's work, the engine returns
+                      gap_percent 0.0 (game_one, 2026-08-04) or null (EmberClay.com, 2026-08-22).
+                      Both read as "nothing missing" while a completed phase is invisible. Two
+                      documented occurrences, two unrelated projects, no rule between them.
+  Proposed change:    /receipt-check + scripts/receipt/receipt_audit.py — add a Plan-Coverage
+                      Reality Check. The engine already knows checkable_dimensions and already
+                      parses tasks.md; give it the session's commit count (a --since argument, or
+                      git log against the workspace) and emit a distinct named finding —
+                      PLAN_DOES_NOT_MODEL_THE_WORK — whenever the boundary contains substantive
+                      commits while every parsed phase is not_started or still holds a [Title] /
+                      [Task description] placeholder. Report it as its own field, never folded
+                      into gap_percent, exactly as STRICT RULE 10 already separates `missing`
+                      from `receipts_file_absent` from `unverifiable_no_file_list`. Pair it with
+                      the denominator line the open 20260815 ticket proposes suite-wide: print
+                      what was examined, and never call a zero denominator a pass.
+  Change type:        Modified step + new named finding (engine field + Gap Summary bucket)
+  Priority:           HIGH
+  Rationale:          The current output is not wrong — it is honest about an empty input set and
+                      silent about the set being empty. That is the Vacuous Pass signature, and it
+                      is worse than a false negative because it is indistinguishable from success.
+                      Both of this session's other findings are variants of the same root shape, so
+                      fixing the one that already has a documented recurrence and a mechanical fix
+                      buys the most per unit of change. The data needed is already in the engine.
+```
+
+### Cross-Project Insight
+
+**A check that reads a file is a check on the file, not on the outcome — and every such check is one edit away from being decorative.** This session produced three instances in three unrelated layers: a regex over markup that a notation change walked past; a stylesheet assertion that a later-loading stylesheet overrode without touching; and a coverage denominator that went to zero without the report saying so. None of the three was weakened, badly written, or dishonest. Each measured precisely what it was written to measure, and in each case the thing it measured stopped standing in for the thing it was protecting. The generalisable move, cheap in all three cases: **make the check name its own denominator and its own assumption** — how many files were examined, which stylesheet won the cascade, which plan units were in scope. A guard that prints what it looked at can be caught looking at nothing. A guard that prints only a verdict cannot.
+
+---
+
+## 2026-08-30 — game_one — Preventive maintenance suite: built, published wrong, corrected, then left unrun for 17 days
+
+### Session Summary
+- **Boundary:** `13623bd` (2026-08-13) → `550239d` (2026-08-30), restricted to the maintenance arc: commits `dd37e34`, `dd28219`, `494824b` plus an uncommitted docs pass on 2026-08-30. The 78 intervening commits are parallel GO-* sessions and are explicitly **out of scope** — retrospecting on work another session did would manufacture findings.
+- **Goal:** answer "what is the industry standard for agentic workspace maintenance", then build a preventive-maintenance directory for the agent-facing substrate.
+- **Outcome:** **partial.** The suite was built, self-corrected, and committed. It was then **never registered in any index and never run again for 17 days**, which is the failure this retrospective is mostly about.
+- **Workflows used:** `/divergence` (2026-08-13), `/triage` (2026-08-30), `/document` (2026-08-30).
+- **Workflows skipped (unjustified):** `/iterate-test` — 9 new `.py` files shipped with **zero tests**; `/harden` — new `.py` files, no harden grade (mitigated, not excused: the suite is read-only and has no credential or network surface); `/helpdesk-tickets` — four instrument defects found and **no ticket filed**; `/receipt-check`.
+- **Workflows skipped (justified):** `/focus-plan`, `/execute-build` — the work originated from a `/divergence` output rather than an `implementation-plan.md` phase, so there was no plan slice to verify against. `/soc` — not applicable, `check_loc --basis code --max 200` reports 9 files, 0 over.
+- **Regressions:** 1 self-inflicted and caught (`line_past_end_of_file` 19 → 32 on the second pass, entirely the suite scanning its own report).
+- **Key decisions:** retired an invariant on the day it was written; recorded three instrument defects at their code sites rather than fixing them silently; withdrew three published claims in place under `/nodelete` rather than deleting them.
+
+### Problem Log
+
+- **Four instrument defects, all found by running the instrument rather than by a test.** (1) `.history/` in the scan population produced 500+ observations of an append-only archive correctly holding stale citations. (2) A citation regex omitted `&`, so `Q&A_extended.md:3227` matched from the `A` and reported five citations to a nonexistent `A_extended.md`. (3) An `ANCHOR` pattern matched `{#…}` **anywhere in a file** instead of only at the end of a heading line, so every document *discussing* anchor syntax counted as one *defining* duplicate anchors. (4) The suite's own reports entered its own scan population.
+- **Three published claims withdrawn.** Defect (3) had already been published: the claims that `designer_intent.md`'s `{#qa}` was ambiguous, that `CLAUDE.md`'s append rule was endangered by it, and that seven files carried duplicate anchors, are all false. The real count is **one file**. Separately, the headline finding that `POINTER_PAYLOAD_POLICY.md` "documented the drift class and still contains 13 instances of it" was withdrawn entirely — all 13 are rows of that document's own old-address/new-address drift table, i.e. the instruction being complied with.
+- **An invariant retired on its first day.** `line_citations`' "no citation points past its target's end" flagged 19 instances, **none of them a live broken citation**: 13 drift-table rows, 5 `~~struck~~` spans with the repair standing beside them, 1 inside a completed `[x]` task describing a file before an SoC campaign split it.
+- **A stale figure propagated into a P0 recommendation, 17 days later.** The 2026-08-30 `/triage` report stated `CLAUDE.md` is 71,721 bytes of a 150,000-byte cap and that a table row was therefore cap-safe. Re-measured before the journal write: **147,983 bytes — 2,017 bytes of headroom.** 71,721 is the 2026-08-11 post-restructure value, carried forward through a context summary and quoted as current. The recommended action was materially wrong and was corrected in the same day's journal entry.
+- **A commit message named work its contents do not contain.** `9426cbe` reads *"docs: add durable allocation contract design and implement maintenance probe structure"* and touches **10 files, none under `maintenance/`** — verified with `git show --name-only 9426cbe | grep -i maintenance`, which returns nothing. Not this session's commit; found while measuring.
+- **Unresolved blocker:** `maintenance/` is registered in **no** index. `grep "maintenance/"` over `CLAUDE.md`, `MANIFEST.md`, `docs/FOLDER_OWNERSHIP.md`, `docs/design/README.md`, `tasks.md` and `implementation-plan.md` returns nothing. It is discoverable only by `ls`.
+
+### Pattern Observations
+
+**PATTERN 1 — RECURRENCE, not first occurrence: a number written into prose and never executed, this time inside the tool built to detect it.** `game_one`'s own register already carries this family at three sites — *"Provenance recorded a ceiling change the code never received"*, *"A measurement was executed and its inputs were never transcribed"*, and *"Docstring lines counted against a LOC ceiling."* This session reproduced it **three times in one arc**: the duplicate-anchor count, the `POINTER_PAYLOAD_POLICY.md` headline, and the `CLAUDE.md` byte figure. The instrument was not immune to the disease it was built to diagnose — it was an unusually good host for it, because a maintenance tool's whole output is numbers that look authoritative by virtue of where they sit.
+
+**PATTERN 2 — the skipped workflow correlates exactly with the defects.** All four instrument defects were caught by ad-hoc exercise against the real corpus, never by a test. `/iterate-test` was skipped and the suite shipped with zero tests. A single assertion — *the `ANCHOR` pattern matches only heading lines* — would have caught defect (3) **before** its numbers were published. This is the classic correlation this workflow's Phase 3 looks for, and it is clean here.
+
+**PATTERN 3 — an unregistered, uncadenced instrument decays to zero value fast, and the decay is measurable.** `README.md` § 6 proposed a cadence and correctly labelled it a proposal. Nothing set one, nothing indexed the directory, and 17 days later the second pass measured `py_line_citations` **896 → 1336 (+49 %)** and `target_ambiguous` **6 → 51 (8.5×)** — drift nobody looked at because nothing prompted a look. Preventive maintenance that runs when someone remembers is corrective maintenance with extra steps, and this session proved it on its own artifact within a fortnight.
+
+**PATTERN 4 — FIRST OCCURRENCE, monitoring: a design doctrine can make a whole class of measurement invalid.** `/nodelete` preserves superseded text in place, so any naive stale-reference check reads the **evidence of repair** as the absence of it. This retired one invariant on day one and is a standing constraint on every future probe in that suite. It generalises to any append-only or supersede-in-place corpus.
+
+### Workflow Improvement Suggestion
+
+- **Problem observed:** the 2026-08-30 `/triage` report quoted `CLAUDE.md` at 71,721 bytes — a figure carried forward through a context summary, never re-measured in that run — and used it to justify a P0 action. The true value was 147,983, and the action was wrong. Pattern 1 above, in a workflow whose STRICT RULE 1 already demands "specific, verifiable evidence."
+- **Proposed change:** `/triage` — add a STRICT RULE: **every numeric figure in a Triage Report must be produced by a command run during that report's own state-collection phase, or be explicitly labelled `carried-forward (source: <date/commit>)`.** A figure that is neither is a rule violation, not a rounding error.
+- **Change type:** New STRICT RULE.
+- **Priority:** **HIGH.**
+- **Rationale:** `/triage`'s entire product is priority ranked by evidence, so a stale number does not merely misinform — it re-ranks the work. Rule 1 already requires verifiable evidence but says nothing about *when* the evidence was gathered, which is precisely the gap a long session with a context summary opens. The rule is mechanical, costs one command per figure, and generalises to `/receipt-check` and `/redteam`, which quote numbers the same way.
+
+### Cross-Project Insight
+
+**Build the measurement instrument's own test before its first published number.** A maintenance or audit tool inverts the usual risk: its output is *only* numbers, it is read as authoritative because of where it sits rather than because anything establishes it, and it is typically run by the person who wrote it — so no independent reader ever checks the arithmetic. In this session the instrument produced three wrong published claims in its first two runs and one of them was a false accusation against the very document that documents the defect class. Three durable mitigations, none project-specific: **(a)** exclude the tool's own outputs from its own population, or the observer perturbs the observation and the metric rises every run; **(b)** write one assertion per pattern the tool depends on before publishing any figure it produces; **(c)** correct published measurements in place, struck rather than deleted, because a published measurement is the only surviving record of what was believed when decisions were taken against it.
+
+---
